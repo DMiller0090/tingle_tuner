@@ -39,9 +39,22 @@ def built_symbols(ver):
 def disasm(data, base, addr, size, mode):
     md = capstone.Cs(capstone.CS_ARCH_ARM,
                      capstone.CS_MODE_THUMB if mode == 'thumb' else capstone.CS_MODE_ARM)
-    md.skipdata = True
     code = data[addr - base:addr - base + size]
-    return [f'{i.mnemonic} {i.op_str}'.strip() for i in md.disasm(code, addr)]
+    # One instruction at a time: capstone's own loop (even with skipdata) gives up at the
+    # first literal pool word it can't decode, which silently truncated long functions.
+    out = []
+    step = 2 if mode == 'thumb' else 4
+    off = 0
+    while off < len(code):
+        ins = next(md.disasm(code[off:off + 4], addr + off, count=1), None)
+        if ins is None:
+            out.append(f'.short {int.from_bytes(code[off:off + 2], "little"):#06x}'
+                       if step == 2 else f'.word {int.from_bytes(code[off:off + 4], "little"):#010x}')
+            off += step
+            continue
+        out.append(f'{ins.mnemonic} {ins.op_str}'.strip())
+        off += ins.size
+    return out
 
 
 def mask(ins):
