@@ -95,17 +95,107 @@ extern struct SoundCmd *gSoundCmdWrite;
 extern struct SoundCmd *gSoundCmdLimit;  // end of what SoundCmdFlush published
 extern struct SoundCmd *gSoundCmdEnd;
 
+struct SoundTrack;
+struct SoundVoice;
+struct SoundBankHeader;
+
+// A sequence player (gSoundPlayers, 20): an SE plays on one track, a song on up to ten.
+struct SoundPlayer
+{
+    /*0x00*/ const u16 *bankMap;      // sequence bank -> global bank
+    /*0x04*/ const u16 *seqOffsets;   // the SE set's (or song's) u16 offsets from here
+    /*0x08*/ struct SoundTrack *tracks[10];
+    /*0x30*/ u16 tempo;               // subtracted from the tracks' waits each frame
+    /*0x32*/ s16 tempoOfs;
+    /*0x34*/ u16 fadeVolume;          // 0x8000 = full
+    /*0x36*/ s16 fadeStep;
+    /*0x38*/ u16 fadeTarget;
+    /*0x3A*/ u16 fadeFrames;
+    /*0x3C*/ u8 paused:1;
+    /*0x3D*/ u8 unk3D[3];
+    /*0x40*/ u8 unk40;
+    /*0x41*/ u8 volume;
+    /*0x42*/ u8 state;                // 0 idle, 1 playing, 2 fading out
+    /*0x43*/ u8 isSe;
+    /*0x44*/ u8 flags;                // bit 0: notes go to gSoundNoteHook
+};
+
+// A sequence track (gSoundTracks, 24), see docs/layout.md for the byte code.
+struct SoundTrack
+{
+    /*0x00*/ const u8 *pc;
+    /*0x04*/ const u32 *sampleSet;
+    /*0x08*/ struct SoundPlayer *player;  // NULL: free
+    /*0x0C*/ struct SoundVoice *voices;
+    /*0x10*/ u16 vibratoDelay;
+    /*0x14*/ u32 vibratoSpeed;
+    /*0x18*/ u32 vibratoDepth;
+    /*0x1C*/ u8 sweep1C;
+    /*0x1D*/ u8 sweep1D;
+    /*0x1E*/ u8 sweep1E;
+    /*0x20*/ u16 sweep20;
+    /*0x22*/ u16 sweep22;
+    /*0x24*/ const u8 *stack[3];         // F4 call return addresses
+    /*0x30*/ const u8 **sp;
+    /*0x34*/ s32 wait;
+    /*0x38*/ u8 unk38[8];
+    /*0x40*/ u16 bank;
+    /*0x42*/ u16 program;
+    /*0x44*/ u16 lastLength;
+    /*0x46*/ u16 lastWait;
+    /*0x48*/ u8 velocity;
+    /*0x49*/ u8 tie;
+    /*0x4A*/ u8 mute;
+    /*0x4B*/ u8 pan;
+    /*0x4C*/ u8 unk4C;                   // sequence command E3
+    /*0x4D*/ u8 volume;                  // sequence command E0
+    /*0x4E*/ u8 cmdVolume;               // SoundCmdSetTrackVolume
+    /*0x4F*/ s8 bend;
+    /*0x50*/ u8 bendRange;
+    /*0x51*/ s8 transpose;
+    /*0x52*/ u8 priority;
+    /*0x53*/ u8 notesWait;
+};
+
+// A voice (gPcmVoices 7, gCgbVoices 4).
+struct SoundVoice
+{
+    /*0x00*/ u8 type;   // 0 PCM, 1-4 GB channel
+    /*0x01*/ u8 state;  // 0 free, 1 on, 2 released
+    /*0x04*/ struct SoundTrack *track;
+    /*0x08*/ u8 unk08[0x68];
+    /*0x70*/ struct SoundVoice *trackPrev;
+    /*0x74*/ struct SoundVoice *trackNext;
+};
+
+extern struct SoundPlayer gSoundPlayers[20];
+extern struct SoundTrack gSoundTracks[24];
+extern const struct SoundBankHeader *gSoundBank;
+
+void TrackStop(struct SoundTrack *track);
+void TrackSetBank(struct SoundTrack *track, u32 bank);
+u8 TrackExecute(struct SoundTrack *track);
+void VoiceNoteOff(struct SoundVoice *voice);
+void PlayerStop(u32 index);
+void PlayerStartSongData(u32 index, const void *song, const void *bankMap);
+void PlayerStartSeData(u32 index, const void *set, const void *bankMap, u32 se);
+void SoundCmdNop(u8 arg);
+void SetPcmVoiceCount(u8 count);
+
 // The sound bank's tables (offsets from each table's start), see docs/layout.md.
 struct SoundBankHeader
 {
-    const void *sampleSets;
-    const void *instBanks;
-    const void *songs;  // empty: the bank has no songs
-    const void *seSets;
+    const u32 *sampleSets;
+    const u32 *instBanks;
+    const u32 *songs;  // empty: the bank has no songs
+    const u32 *seSets;
     const u16 *bankToSampleSet;
-    const void *songBankMaps;
-    const void *seBankMaps;
+    const u32 *songBankMaps;
+    const u32 *seBankMaps;
 };
+
+// Entry i of an offset table: the table's address plus the offset stored there.
+#define SOUND_OFFSET(table, i) ((const void *)((const u8 *)(table) + (table)[i]))
 
 // One step of a volume envelope: ramp linearly to level over frames (0xFFFF: hold).
 struct EnvelopeStep
@@ -114,13 +204,13 @@ struct EnvelopeStep
     s16 level;
 };
 
-extern const u8 gSoundBankSeBankMaps[];
-extern const u8 gSoundBankSeSets[];
-extern const u8 gSoundBankInstBanks[];
+extern const u32 gSoundBankSeBankMaps[];
+extern const u32 gSoundBankSeSets[];
+extern const u32 gSoundBankInstBanks[];
 extern const u16 gSoundBankBankToSampleSet[];
-extern const u8 gSoundBankSongBankMaps[];
-extern const u8 gSoundBankSampleSets[];
-extern const u8 gSoundBankEnd[];
+extern const u32 gSoundBankSongBankMaps[];
+extern const u32 gSoundBankSampleSets[];
+extern const u32 gSoundBankEnd[];
 
 const struct SoundBankHeader gSoundBankHeader =
 {
@@ -599,45 +689,323 @@ INCLUDE_ASM(VoiceAlloc);
 
 INCLUDE_ASM(TracksInit);
 
-INCLUDE_ASM(TrackAlloc);
+struct SoundTrack *TrackAlloc(void)
+{
+    s32 i;
 
-INCLUDE_ASM(TrackStart);
+    for (i = 0; i < 24; i++)
+    {
+        struct SoundTrack *track = &gSoundTracks[i];
 
-INCLUDE_ASM(TrackReleaseNotes);
+        if (track->player == NULL)
+            return track;
+    }
+    return NULL;
+}
 
-INCLUDE_ASM(TrackStop);
+void TrackStart(struct SoundTrack *track, struct SoundPlayer *player, const u8 *pc)
+{
+    if (track != NULL)
+    {
+        if (track->player != NULL)
+            TrackStop(track);
+        track->wait = 0;
+        track->tie = 0;
+        track->mute = 0;
+        track->pc = pc;
+        track->player = player;
+        track->voices = NULL;
+        TrackSetBank(track, 0);
+        track->pan = 0x40;
+        track->vibratoDelay = 0;
+        track->vibratoSpeed = 0x22;
+        track->vibratoDepth = 0;
+        track->sweep1C = 0;
+        track->sweep1D = 0;
+        track->sweep1E = 0;
+        track->sweep20 = 0;
+        track->sweep22 = 0;
+        track->volume = 0x80;
+        track->cmdVolume = 0x80;
+        track->bend = 0;
+        track->bendRange = 2;
+        track->transpose = 0;
+        if (player->isSe == TRUE)
+        {
+            track->priority = 12;
+            track->unk4C = 0x7F;
+            track->notesWait = TRUE;
+        }
+        else
+        {
+            track->priority = 3;
+            track->unk4C = 0;
+            track->notesWait = FALSE;
+        }
+        track->lastLength = 0x7F;
+        track->velocity = 0x7F;
+        track->lastWait = 0;
+        track->sp = track->stack;
+    }
+}
+
+void TrackReleaseNotes(struct SoundTrack *track)
+{
+    if (track != NULL)
+    {
+        u8 tie = track->tie;
+        struct SoundVoice *voice;
+
+        track->tie = FALSE;
+        voice = track->voices;
+        while (voice != NULL)
+        {
+            struct SoundVoice *next = voice->trackNext;
+
+            VoiceNoteOff(voice);
+            voice = next;
+        }
+        track->tie = tie;
+    }
+}
+
+void TrackStop(struct SoundTrack *track)
+{
+    if (track != NULL)
+    {
+        TrackReleaseNotes(track);
+        track->player = NULL;
+    }
+}
 
 INCLUDE_ASM(TrackExecute);
 
-INCLUDE_ASM(TrackAddVoice);
+void TrackAddVoice(struct SoundTrack *track, struct SoundVoice *voice)
+{
+    if (voice->track == NULL)
+    {
+        voice->track = track;
+        voice->trackPrev = NULL;
+        voice->trackNext = track->voices;
+        track->voices = voice;
+        if (voice->trackNext != NULL)
+            voice->trackNext->trackPrev = voice;
+    }
+}
 
-INCLUDE_ASM(TrackRemoveVoice);
+void TrackRemoveVoice(struct SoundTrack *track, struct SoundVoice *voice)
+{
+    if (voice->track != NULL)
+    {
+        voice->track = NULL;
+        if (voice->trackNext != NULL)
+            voice->trackNext->trackPrev = voice->trackPrev;
+        if (voice->trackPrev != NULL)
+            voice->trackPrev->trackNext = voice->trackNext;
+        else
+            track->voices = voice->trackNext;
+    }
+}
 
-INCLUDE_ASM(TrackReadVarLen);
+// A length or wait: one byte, or two (big-endian, 15 bits) when bit 7 is set.
+u32 TrackReadVarLen(struct SoundTrack *track)
+{
+    u32 value = *track->pc++;
 
-INCLUDE_ASM(TrackSetBank);
+    if (value & 0x80)
+        value = ((value & 0x7F) << 8) | *track->pc++;
+    return value;
+}
 
-INCLUDE_ASM(PlayersInit);
+void TrackSetBank(struct SoundTrack *track, u32 bank)
+{
+    const struct SoundBankHeader *header;
+    u16 set;
 
-INCLUDE_ASM(PlayerReset);
+    track->bank = bank;
+    track->program = 0;
+    header = gSoundBank;
+    set = header->bankToSampleSet[track->player->bankMap[bank]];
+    track->sampleSet = SOUND_OFFSET(header->sampleSets, set);
+}
 
-INCLUDE_ASM(PlayerUpdateAll);
+void PlayersInit(void)
+{
+    s32 i, j;
 
-INCLUDE_ASM(PlayerStartSong);
+    for (i = 0; i < 20; i++)
+    {
+        struct SoundPlayer *player = &gSoundPlayers[i];
 
-INCLUDE_ASM(PlayerStartSe);
+        player->state = 0;
+        for (j = 0; j < 10; j++)
+            player->tracks[j] = NULL;
+    }
+}
 
-INCLUDE_ASM(PlayerStartSongData);
+void PlayerReset(struct SoundPlayer *player)
+{
+    player->paused = FALSE;
+    player->tempo = 150;
+    player->tempoOfs = 0;
+    player->unk40 = 0x80;
+    player->volume = 0x80;
+    player->fadeVolume = 0x8000;
+    player->fadeStep = 0;
+    player->fadeFrames = 0;
+    player->fadeTarget = 0;
+    player->flags = 0;
+}
 
-INCLUDE_ASM(PlayerStartSeData);
+// Fade, then run each track; stop the players whose tracks have all ended.
+void PlayerUpdateAll(void)
+{
+    s32 i;
 
-INCLUDE_ASM(PlayerStop);
+    for (i = 0; i < 20; i++)
+    {
+        struct SoundPlayer *player = &gSoundPlayers[i];
 
-INCLUDE_ASM(PlayerFadeOut);
+        if (player->state != 0)
+        {
+            bool32 playing;
+            s32 j;
 
-INCLUDE_ASM(PlayerSetPause);
+            if (player->fadeFrames == 0)
+            {
+                if (player->state == 2)
+                {
+                    PlayerStop(i);
+                    continue;
+                }
+            }
+            else
+            {
+                player->fadeVolume += player->fadeStep;
+                if (--player->fadeFrames == 0)
+                    player->fadeVolume = player->fadeTarget;
+            }
+            playing = FALSE;
+            for (j = 0; j < 10; j++)
+            {
+                if (player->tracks[j] != NULL)
+                {
+                    if (TrackExecute(player->tracks[j]) == 0)
+                        playing = TRUE;
+                    else
+                        player->tracks[j] = NULL;
+                }
+            }
+            if (!playing)
+                PlayerStop(i);
+        }
+    }
+}
 
+void PlayerStartSong(u32 player, u32 song)
+{
+    const struct SoundBankHeader *header = gSoundBank;
+
+    PlayerStartSongData(player, SOUND_OFFSET(header->songs, song),
+                        SOUND_OFFSET(header->songBankMaps, song));
+}
+
+void PlayerStartSe(u32 player, u32 set, u32 index)
+{
+    const struct SoundBankHeader *header = gSoundBank;
+
+    PlayerStartSeData(player, SOUND_OFFSET(header->seSets, set),
+                      SOUND_OFFSET(header->seBankMaps, set), index);
+}
+
+void PlayerStartSongData(u32 index, const void *song, const void *bankMap)
+{
+    struct SoundPlayer *player = &gSoundPlayers[index];
+    const u16 *offsets;
+    s32 count;
+    s32 i;
+
+    if (player->state != 0)
+        PlayerStop(index);
+    player->seqOffsets = song;
+    player->bankMap = bankMap;
+    player->isSe = FALSE;
+    PlayerReset(player);
+    offsets = player->seqOffsets;
+    count = *(s8 *)offsets;
+    offsets++;
+    for (i = 0; i < count; i++)
+    {
+        if (offsets[i] != 0)
+        {
+            struct SoundTrack *track = TrackAlloc();
+
+            player->tracks[i] = track;
+            TrackStart(track, player, (const u8 *)player->seqOffsets + offsets[i]);
+        }
+    }
+    player->state = 1;
+}
+
+void PlayerStartSeData(u32 index, const void *set, const void *bankMap, u32 se)
+{
+    struct SoundPlayer *player = &gSoundPlayers[index];
+    struct SoundTrack *track;
+
+    if (player->state != 0)
+        PlayerStop(index);
+    player->seqOffsets = set;
+    player->bankMap = bankMap;
+    player->isSe = TRUE;
+    PlayerReset(player);
+    track = TrackAlloc();
+    player->tracks[0] = track;
+    TrackStart(track, player, (const u8 *)player->seqOffsets + player->seqOffsets[se]);
+    player->state = 1;
+}
+
+void PlayerStop(u32 index)
+{
+    struct SoundPlayer *player = &gSoundPlayers[index];
+
+    if (player->state != 0)
+    {
+        s32 i;
+
+        for (i = 0; i < 10; i++)
+        {
+            TrackStop(player->tracks[i]);
+            player->tracks[i] = NULL;
+        }
+        player->state = 0;
+    }
+}
+
+void PlayerFadeOut(u32 index, s32 frames)
+{
+    struct SoundPlayer *player = &gSoundPlayers[index];
+
+    if (player->state != 0)
+    {
+        player->state = 2;
+        player->fadeTarget = 0;
+        player->fadeFrames = frames;
+        player->fadeStep = -player->fadeVolume / frames;
+    }
+}
+
+void PlayerSetPause(u32 index, u8 on)
+{
+    gSoundPlayers[index].paused = on;
+}
+
+// Near-miss: the original adds 0x42 to the table address before the index.
+//     u32 PlayerGetState(u32 index)
+//     {
+//         return gSoundPlayers[index].state;
+//     }
 INCLUDE_ASM(PlayerGetState);
+
 
 // The command queue: the API writes commands at gSoundCmdWrite, SoundCmdFlush (from
 // SoundMain) publishes them up to there, and SoundCmdProcess (in VBlank) reads them.
@@ -852,13 +1220,146 @@ void SoundCmdSetNoteHook(SoundNoteHook hook)
     SoundCmdPush();
 }
 
-INCLUDE_ASM(SoundCmdPlayer);
+// Commands 000-006: a = player (START_SE: player << 16 | SE set), b = the argument.
+void SoundCmdPlayer(struct SoundCmd *cmd)
+{
+    struct SoundPlayer *player = &gSoundPlayers[cmd->a];
 
+    switch (cmd->cmd)
+    {
+    case SOUND_CMD_START_SONG:
+        PlayerStartSong(cmd->a, cmd->b);
+        break;
+    case SOUND_CMD_START_SE:
+        PlayerStartSe(cmd->a >> 16, cmd->a & 0xFFFF, cmd->b);
+        break;
+    case SOUND_CMD_FADE_OUT:
+        PlayerFadeOut(cmd->a, cmd->b);
+        break;
+    case SOUND_CMD_PAUSE:
+        PlayerSetPause(cmd->a, cmd->b);
+        break;
+    case SOUND_CMD_SET_FLAGS:
+        player->flags = cmd->b;
+        break;
+    case SOUND_CMD_SET_TEMPO:
+        player->tempoOfs = cmd->b;
+        break;
+    case SOUND_CMD_SET_VOLUME:
+        player->volume = cmd->b;
+        break;
+    }
+}
+
+// Commands 100-103: a = player << 16 | value, b = mask of the player's tracks (shifted out).
+// Near-miss: in the bend case the range, bend and the constant 1 get other registers
+// (r2/r4/r6 in the original); the types and a shared value variable change nothing.
+//     void SoundCmdTracks(struct SoundCmd *cmd)
+//     {
+//         u32 a = cmd->a;
+//         struct SoundPlayer *player = &gSoundPlayers[a >> 16];
+//         s32 i = 0;
+//
+//         switch (cmd->cmd)
+//         {
+//         case SOUND_CMD_MUTE_TRACKS:
+//         {
+//             u8 mute = a;
+//
+//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+//             {
+//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
+//                     player->tracks[i]->mute = mute;
+//             }
+//             break;
+//         }
+//         case SOUND_CMD_SET_TRACK_VOLUME:
+//         {
+//             u8 volume = a;
+//
+//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+//             {
+//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
+//                     player->tracks[i]->cmdVolume = volume;
+//             }
+//             break;
+//         }
+//         case SOUND_CMD_SET_TRACK_BEND:
+//         {
+//             u8 range = (a & 0xFF00) >> 8;
+//             u8 bend = a;
+//
+//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+//             {
+//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
+//                 {
+//                     player->tracks[i]->bendRange = range;
+//                     player->tracks[i]->bend = bend;
+//                 }
+//             }
+//             break;
+//         }
+//         case SOUND_CMD_SET_TRACK_PAN:
+//         {
+//             u8 pan = a;
+//
+//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+//             {
+//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
+//                     player->tracks[i]->pan = pan;
+//             }
+//             break;
+//         }
+//         }
+//     }
 INCLUDE_ASM(SoundCmdTracks);
 
-INCLUDE_ASM(SoundCmdPlayers);
+// Commands 200-201: a = the argument, b = mask of players (shifted out).
+void SoundCmdPlayers(struct SoundCmd *cmd)
+{
+    s32 i = 0;
 
-INCLUDE_ASM(SoundCmdGlobal);
+    switch (cmd->cmd)
+    {
+    case SOUND_CMD_FADE_OUT_PLAYERS:
+        for (; cmd->b != 0 && i < 20; i++, cmd->b >>= 1)
+        {
+            if (cmd->b & 1)
+                PlayerFadeOut(i, cmd->a);
+        }
+        break;
+    case SOUND_CMD_PAUSE_PLAYERS:
+        for (; cmd->b != 0 && i < 20; i++, cmd->b >>= 1)
+        {
+            if (cmd->b & 1)
+                PlayerSetPause(i, cmd->a);
+        }
+        break;
+    }
+}
+
+void SoundCmdGlobal(struct SoundCmd *cmd)
+{
+    switch (cmd->cmd)
+    {
+    case SOUND_CMD_CALL:
+        ((void (*)(u32))cmd->a)(cmd->b);
+        break;
+    case SOUND_CMD_SET_SEQ_HOOK:
+        gSoundSeqHook = (SoundSeqHook)cmd->a;
+        break;
+    case SOUND_CMD_SET_NOTE_HOOK:
+        gSoundNoteHook = (SoundNoteHook)cmd->a;
+        break;
+    case SOUND_CMD_NOP:
+        SoundCmdNop(cmd->a);
+        break;
+    case SOUND_CMD_SET_PCM_VOICES:
+        SetPcmVoiceCount(cmd->a);
+        break;
+    }
+}
+
 
 void SoundCmdProcess(void)
 {
