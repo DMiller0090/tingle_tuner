@@ -216,11 +216,49 @@ INCLUDE_ASM(Mode1SendSwitch);
 INCLUDE_ASM(Mode1State2);
 INCLUDE_ASM(Mode1State3);
 INCLUDE_ASM(Mode1Func_020160C8);
+// Near-miss: all but the loop. The original drops the counter and ends the loop on a
+// signed compare of the object pointer against gObjs; agbcc keeps the counter (tried index,
+// pointer, do/while, local base, constant base and two-induction-variable forms).
+/*
+void Mode1Func_02016350(void)
+{
+    s32 i;
+
+    gGameState.unk11B = 0;
+    gGameState.unk11A = 0;
+    gGameState.unk10E = 1;
+    gGameState.unk11D = 0;
+    gGameState.unk010 = 0;
+    gGameState.unk11C = 0;
+    gGameState.unk222 = 1;
+    gMain.unk404 = 0;
+    gGameState.unk106 = 0;
+    gGameState.unk030 = 0;
+    gGameState.unk120 = 0;
+    gGameState.unk15A = 0;
+    gGameState.switchSound = 0xFFFF;
+    gGameState.switchType = 0;
+    gGameState.unk140 = -1;
+    gGameState.unk1F8 = -1;
+    gGameState.unk0FD = 0;
+    gGameState.unk136 = 0;
+    gGameState.unk1E0 = 0;
+    for (i = 15; i >= 0; i--)
+        gObjs[i].active = 0;
+    if (!gGameState.unk1E5_1)
+    {
+        gGameState.unk1E5_1 = 1;
+        gGameState.unk1E5_2 = 0;
+        gGameState.unk12B = 0;
+    }
+    Func_0201A6D4();
+}
+*/
 INCLUDE_ASM(Mode1Func_02016350);
 INCLUDE_ASM(Mode1State4);
 void Mode1StartFadeOut(void)
 {
-    Func_02020644();
+    ObjResetActive();
     gGameState.unk10E = 0;
     gMain.bgcnt[2] |= 0x40;  // mosaic
     gMain.bgcnt[3] |= 0x40;

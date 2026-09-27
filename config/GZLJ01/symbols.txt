@@ -54,8 +54,9 @@ Mode1VBlank = 0x0201ABDC; // thumb
 Func_0201A570 = 0x0201A570; // thumb
 // sound request wrapper used by the game code (range-checks the id)
 GamePlaySound = 0x0201D978; // thumb
-// runs Func_02020570 on each active entry of the 16 x 0x24 array at 0x03005650
-Func_02020644 = 0x02020644; // thumb
+ObjReset = 0x02020570; // thumb
+ObjResetActive = 0x02020644; // thumb
+Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb
 Func_0201CFE8 = 0x0201CFE8; // thumb
 
@@ -191,6 +192,7 @@ gGbaComDataStatus = 0x03005320; // data
 gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
+gObjs = 0x03005650; // data
 
 // ---- EWRAM below the program: link receive buffers (gGbaComBuffers) ----
 gGbaComMessageBuf = 0x0200A000; // data

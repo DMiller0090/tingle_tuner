@@ -9,7 +9,7 @@ struct Main
 {
     /*0x000*/ u32 intrMain[0x100];  // IWRAM copy of intr_main (INTR_VECTOR points here)
     /*0x400*/ u32 gameCode;         // from the packer's header (0x020000AC)
-    /*0x404*/ u8 filler404[4];
+    /*0x404*/ u32 unk404;
     /*0x408*/ s32 random;           // UpdateRandom
     /*0x40C*/ u16 unk40C[4];        // cleared by InitSystem
     /*0x414*/ vu16 intrCheck:16;    // VBlankIntr sets bit 0; MainLoop waits for it
