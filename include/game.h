@@ -36,7 +36,8 @@
 // 0x1E0 u8 unk1E0
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:5
 // 0x1F8 s16 unk1F8
-// 0x1FA u16 unk1FA
+// 0x1FB u8 unk1FB
+// 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
 // 0x1FC s16 rupees  // shown on screen; counts toward flags.rupees
 // 0x1FE s16 rupeeDelta  // flags.rupees - rupees
 // 0x206 u16 unk206
@@ -52,6 +53,7 @@
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
 // 0x233 u8 dungeonChests  // flags.dungeonChests
 // 0x236 u8 isFree  // flags.isFree
+// 0x237 u8 unk237
 // 0x238 u8 unk238  // flags.unkB_7
 // 0x23B u8 flagsReceived
 // 0x23C u8 unk23C
@@ -109,7 +111,8 @@ struct GameState
               u8 unk1E5_3:5;
     /*0x1E6*/ u8 filler1E6[0x1F8 - 0x1E6];
     /*0x1F8*/ s16 unk1F8;
-    /*0x1FA*/ u16 unk1FA;
+    /*0x1FA*/ u8 unk1FA;                      // MainLoop tests 0x1FA-0x1FB as one u16
+    /*0x1FB*/ u8 unk1FB;
     /*0x1FC*/ s16 rupees;                     // shown on screen; counts toward flags.rupees
     /*0x1FE*/ s16 rupeeDelta;                 // flags.rupees - rupees
     /*0x200*/ u8 filler200[0x206 - 0x200];
@@ -134,7 +137,7 @@ struct GameState
     /*0x233*/ u8 dungeonChests;               // flags.dungeonChests
     /*0x234*/ u8 filler234[0x236 - 0x234];
     /*0x236*/ u8 isFree;                      // flags.isFree
-    /*0x237*/ u8 filler237[0x238 - 0x237];
+    /*0x237*/ u8 unk237;
     /*0x238*/ u8 unk238;                      // flags.unkB_7
     /*0x239*/ u8 filler239[0x23B - 0x239];
     /*0x23B*/ u8 flagsReceived;
@@ -165,6 +168,8 @@ void Func_0201A570(void);
 void GamePlaySound(s16 id, u8 arg);
 void Func_0201A6D4(void);
 void Func_0201A540(void);
+bool32 StepToward(s16 *pos, s16 target, s16 speed);
+void Func_020209E0(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).

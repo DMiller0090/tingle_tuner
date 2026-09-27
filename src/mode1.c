@@ -249,7 +249,48 @@ void Mode1SendSwitch(u8 soundArg)
 */
 INCLUDE_ASM(Mode1SendSwitch);
 INCLUDE_ASM(Mode1State2);
-INCLUDE_ASM(Mode1State3);
+// Fade out: step the mosaic and brightness up every other frame while BG1 slides to
+// its target, then go to state 4.
+void Mode1State3(void)
+{
+    u16 target = gGameState.unk1CC ? -4 : 0x7C;
+
+    if (gGameState.unk1FB)
+    {
+        Func_020209E0();
+        return;
+    }
+    if (--gGameState.fadeTimer == 0)
+    {
+        gMain.mosaic += 0x1111;
+        gMain.bldy = (gMain.mosaic & 0xF) >> 1;
+        if (gMain.mosaic == 0xFFFF)
+        {
+            if (gMain.bgcnt[0] & 0x40)
+                gMain.bgcnt[0] ^= 0x40;
+            if (gMain.bgcnt[1] & 0x40)
+                gMain.bgcnt[1] ^= 0x40;
+            if (gMain.bgcnt[2] & 0x40)
+                gMain.bgcnt[2] ^= 0x40;
+            if (gMain.bgcnt[3] & 0x40)
+                gMain.bgcnt[3] ^= 0x40;
+            if (!gMain.unk457)
+                gMain.dispcnt &= ~0x0C00;  // BG2 and BG3 off
+            else
+                gMain.dispcnt &= ~0x0800;  // BG3 off
+            gGameState.unk23C = 0;
+            gGameState.unk237 = 20;
+            gMain.modeState = 4;
+        }
+        else
+        {
+            gGameState.fadeTimer = 2;
+        }
+    }
+    Func_0201A224();
+    Func_0201CFE8();
+    StepToward((s16 *)&gMain.bgOfs[1][0], target, 16);
+}
 INCLUDE_ASM(Mode1Func_020160C8);
 // Near-miss: all but the loop. The original drops the counter and ends the loop on a
 // signed compare of the object pointer against gObjs; agbcc keeps the counter (tried index,

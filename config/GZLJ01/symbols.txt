@@ -58,6 +58,9 @@ ObjReset = 0x02020570; // thumb
 // table[line] = BG0HOFS + sin(phase + 4 * line) * amplitude / 256 for the 160 lines
 BuildWaveScrollTable = 0x020208BC; // thumb
 Func_0201A540 = 0x0201A540; // thumb
+// move *pos toward target by speed; TRUE once there
+StepToward = 0x020189E0; // thumb
+Func_020209E0 = 0x020209E0; // thumb
 ObjResetActive = 0x02020644; // thumb
 Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb

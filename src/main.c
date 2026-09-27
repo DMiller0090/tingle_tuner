@@ -201,7 +201,7 @@ void MainLoop(void)
             *(u16 *)((u8 *)&gGbaComBufGbaFlg + 4) = gMain.bgOfs[3][0] + 8;
             *(u16 *)((u8 *)&gGbaComBufGbaFlg + 6) = gMain.bgOfs[3][1] + 8;
             *(u16 *)((u8 *)&gGbaComBufGbaFlg + 0) = gMain.heldKeys;
-            if (gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0
+            if (*(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0
              && gMain.modeState == 2)
                 *(u8 *)((u8 *)&gGbaComBufGbaFlg + 3) = TRUE;
             else
