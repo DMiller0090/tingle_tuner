@@ -16,7 +16,7 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
-// 8-byte entries at GameState 0x164 (indexed by effect; entry 5 is read by Func_0201F308).
+// 8-byte entries at GameState 0x164 (indexed by effect; entry 5 is read by Effect5).
 struct Unk164
 {
     /*0x0*/ u8 filler0[2];
@@ -83,7 +83,7 @@ struct Unk164
 // 0x126 u8 unk126
 // 0x128 u8 unk128
 // 0x12A u8 unk12A
-// 0x12B u8 unk12B
+// 0x12B u8 unk12B  // item effect step (Effect5, Effect8, Effect12)
 // 0x12E u8 unk12E
 // 0x12F u8 unk12F
 // 0x132 u8 unk132
@@ -113,14 +113,14 @@ struct Unk164
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
 // 0x1E1 u8 unk1E1  // chest bits that changed
-// 0x1E2 u8 unk1E2
+// 0x1E2 u8 unk1E2  // item effect step (Effect7, Effect11)
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
-// 0x1E8 u16 unk1E8
-// 0x1EA s16 unk1EA
-// 0x1EE u8 unk1EE
-// 0x1F4 u8 unk1F4
+// 0x1E8 u16 unk1E8  // select window edge x (0xF8 closed, 0xFFF8 fully across)
+// 0x1EA s16 unk1EA  // select window edge y
+// 0x1EE u8 unk1EE  // UpdateSelectWindow step (0: closed)
+// 0x1F4 u8 unk1F4  // DrawStatusIcon: which icon
 // 0x1F5 u8 unk1F5
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
@@ -235,7 +235,7 @@ struct GameState
     /*0x128*/ u8 unk128;
     /*0x129*/ u8 filler129[0x12A - 0x129];
     /*0x12A*/ u8 unk12A;
-    /*0x12B*/ u8 unk12B;
+    /*0x12B*/ u8 unk12B;                      // item effect step (Effect5, Effect8, Effect12)
     /*0x12C*/ u8 filler12C[0x12E - 0x12C];
     /*0x12E*/ u8 unk12E;
     /*0x12F*/ u8 unk12F;
@@ -285,7 +285,7 @@ struct GameState
     /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
     /*0x1E0*/ u8 unk1E0;
     /*0x1E1*/ u8 unk1E1;                      // chest bits that changed
-    /*0x1E2*/ u8 unk1E2;
+    /*0x1E2*/ u8 unk1E2;                      // item effect step (Effect7, Effect11)
     /*0x1E3*/ u8 unk1E3;                      // chests opened
     /*0x1E4*/ u8 unk1E4;
     /*0x1E5*/ u8 unk1E5_0:1;
@@ -295,12 +295,12 @@ struct GameState
               u8 unk1E5_4:1;
               u8 unk1E5_5:3;
     /*0x1E6*/ u8 filler1E6[0x1E8 - 0x1E6];
-    /*0x1E8*/ u16 unk1E8;
-    /*0x1EA*/ s16 unk1EA;
+    /*0x1E8*/ u16 unk1E8;                     // select window edge x (0xF8 closed, 0xFFF8 fully across)
+    /*0x1EA*/ s16 unk1EA;                     // select window edge y
     /*0x1EC*/ u8 filler1EC[0x1EE - 0x1EC];
-    /*0x1EE*/ u8 unk1EE;
+    /*0x1EE*/ u8 unk1EE;                      // UpdateSelectWindow step (0: closed)
     /*0x1EF*/ u8 filler1EF[0x1F4 - 0x1EF];
-    /*0x1F4*/ u8 unk1F4;
+    /*0x1F4*/ u8 unk1F4;                      // DrawStatusIcon: which icon
     /*0x1F5*/ u8 unk1F5;
     /*0x1F6*/ u8 filler1F6[0x1F8 - 0x1F6];
     /*0x1F8*/ s16 unk1F8;
@@ -378,14 +378,14 @@ void GamePlaySound(s16 id, u8 arg);
 void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
-void Func_020209E0(void);
+void UpdateSelectWindow(void);
 void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, s16 a7, s16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
 void Func_0201A69C(void);
 void Func_0201E190(void);
-void Func_02020BEC(void);
+void ResetSelectWindow(void);
 bool32 Func_0201D8AC(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
@@ -441,7 +441,7 @@ void Func_0201B0F4(void);
 void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
 void Func_0201DEAC(void);
-void Func_02020C10(void);
+void DrawStatusIcon(void);
 u8 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
@@ -509,7 +509,7 @@ void Func_0201ECC4(void);
 void UpdateItemEffect(void);
 void Func_0201F878(void);
 void Func_0201FCA0(void);
-void Func_020208FC(u8 open);
+void SelectWindowWipe(u8 open);
 void Func_0201ED08(void);
 void SendItemUse(u8 item, u8 arg);
 #define GBACOM_BUF_SHOP     ((u8 *)(PROG_BASE - 0x570))

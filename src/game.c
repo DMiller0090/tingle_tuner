@@ -232,7 +232,8 @@ INCLUDE_ASM(Func_0201F2A8);
 
 INCLUDE_ASM(Func_0201F2C4);
 
-void Func_0201F308(void)
+// Item effect 5.
+void Effect5(void)
 {
     Func_0201ED08();
     if (gGameState.unk12B == 2)
@@ -293,7 +294,7 @@ void Func_0201F420(void)
 
 // Item effect 7, the shop: gGameState.unk1E2 steps through choosing an item, sending the purchase request
 // (slot 12) and waiting for the GC's answer (slot 13).
-void EffectShop(void)
+void Effect7(void)
 {
     u16 item;
     u8 what, result;
@@ -500,7 +501,7 @@ INCLUDE_ASM(Func_0201F8C4);
 // Item effects 8-10: the title sprite drops in over the type 1 marker and sends the item use.
 // Doesn't match by one instruction: in state 2 the original stores a fresh 0 to unk120 where this
 // reuses the register holding unk132 (known to be 0):
-//     void Func_0201FA2C(void)
+//     void Effect8(void)
 //     {
 //         struct Main *main = &gMain;
 //         s32 m = FindMarker(1);
@@ -602,7 +603,7 @@ INCLUDE_ASM(Func_0201F8C4);
 //         }
 //     }
 //
-INCLUDE_ASM(Func_0201FA2C);
+INCLUDE_ASM(Effect8);
 
 void Func_0201FCA0(void)
 {
@@ -617,7 +618,7 @@ void Func_0201FCA0(void)
 }
 
 // Item effect 11.
-void Func_0201FD04(void)
+void Effect11(void)
 {
     if (gGameState.unk1E2 == 0)
     {
@@ -683,7 +684,7 @@ void Func_0201FEEC(void)
 }
 
 // Item effect 12.
-void Func_0201FF14(void)
+void Effect12(void)
 {
     struct Main *main = &gMain;
     s32 m = FindMarker(1);
@@ -786,7 +787,7 @@ void Func_02020150(void)
 
 // Item effect 14: a countdown (unk1C8) that ticks faster near the end, drawn at the type 3
 // marker; at 0 it switches to effect 2.
-void Func_02020190(void)
+void Effect14(void)
 {
     u8 mosaic = gMain.mosaic != 0;
     s32 m;
@@ -1117,7 +1118,7 @@ void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude)
     }
 }
 
-void Func_020208FC(u8 open)
+void SelectWindowWipe(u8 open)
 {
     s16 step;
 
@@ -1145,16 +1146,16 @@ void Func_020208FC(u8 open)
     gMain.dispcnt |= 0x2000;
 }
 
-void Func_020209A0(void)
+void SelectWindowDrawEdge(void)
 {
     DrawSprite(gSprite_0202BD78, 0, gGameState.unk1E8, gGameState.unk1EA, 0, 0, 0, 0, 0, 0, 0);
 }
 
 // Select (in mode 1 state 2, when nothing else is up) wipes a window across the screen
-// (Func_020208FC), flips BG0 to its other half behind it and wipes it back; Select again (or
+// (SelectWindowWipe), flips BG0 to its other half behind it and wipes it back; Select again (or
 // leaving state 2) reverses it. gGameState.unk1EE is the step.
 // Doesn't match: in states 3 and 4 the registers for three offset constants differ.
-//     void Func_020209E0(void)
+//     void UpdateSelectWindow(void)
 //     {
 //         switch (gGameState.unk1EE)
 //         {
@@ -1168,22 +1169,22 @@ void Func_020209A0(void)
 //             }
 //             break;
 //         case 1:
-//             Func_020208FC(0);
+//             SelectWindowWipe(0);
 //             if (gGameState.unk1E8 == 0xFFF8)
 //             {
 //                 gGameState.unk1EE++;
 //                 gMain.bgOfs[0][0] = 0x100;
 //             }
-//             Func_020209A0();
+//             SelectWindowDrawEdge();
 //             break;
 //         case 2:
-//             Func_020208FC(1);
+//             SelectWindowWipe(1);
 //             if (gGameState.unk1E8 == 0xF8)
 //             {
 //                 gGameState.unk1EE++;
 //                 gMain.dispcnt ^= 0x2000;
 //             }
-//             Func_020209A0();
+//             SelectWindowDrawEdge();
 //             break;
 //         case 3:
 //             if (gMain.modeState != 2 || (gMain.newKeys & 4))
@@ -1193,16 +1194,16 @@ void Func_020209A0(void)
 //             }
 //             break;
 //         case 4:
-//             Func_020208FC(0);
+//             SelectWindowWipe(0);
 //             if (gGameState.unk1E8 == 0xFFF8)
 //             {
 //                 gGameState.unk1EE++;
 //                 gMain.bgOfs[0][0] = 0;
 //             }
-//             Func_020209A0();
+//             SelectWindowDrawEdge();
 //             break;
 //         case 5:
-//             Func_020208FC(1);
+//             SelectWindowWipe(1);
 //             if (gGameState.unk1E8 == 0xF8)
 //             {
 //                 gGameState.unk1EE = 0;
@@ -1210,13 +1211,13 @@ void Func_020209A0(void)
 //                 gGameState.unk104 = 1;
 //                 gMain.dispcnt &= 0xDFFF;
 //             }
-//             Func_020209A0();
+//             SelectWindowDrawEdge();
 //             break;
 //         }
 //     }
-INCLUDE_ASM(Func_020209E0);
+INCLUDE_ASM(UpdateSelectWindow);
 
-void Func_02020BEC(void)
+void ResetSelectWindow(void)
 {
     gGameState.unk1E8 = 0xF8;
     gGameState.unk1EA = 0x50;
@@ -1225,7 +1226,7 @@ void Func_02020BEC(void)
 
 // The status icon at (232, 128) and the blinking frame around it; gGameState.unk1F4 picks the
 // icon.
-void Func_02020C10(void)
+void DrawStatusIcon(void)
 {
     u8 blink = (gMain.frameCount >> 3) % 2;
     s32 m = FindMarker(1);
