@@ -40,8 +40,18 @@ Mode1State2 = 0x020158E0; // thumb
 Mode1State3 = 0x02015F68; // thumb
 Mode1State4 = 0x0201643C; // thumb
 Mode1State5 = 0x02015744; // thumb
+Mode1Func_020150A4 = 0x020150A4; // thumb
+Mode1Func_0201521C = 0x0201521C; // thumb
+Mode1Func_02015298 = 0x02015298; // thumb
+Mode1Func_02015840 = 0x02015840; // thumb
+Mode1Func_020160C8 = 0x020160C8; // thumb
+Mode1Func_02016350 = 0x02016350; // thumb
+Mode1Func_02016684 = 0x02016684; // thumb
 // VBlankIntr calls it in mode 1 unless gMain.unk457 is set
 Mode1VBlank = 0x0201ABDC; // thumb
+
+// ---- game code 02018884-02020E28 (not split yet) ----
+Func_0201A570 = 0x0201A570; // thumb
 
 // ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
 GbaComInit = 0x02017190; // thumb
@@ -91,6 +101,8 @@ SoundVSync = 0x02021480; // thumb
 SoundVSyncProc = 0x0202148C; // thumb
 SoundDmaStop = 0x020215D0; // thumb
 SoundDriverInit = 0x020213C0; // thumb
+// play sound `id` (index into gSoundBankHeader+0x1C) unless a higher-priority one is playing
+SoundPlay = 0x02021070; // thumb
 // ARM, copied to IWRAM by SoundDriverInit and called through pointers
 PcmClipS16ToS8 = 0x020237CC; // arm
 PcmMixChannel = 0x020238EC; // arm
@@ -138,13 +150,25 @@ rand = 0x02023DC4; // thumb
 gIntrTableInit = 0x02023DEC; // data
 gOamHiddenEntry = 0x02023E24; // data
 gMainModeFuncs = 0x02023E2C; // data
+gMode1Unused_02023E38 = 0x02023E38; // data
+gDungeonSounds = 0x02023E44; // data
 gMode1StateFuncs = 0x02023E68; // data
+gMode1Unk_02023E80 = 0x02023E80; // data
+gMode1Unk_02023E86 = 0x02023E86; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
 gMode0Unk_02023EE4 = 0x02023EE4; // data
 gMode0StateFuncs = 0x02023EEC; // data
 // sin(i * 2pi / 256) in 8.8 fixed point; 320 entries so cos(i) = gSinTable[i + 64]
 gSinTable = 0x02023EFC; // data
+// graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
+gMode1BgTiles = 0x02024568; // data
+gMode1BgPalette = 0x02026650; // data
+gMode1BgMap = 0x02026850; // data
+gMode1SeaMap = 0x020270B8; // data
+gMode2BgMap = 0x02029498; // data
+gMode1ObjTiles = 0x020295EC; // data
+gMode1ObjPalette = 0x0202BB78; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

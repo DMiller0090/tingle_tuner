@@ -16,8 +16,8 @@ struct GameState
     /*0x1CC*/ u8 unk1CC;
     /*0x1CD*/ u8 filler1CD[0x1FA - 0x1CD];
     /*0x1FA*/ u16 unk1FA;
-    /*0x1FC*/ u16 unk1FC;
-    /*0x1FE*/ u16 unk1FE;                 // flags.rupees - unk1FC
+    /*0x1FC*/ s16 rupees;                 // shown on screen; counts toward flags.rupees
+    /*0x1FE*/ s16 rupeeDelta;             // flags.rupees - rupees
     /*0x200*/ u8 filler200[0x210 - 0x200];
     /*0x210*/ u16 timer;                  // flags.timer
     /*0x212*/ u8 filler212[0x224 - 0x212];
@@ -43,6 +43,16 @@ extern struct GameState gGameState;
 // (gGameState.scrollTable picks one).
 extern u16 gBgScrollTables[][160];
 
+// Graphics in .rodata (LZ77-compressed except the palettes).
+extern const u8 gMode1BgTiles[];
+extern const u16 gMode1BgPalette[0x100];
+extern const u8 gMode1BgMap[];
+extern const u8 gMode1SeaMap[];
+extern const u8 gMode2BgMap[];
+extern const u8 gMode1ObjTiles[];
+extern const u16 gMode1ObjPalette[0x100];
+
 void Mode1VBlank(void);
+void Func_0201A570(void);
 
 #endif // GUARD_GAME_H

@@ -226,7 +226,7 @@ void MainLoop(void)
             }
         }
         gMain.inDungeon = gGameState.flags.dungeonNo != 0;
-        gGameState.unk1FE = gGameState.flags.rupees - gGameState.unk1FC;
+        gGameState.rupeeDelta = gGameState.flags.rupees - gGameState.rupees;
         if (gGameState.flags.menuOpen || gGameState.flags.eventRunning)
             gGameState.unk104 = 0;
         ReadKeys();

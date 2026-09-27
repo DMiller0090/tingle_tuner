@@ -11,6 +11,8 @@
 
 void CpuSet(const void *src, void *dest, u32 control);
 void CpuFastSet(const void *src, void *dest, u32 control);
+void LZ77UnCompVram(const void *src, void *dest);
+void LZ77UnCompWram(const void *src, void *dest);
 
 #define CpuCopy16(src, dest, size) CpuSet(src, dest, CPU_SET_16BIT | (((size) / 2) & 0x1FFFFF))
 #define CpuCopy32(src, dest, size) CpuSet(src, dest, CPU_SET_32BIT | (((size) / 4) & 0x1FFFFF))
