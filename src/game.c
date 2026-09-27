@@ -561,6 +561,389 @@ end:
     return 0;
 }
 
+// Per frame in mode 1: slide the message box (msgBoxPos) and step the message (MsgStep, fast
+// while A is held), then run Tingle's animation (switch on gGameState.unk226; unk227 picks the
+// sprite list, unk228 the frame, unk202 counts the frame's duration, unk206 the scale) and
+// draw him, and the sprite at (0xC8, 0x58) while flags.unkB_1 is set.
+// Not matched yet. The draft below has the right structure and case order (the jump table
+// order is 14,1,2,3+6,4,5,7,8,9,10,11,12,13,16,18+17,20+19,0; 15 returns); what's left is
+// register allocation (base r6 / frame r7 / gMain r8) and the per-case frame = unk228 reads:
+// the original reloads gGameState from the pool for each of them (the volatile read is a hack
+// that gets close), so its tails don't cross-jump the way this draft's do.
+/*
+void Func_0201CFE8(void)
+{
+    s32 target;
+    u32 mosaic;
+    u8 frame;
+    s32 x;
+    s32 a10;
+    const u8 *sprite;
+    u8 r;
+    u8 anim;
+
+    if (gGameState.unk13C)
+        target = 10;
+    else
+        target = 0;
+    mosaic = (gMain.bgcnt[0] >> 6) & 1;
+    frame = 0;
+    a10 = 0;
+    if (gGameState.msgBoxPos != target)
+    {
+        Func_02018988(&gGameState.msgBoxPos, target, 2);
+        if (gGameState.unk13C)
+        {
+            Func_0201BA2C(gGameState.msgBoxPos);
+            gGameState.unk14B = 1;
+        }
+        else
+        {
+            Func_0201BA9C(gGameState.msgBoxPos);
+            if (gGameState.msgBoxPos == 0)
+            {
+                if (gGameState.unk21C)
+                {
+                    gGameState.unk0E5 = 0;
+                    gGameState.unk21C = 0;
+                }
+                gGameState.unk1FA = 0;
+                gGameState.unk226 = 0;
+                gGameState.unk227 = 0;
+                gGameState.unk228 = 0;
+                if (gGameState.flags.unkA_3 && gMain.modeState == 2)
+                    Mode1StartFadeOut();
+                gGameState.unk142 = 0xFFFF;
+                gGameState.unk104 = 1;
+            }
+        }
+        Func_0201BEA0(gGameState.msgBoxPos);
+    }
+    else if (gGameState.unk13C && gGameState.unk142 >= 0)
+    {
+        do
+        {
+            r = MsgStep();
+            if (gGameState.unk12B == 1 || r != 0)
+                break;
+        } while ((gMain.newKeys & 1) || gGameState.unk158);
+        gGameState.unk14B = r;
+        Func_0201BEA0(gGameState.msgBoxPos);
+    }
+    else if (gGameState.unk1FA)
+    {
+        gGameState.unk1FA = 0;
+    }
+    if (gGameState.unk1FA || gGameState.unk1CC || gGameState.unk224
+     || (!gGameState.flags.busy && gGameState.unk104))
+    {
+        gGameState.unk22B = 1;
+        anim = gGameState.unk226;
+        sprite = gTingleAnims[anim][gGameState.unk227];
+        x = 0xB8;
+        switch (anim)
+        {
+        case 14:
+            x = 0x98;
+            a10 = 2;
+        case 1:
+            gGameState.unk206 = 0;
+            if (gGameState.unk14B)
+                goto talk;
+            if (gGameState.unk202 == 0)
+            {
+                if (++gGameState.unk228 > 8)
+                    gGameState.unk228 = 0;
+                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 2:
+            if (gGameState.unk227 && gGameState.unk14B)
+                goto talk;
+            if (gGameState.unk202 == 0)
+            {
+                gGameState.unk228++;
+                if (gGameState.unk227)
+                {
+                    if (gGameState.unk228 > 8)
+                        gGameState.unk228 = 0;
+                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                }
+                else
+                {
+                    gGameState.unk228 = 0;
+                    if (gGameState.unk22A == 0)
+                    {
+                        if (gGameState.unk206 != 0xA0)
+                        {
+                            gGameState.unk206 -= 0x20;
+                        }
+                        else
+                        {
+                            gGameState.unk202 = 10;
+                            gGameState.unk22A = 1;
+                        }
+                    }
+                    else if (gGameState.unk206 != 0x100)
+                    {
+                        gGameState.unk206 += 0x10;
+                    }
+                    else
+                    {
+                        gGameState.unk227++;
+                        sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                        gGameState.unk202 = sprite[4];
+                    }
+                }
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 3:
+            if (gGameState.unk204 == 0)
+            {
+                if (gGameState.unk22A == 0)
+                {
+                    if (gGameState.unk206 != 0xA0)
+                        gGameState.unk206 -= 8;
+                    else
+                        gGameState.unk22A = 1;
+                }
+                else if (gGameState.unk206 != 0x100)
+                {
+                    gGameState.unk206 += 8;
+                }
+                else
+                {
+                    gGameState.unk204 = 10;
+                    gGameState.unk22A = 0;
+                }
+            }
+            else
+            {
+                gGameState.unk204--;
+            }
+        case 6:
+            if (gGameState.unk14B)
+                goto talk;
+            if (gGameState.unk202 == 0)
+            {
+                if (++gGameState.unk228 > 8)
+                    gGameState.unk228 = 0;
+                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 4:
+            gGameState.unk206 = 0;
+            if (gGameState.unk227 && gGameState.unk14B)
+                goto talk;
+            if (gGameState.unk202 == 0)
+            {
+                gGameState.unk228++;
+                if (gGameState.unk227)
+                {
+                    if (gGameState.unk228 > 8)
+                        gGameState.unk228 = 0;
+                }
+                else if (gGameState.unk228 > 0x1D)
+                {
+                    gGameState.unk228 = 0;
+                    gGameState.unk227++;
+                    sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                }
+                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 5:
+            gGameState.unk206 = 0;
+            if (gGameState.unk202 == 0)
+            {
+                if (++gGameState.unk228 > 0x1D)
+                {
+                    if (gGameState.unk1C8)
+                    {
+                        gGameState.unk228 = 0;
+                        gGameState.unk202 = sprite[4];
+                    }
+                    else
+                    {
+                        gGameState.unk228 = 0;
+                        gGameState.unk226 = 0;
+                        gGameState.unk227 = 0;
+                        sprite = gTingleAnims[0][0];
+                    }
+                }
+                else
+                {
+                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                }
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 7:
+            gGameState.unk206 = 0;
+            if (gGameState.unk202 == 0)
+            {
+                gGameState.unk228 = (gGameState.unk228 + 1) & 7;
+                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 8:
+            gGameState.unk206 = 0;
+            if (gGameState.unk202 == 0)
+            {
+                gGameState.unk228 = (gGameState.unk228 + 1) & 15;
+                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 9:
+            gGameState.unk206 = 0;
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 10:
+            if (gGameState.unk202 == 0)
+            {
+                gGameState.unk228++;
+                if (gGameState.unk227)
+                {
+                    if (gGameState.unk206 > 0x2FF)
+                        gGameState.unk206 = 0x300;
+                    else
+                        gGameState.unk206 += 0x10;
+                }
+                else
+                {
+                    if (gGameState.unk228 > 6)
+                    {
+                        gGameState.unk228 = 0;
+                        gGameState.unk206 = 0x100;
+                        gGameState.unk227++;
+                        sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                    }
+                    else
+                    {
+                        gGameState.unk206 = 0;
+                    }
+                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                }
+            }
+            else
+            {
+                gGameState.unk202--;
+            }
+            break;
+        case 11:
+            gGameState.unk206 = 0;
+            if (gGameState.unk22C)
+            {
+                gGameState.unk208 += 4;
+                if (gGameState.unk208 > 0xFF)
+                    gGameState.unk22C = 0;
+            }
+            else
+            {
+                gGameState.unk208 -= 4;
+                if (gGameState.unk208 <= 0xC0)
+                    gGameState.unk22C = 1;
+            }
+            DrawSprite(sprite, 0, 0xCC, 0xE, 0, mosaic, gGameState.unk208, 0, 0, 0, 0);
+            frame = 1;
+        talk:
+            sprite = gSprite_0202C740;
+            break;
+        case 12:
+            gGameState.unk206 = 0;
+            frame = 1;
+            break;
+        case 13:
+            gGameState.unk206 = 0;
+            frame = 0;
+            break;
+        case 16:
+            sprite = gSprite_0202C650;
+            frame = 4;
+            break;
+        case 18:
+            x = 0xA8;
+        case 17:
+            sprite = gSprite_0202C650;
+            frame = 1;
+            break;
+        case 20:
+            x = 0xC8;
+        case 19:
+            sprite = gSprite_0202C650;
+            frame = 7;
+            break;
+        case 0:
+            if (!mosaic && gGameState.unk206 != 0 && gGameState.unk206 != 0x100)
+            {
+                if (gGameState.unk206 > 0x100)
+                    gGameState.unk206 -= 8;
+                else
+                    gGameState.unk206 += 8;
+                if (gGameState.unk206 == 0x100)
+                    gGameState.unk206 = 0;
+            }
+            frame = *(vu8 *)&gGameState.unk228;
+            break;
+        case 15:
+            return;
+        }
+        DrawSprite(sprite, frame, x, 0x18, gGameState.unk229, 0, gGameState.unk206, 0, 0x10, 0, a10);
+    }
+    else
+    {
+        gGameState.unk22B = 0;
+    }
+    if (gGameState.flags.unkB_1 && gGameState.msgBoxPos == 0)
+    {
+        if (gGameState.unk0FF == 0)
+        {
+            gGameState.unk100 = (gGameState.unk100 + 1) & 3;
+            gGameState.unk0FF = gSprite_0202C400[gGameState.unk100 * 8 + 4];
+        }
+        else
+        {
+            gGameState.unk0FF--;
+        }
+        DrawSprite(gSprite_0202C400, gGameState.unk100, 0xC8, 0x58, gGameState.flags.unk2 + 0x80, 0,
+                   0x100, 0, 0, 0, 0);
+    }
+}
+*/
 INCLUDE_ASM(Func_0201CFE8);
 
 bool32 MsgReset(void)
