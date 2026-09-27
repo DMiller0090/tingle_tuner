@@ -268,6 +268,103 @@ bool32 SendItemUse(u8 item, u8 arg)
     return FALSE;
 }
 
+// Use the item in menu entry `item` (16: from the other button?). Returns FALSE if it can't be
+// used right now.
+// Nearly matches: the register allocation (item in r4, the entry in r5 and &items in r6)
+// only comes out right when the marker test is written relative to gGameState.items, e.g.
+// `((u8 *)gGameState.items)[FindMarker(1) * 8 - 0xF6]`, and even then items - 0xF6 is
+// computed before adding the index instead of after (`adds r0, r6, r0; subs r0, #0xf6`).
+//     bool32 Func_0201E384(u8 item)
+//     {
+//         struct ShopItem *entry = &gGameState.items[item];
+//         u8 price;
+//
+//         if (item == 0)
+//             return FALSE;
+//         if (!gMain.linked)
+//             return TRUE;
+//         if (gGameState.markers[FindMarker(1)].unk6 != 0
+//          && ((item >= 3 && item <= 5) || item == 8 || item == 9 || item == 10 || item == 16))
+//         {
+//             if (item == 16)
+//                 GamePlaySound(0x1F, 1);
+//             else
+//                 GamePlaySound(0xE, 1);
+//             return FALSE;
+//         }
+//         if (item == 6)
+//         {
+//             GamePlaySound(0xD, 1);
+//         }
+//         else if (item == 11)
+//         {
+//             gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0x88;
+//             Func_0201DCEC(gGameState.unk1DE);
+//             Func_0201FCA0();
+//         }
+//         else if (item == 1)
+//         {
+//             if (gMain.unk457 == 0)
+//             {
+//                 if (Func_0201A8AC(1) <= 24)
+//                 {
+//                     GamePlaySound(0xC, 1);
+//                 }
+//                 else if (gGameState.unk058 == 0)
+//                 {
+//                     u8 i = FindMarker(3);
+//
+//                     gGameState.unk058 = 3;
+//                     gGameState.unk054 = gGameState.markers[i].x;
+//                     gGameState.unk056 = gGameState.markers[i].y;
+//                     SoundPlay(0xB - SOUND_ID_SHIFT, 0);
+//                 }
+//                 else
+//                 {
+//                     GamePlaySound(0x1A6, 1);
+//                 }
+//             }
+//             else
+//             {
+//                 GamePlaySound(0xE, 1);
+//             }
+//         }
+//         else if (item >= 3 && item <= 4)
+//         {
+//             if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
+//                 goto no_money;
+//             SendItemUse(item == 3 ? 0x11 : 0x12, 0);
+//         }
+//         else if (item >= 8 && item <= 10)
+//         {
+//             if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
+//             {
+//                 GamePlaySound(0xF, 1);
+//                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+//             }
+//             else
+//             {
+//                 gGameState.effect[0] = item;
+//                 Func_0201F878();
+//             }
+//         }
+//         else
+//         {
+//             if (item == 5 && gGameState.rupees - gGameState.rupeeDelta < entry->price)
+//             {
+//             no_money:
+//                 GamePlaySound(0xF, 1);
+//                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+//                 return FALSE;
+//             }
+//             if (item == 16 || item == 5)
+//                 price = 0;
+//             else
+//                 price = entry->price;
+//             SendItemUse(item, price);
+//         }
+//         return TRUE;
+//     }
 INCLUDE_ASM(Func_0201E384);
 
 void Func_0201E584(void)

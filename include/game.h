@@ -400,7 +400,7 @@ void Func_0201A224(void);
 void Func_0201CFE8(void);
 void Func_0201B7D4(void);
 void Func_0201DA50(void);
-void Func_0201E384(u8 arg);
+bool32 Func_0201E384(u8 item);
 void Func_0201B0F4(void);
 void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
@@ -458,6 +458,9 @@ void Func_0201ECC4(void);
 void Func_0201ED08(void);
 void Func_0201F2A8(void);
 void Func_0201DCEC(u8 arg);
+u32 Func_0201A8AC(u8 arg);
+void Func_0201FCA0(void);
+void Func_0201F878(void);
 void Func_020205F8(u8 arg);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void Func_020190A8(const u8 *sprite, s16 x, s16 y, u8 a3, u8 a4);
