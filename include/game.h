@@ -85,8 +85,10 @@ struct MapMarker
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
 // 0x14D u8 unk14D
+// 0x14E u8 unk14E
 // 0x14F u8 unk14F
 // 0x150 u8 unk150
+// 0x151 u8 unk151
 // 0x152 u8 unk152
 // 0x153 u8 unk153
 // 0x156 u8 unk156
@@ -242,10 +244,10 @@ struct GameState
     /*0x14B*/ u8 unk14B;
     /*0x14C*/ u8 filler14C[0x14D - 0x14C];
     /*0x14D*/ u8 unk14D;
-    /*0x14E*/ u8 filler14E[0x14F - 0x14E];
+    /*0x14E*/ u8 unk14E;
     /*0x14F*/ u8 unk14F;
     /*0x150*/ u8 unk150;
-    /*0x151*/ u8 filler151[0x152 - 0x151];
+    /*0x151*/ u8 unk151;
     /*0x152*/ u8 unk152;
     /*0x153*/ u8 unk153;
     /*0x154*/ u8 filler154[0x156 - 0x154];
@@ -444,7 +446,7 @@ bool32 Func_0201C60C(void);
 void Func_0201BAF8(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst);
 void Func_0201BC0C(s32 count, const u8 *src);
 void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch);
-void Func_0201C164(void);
+void DrawChoiceCursor(void);
 // EWRAM below the program, after the link buffers: a 16x8 glyph scaled up by Func_0201BC0C.
 #define TEXT_GLYPH_BUF ((u16 *)(PROG_BASE - 0x540))
 // A 4bpp pixel pair doubled horizontally: 0xAB -> 0xAABB.
@@ -457,11 +459,37 @@ extern const s16 gSounds_02024278[];
 void Func_0201B2C0(void);
 void Mode1SendSwitch(u8 soundArg);
 void DrawQuestMarkers(void);
+// One OAM entry as bitfields (gOamBuffer holds 128 of them).
+struct OamData
+{
+    /*0x0*/ u16 y:8;
+            u16 affine:1;
+            u16 doubleSize:1;
+            u16 objMode:2;
+            u16 mosaic:1;
+            u16 bpp:1;
+            u16 shape:2;
+    /*0x2*/ u16 x:9;
+            u16 matrixNum:3;
+            u16 hFlip:1;
+            u16 vFlip:1;
+            u16 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 affineParam;
+};
 extern const u8 gPearlMarkerPos[6];
 extern const u8 gTriangleIslandPos[6];
 extern const u8 gTempleMarkerPos[4];
 extern const u8 gSprite_0202C200[];
 extern const u16 gTable_02024274[2];
+u8 ChoiceMenuUpdate(void);
+// Per question (unk142): the ids, then the sound per choice (0xFFFF: none).
+extern const u16 gTwoChoiceIds[];
+extern const u16 gTwoChoiceSounds[];  // [id index * 2 + choice]
+extern const u16 gThreeChoiceIds[];
+extern const u16 gThreeChoiceSounds[];  // [id index * 3 + choice]
 void Func_0201A944(void);
 void Func_0201ACD0(void);
 void Func_0201AD24(void);

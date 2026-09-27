@@ -137,8 +137,10 @@ Func_0201BCC0 = 0x0201BCC0; // thumb
 Func_0201BDE4 = 0x0201BDE4; // thumb
 Func_0201BEA0 = 0x0201BEA0; // thumb
 Func_0201C0E8 = 0x0201C0E8; // thumb
-Func_0201C164 = 0x0201C164; // thumb
-Func_0201C204 = 0x0201C204; // thumb
+// the choice menu's animated cursor (gSprite_0202C130), at y = unk14F * 12 + unk150 + 52
+DrawChoiceCursor = 0x0201C164; // thumb
+// Up/Down/A in the choice menu; returns 1 while waiting, 0 after a pick, 3 when the pick is 0xFFFF
+ChoiceMenuUpdate = 0x0201C204; // thumb
 Func_0201C60C = 0x0201C60C; // thumb
 Func_0201C660 = 0x0201C660; // thumb
 Func_0201C704 = 0x0201C704; // thumb
@@ -326,9 +328,13 @@ gTable_02024274 = 0x02024274; // data
 gSounds_02024278 = 0x02024278; // data
 // u32 per text colour, ANDed with the glyph's 4bpp rows
 gTextColorMasks = 0x0202429C; // data
+// graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
+gTwoChoiceIds = 0x020242B8; // data
+gTwoChoiceSounds = 0x020242C2; // data
+gThreeChoiceIds = 0x020242D6; // data
+gThreeChoiceSounds = 0x020242E4; // data
 gSoundIds_0202430E = 0x0202430E; // data
 gTable_02024424 = 0x02024424; // data
-// graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data
 gMode1BgMap = 0x02026850; // data

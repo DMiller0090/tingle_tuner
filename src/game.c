@@ -517,6 +517,36 @@ void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 
+// Add the text box frame's sprites to gOamBuffer: the corners (tiles 0x24, 0x26) and 12
+// edge pieces (0x25), each once at y = row * 8 + 48 (a line higher while the screen shakes)
+// and once flipped at y = 40, all in palette 8.
+// Near-miss: identical but for one instruction, the edge loop's x (0x88) is set up after the
+// hoisted constants 0x25 and ~0xC instead of before them.
+/*
+#define TEXT_BOX_PIECE(p, Y, X, TILE, VFLIP)     p->y = Y;                                    p->mosaic = 0;                               p->x = X;                                    VFLIP                                        p->size = 0;                                 p->tileNum = TILE;                           p->priority = 0;                             p->paletteNum = 8;                           p++;                                         gMain.unk450++;
+
+void Func_0201BEA0(s8 row)
+{
+    struct OamData *p = (struct OamData *)&gOamBuffer[gMain.unk450];
+    s32 y;
+    s32 shake;
+    s32 t;
+    s32 i;
+
+    t = row * 8;
+    shake = (gGameState.shake >> 1) & 1;
+    y = t + 48;
+    TEXT_BOX_PIECE(p, y - shake, 0x80, 0x24, )
+    TEXT_BOX_PIECE(p, 40, 0x80, 0x24, p->vFlip = 1;)
+    TEXT_BOX_PIECE(p, y - shake, 0xE8, 0x26, )
+    TEXT_BOX_PIECE(p, 40, 0xE8, 0x26, p->vFlip = 1;)
+    for (i = 0; i < 12; i++)
+    {
+        TEXT_BOX_PIECE(p, y - shake, i * 8 + 0x88, 0x25, )
+        TEXT_BOX_PIECE(p, 40, i * 8 + 0x88, 0x25, p->vFlip = 1;)
+    }
+}
+*/
 INCLUDE_ASM(Func_0201BEA0);
 
 void Func_0201C0E8(u8 playSound)
@@ -543,7 +573,7 @@ void Func_0201C0E8(u8 playSound)
     }
 }
 
-void Func_0201C164(void)
+void DrawChoiceCursor(void)
 {
     u32 mosaic;
     const u8 *sprite;
@@ -563,7 +593,84 @@ void Func_0201C164(void)
     DrawSprite(sprite, gGameState.unk153, 0x8C, y, 0, mosaic, 0, 0, 0, 0, 0);
 }
 
-INCLUDE_ASM(Func_0201C204);
+// The choice menu after a question (unk14F: cursor; two choices when unk151 is 1, else
+// three). Up/Down move the cursor, A picks: the sound for (unk142, choice) from the tables
+// is played, or 0xFFFF closes the menu. Returns 1 while waiting, 0 after a pick, 3 for 0xFFFF.
+u8 ChoiceMenuUpdate(void)
+{
+    s32 i;
+
+    if (gGameState.unk151 == 1)
+    {
+        if (gMain.newKeys & 0xC0)
+        {
+            gGameState.unk14F ^= 1;
+            SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
+            gGameState.unk153 = 0;
+            gGameState.unk152 = gSprite_0202C130[4];
+        }
+    }
+    else if (gMain.newKeys & 0xC0)
+    {
+        SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
+        if (gMain.newKeys & 0x80)
+        {
+            if (++gGameState.unk14F > 2)
+                gGameState.unk14F = 0;
+        }
+        else
+        {
+            if (--gGameState.unk14F > 2)
+                gGameState.unk14F = 2;
+        }
+        gGameState.unk153 = 0;
+        gGameState.unk152 = gSprite_0202C130[4];
+    }
+    DrawChoiceCursor();
+    if (gMain.newKeys & 1)
+    {
+        i = 0;
+        if (gGameState.unk151 == 1)
+        {
+            while (gTwoChoiceIds[i] != gGameState.unk142)
+                i++;
+            if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0xFFFF)
+            {
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+                gGameState.unk13E = 300;
+                return 3;
+            }
+            if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0x1A7)
+                gGameState.unk11E = 1;
+            GamePlaySound(gTwoChoiceSounds[i * 2 + gGameState.unk14F], gGameState.unk226);
+        }
+        else
+        {
+            while (gThreeChoiceIds[i] != gGameState.unk142)
+                i++;
+            if (gThreeChoiceSounds[i * 3 + gGameState.unk14F] == 0xFFFF)
+            {
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+                return 3;
+            }
+            GamePlaySound(gThreeChoiceSounds[i * 3 + gGameState.unk14F], gGameState.unk226);
+        }
+        gGameState.unk151 = 0;
+        gGameState.unk150 = 0;
+        gGameState.unk14F = 0xFF;
+        gGameState.unk14E = 0;
+        gMain.newKeys ^= 1;
+        SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        return 0;
+    }
+    return 1;
+}
 
 void Func_0201C484(u8 id)
 {
