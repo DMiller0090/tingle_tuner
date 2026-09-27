@@ -12,3 +12,4 @@ src/mode0.c 0x0201E948 0x0201EE3C
 src/mode0.c .rodata 0x0202AD74 0x0202AD98
 src/mode1.c 0x0201B854 0x0201D980
 src/mode1.c .rodata 0x0202ACC8 0x0202AD20
+src/game.c 0x0201F068 0x02027CB8
