@@ -194,11 +194,11 @@ INCLUDE_ASM(Func_0201DDA0);
 
 #ifdef VERSION_GZLE01_ud
 // This version adds a sound test (L toggles it; see docs/layout.md).
-INCLUDE_ASM(Func_0201DEAC);
+INCLUDE_ASM(ItemMenuUpdate);
 #else
 // Item menu: move the cursor over the 5 x 3 slots with the d-pad (with key repeat); B picks
 // the item under it, and the cursor sprite slides there.
-void Func_0201DEAC(void)
+void ItemMenuUpdate(void)
 {
     s32 col = (u8)(gGameState.menuCursor % 5);
     s32 row = (u8)(gGameState.menuCursor / 5);
@@ -308,7 +308,7 @@ void Func_0201DEAC(void)
 
 // Set up the item menu: reset the item table, adjust prices and the dungeon item, and draw
 // the ten slots.
-bool32 Func_0201E190(void)
+bool32 ItemMenuInit(void)
 {
     s32 i;
 
@@ -361,15 +361,40 @@ bool32 Func_0201E190(void)
     if (gGameState.unk1DE == 0)
         gGameState.unk1DE = 2;
     Func_0201DCEC(gGameState.unk1DE);
-    Func_0201E5E0();
-    Func_0201E2FC();
+    UpdateHudPanels();
+    DrawChestRow();
     gGameState.unk1CC = 0;
     gGameState.menuCursor = 0;
     gGameState.unk1E5_0 = 0;
     return TRUE;
 }
 
-INCLUDE_ASM(Func_0201E2FC);
+// Draw the dungeon chest row of the item menu (a 2x2 tile icon per flags.dungeonChests bit).
+// Nearly matches, but the original copies the running tile value to r0 before each store
+// (`adds r0, r1, #0; strh r0, ...`) and loads it in both arms of the if (`b` over the pool),
+// which neither u16, u32 nor s32 `tile` reproduces:
+//     void DrawChestRow(void)
+//     {
+//         u16 *top = (u16 *)0x06007306;
+//         s32 i;
+//         u16 *bottom = (u16 *)0x06007346;
+//         u32 tile;
+//
+//         for (i = 0; i <= 4; i++)
+//         {
+//             if ((gGameState.flags.dungeonChests >> i) & 1)
+//                 tile = 0xB0C6;
+//             else
+//                 tile = 0xC0C2;
+//             top[0] = tile;
+//             top[1] = tile + 1;
+//             bottom[0] = tile + 0x10;
+//             bottom[1] = tile + 0x11;
+//             bottom += 2;
+//             top += 2;
+//         }
+//     }
+INCLUDE_ASM(DrawChestRow);
 
 bool32 SendItemUse(u8 item, u8 arg)
 {
@@ -386,7 +411,7 @@ bool32 SendItemUse(u8 item, u8 arg)
 // only comes out right when the marker test is written relative to gGameState.items, e.g.
 // `((u8 *)gGameState.items)[FindMarker(1) * 8 - 0xF6]`, and even then items - 0xF6 is
 // computed before adding the index instead of after (`adds r0, r6, r0; subs r0, #0xf6`).
-//     bool32 Func_0201E384(u8 item)
+//     bool32 UseItem(u8 item)
 //     {
 //         struct ShopItem *entry = &gGameState.items[item];
 //         u8 price;
@@ -477,7 +502,7 @@ bool32 SendItemUse(u8 item, u8 arg)
 //         }
 //         return TRUE;
 //     }
-INCLUDE_ASM(Func_0201E384);
+INCLUDE_ASM(UseItem);
 
 void Func_0201E584(void)
 {
@@ -512,7 +537,7 @@ void Func_0201E584(void)
 // fails), and in cases 0 and 1 the original keeps the digit doubled ((u8)x * 2, in r3, the
 // same register as the tile in cases 2 and 3); writing it that way shifts the register
 // allocation of the whole function.
-//     void Func_0201E5E0(void)
+//     void UpdateHudPanels(void)
 //     {
 //         u16 *map;
 //         u16 tile;
@@ -712,7 +737,7 @@ void Func_0201E584(void)
 //             }
 //         }
 //     }
-INCLUDE_ASM(Func_0201E5E0);
+INCLUDE_ASM(UpdateHudPanels);
 
 void Func_0201EBAC(void)
 {
@@ -852,7 +877,7 @@ void Func_0201EDC4(void)
 INCLUDE_ASM(Func_0201EDF8);
 
 // Draw the flags.timer count (two digits) at x, y; a sound plays when it changes.
-void Func_0201EF98(s16 x, s16 y)
+void DrawTimerCount(s16 x, s16 y)
 {
     u32 mosaic = gMain.mosaic != 0;
     u8 digit;
@@ -934,7 +959,7 @@ void Func_0201F068(void)
                 x = gGameState.markers[i].x - main->bgOfs[3][0] + 4;
                 y = gGameState.markers[i].y - main->bgOfs[3][1] - 16;
             }
-            Func_0201EF98(x, y);
+            DrawTimerCount(x, y);
         }
     }
     else if (gGameState.unk12B == 7)

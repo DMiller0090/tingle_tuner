@@ -16,7 +16,7 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
-// One entry of the item menu (12 of them, copied from gShopItemsInit by Func_0201E190).
+// One entry of the item menu (12 of them, copied from gShopItemsInit by ItemMenuInit).
 struct ShopItem
 {
     /*0x0*/ u16 tile;        // BG map entry of the icon (palette in the top 4 bits)
@@ -363,13 +363,13 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-// Callers see s16 x and y (Func_0201EF98 sign-extends them).
+// Callers see s16 x and y (DrawTimerCount sign-extends them).
 void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
 void Func_0201A69C(void);
-bool32 Func_0201E190(void);
+bool32 ItemMenuInit(void);
 void Func_02020BEC(void);
 bool32 Func_0201D8AC(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
@@ -413,17 +413,17 @@ void Func_0201A224(void);
 void Func_0201CFE8(void);
 void Func_0201B7D4(void);
 void Func_0201DA50(void);
-bool32 Func_0201E384(u8 item);
+bool32 UseItem(u8 item);
 void Func_0201B0F4(void);
 void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
-void Func_0201DEAC(void);
+void ItemMenuUpdate(void);
 void Func_02020C10(void);
 u8 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
 void Func_0201DD20(u8 a, u8 b);
-void Func_0201E5E0(void);
+void UpdateHudPanels(void);
 void Func_0201EBAC(void);
 void Func_0201EBD4(void);
 void Func_0201EDC4(void);
@@ -464,13 +464,13 @@ extern const struct SpriteAnimFrame gSprite_0202C950[];
 extern const u8 gSprite_0202CC60[];
 
 bool32 SendItemUse(u8 item, u8 arg);
-void Func_0201E2FC(void);
+void DrawChestRow(void);
 void Func_0201E584(void);
 void Func_0201EC10(void);
 void Func_0201ECC4(void);
 void Func_0201ED08(void);
 void Func_0201EDF8(s16 x, s16 y, u8 kind);
-void Func_0201EF98(s16 x, s16 y);
+void DrawTimerCount(s16 x, s16 y);
 void Func_0201F2A8(void);
 void Func_0201DCEC(u8 arg);
 // The definition takes a u16; callers see s16 (they sign-extend).

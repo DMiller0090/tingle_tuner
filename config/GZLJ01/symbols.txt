@@ -73,7 +73,8 @@ DrawSprite = 0x02018AB8; // thumb
 // shorter DrawSprite: (sprite data, frame, x, y, 3 more bytes)
 DrawSpriteAt = 0x02018F0C; // thumb
 Func_0201A69C = 0x0201A69C; // thumb
-Func_0201E190 = 0x0201E190; // thumb
+// item menu: reset gGameState.items from gShopItemsInit and draw the slots
+ItemMenuInit = 0x0201E190; // thumb
 Func_02020BEC = 0x02020BEC; // thumb
 Func_0201D8AC = 0x0201D8AC; // thumb
 ObjResetActive = 0x02020644; // thumb
@@ -82,16 +83,19 @@ Func_0201A224 = 0x0201A224; // thumb
 Func_0201CFE8 = 0x0201CFE8; // thumb
 Func_0201B7D4 = 0x0201B7D4; // thumb
 Func_0201DA50 = 0x0201DA50; // thumb
-Func_0201E384 = 0x0201E384; // thumb
+// use item menu entry n (sends slot 6 via SendItemUse, checks rupees)
+UseItem = 0x0201E384; // thumb
 Func_0201B0F4 = 0x0201B0F4; // thumb
 Func_0201B8C8 = 0x0201B8C8; // thumb
-Func_0201DEAC = 0x0201DEAC; // thumb
+// item menu cursor (d-pad with key repeat, B picks); GZLE01_ud adds a sound test
+ItemMenuUpdate = 0x0201DEAC; // thumb
 Func_02020C10 = 0x02020C10; // thumb
 Func_0201B3A4 = 0x0201B3A4; // thumb
 Func_0201C484 = 0x0201C484; // thumb
 Func_0201C568 = 0x0201C568; // thumb
 Func_0201DD20 = 0x0201DD20; // thumb
-Func_0201E5E0 = 0x0201E5E0; // thumb
+// slide the two HUD panels (unk21F/unk21D, unk220/unk21E) in and out
+UpdateHudPanels = 0x0201E5E0; // thumb
 Func_0201EBAC = 0x0201EBAC; // thumb
 Func_0201EBD4 = 0x0201EBD4; // thumb
 Func_0201EDC4 = 0x0201EDC4; // thumb
@@ -167,13 +171,15 @@ Func_0201DA78 = 0x0201DA78; // thumb
 Func_0201DB50 = 0x0201DB50; // thumb
 Func_0201DCEC = 0x0201DCEC; // thumb
 Func_0201DDA0 = 0x0201DDA0; // thumb
-Func_0201E2FC = 0x0201E2FC; // thumb
+// item menu row 2: one icon per flags.dungeonChests bit
+DrawChestRow = 0x0201E2FC; // thumb
 Func_0201E584 = 0x0201E584; // thumb
 Func_0201EC10 = 0x0201EC10; // thumb
 Func_0201ECC4 = 0x0201ECC4; // thumb
 Func_0201ED08 = 0x0201ED08; // thumb
 Func_0201EDF8 = 0x0201EDF8; // thumb
-Func_0201EF98 = 0x0201EF98; // thumb
+// two-digit flags.timer next to the effect sprite
+DrawTimerCount = 0x0201EF98; // thumb
 Func_0201F068 = 0x0201F068; // thumb
 Func_0201F2A8 = 0x0201F2A8; // thumb
 Func_0201F308 = 0x0201F308; // thumb
@@ -314,11 +320,11 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
-// initial item menu entries (struct ShopItem[12]), copied by Func_0201E190
+// initial item menu entries (struct ShopItem[12]), copied by ItemMenuInit
 gShopItemsInit = 0x02024460; // data
 // id per dungeon chest (flags.dungeonChests bit) for the item menu's third row, passed to Func_0201DA24
 gChestRowIds = 0x020244C0; // data
-/ first tile of the left HUD panel per gGameState.unk0FC (Func_0201E5E0)
+/ first tile of the left HUD panel per gGameState.unk0FC (UpdateHudPanels)
 gHudPanelTiles = 0x020244CA; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
