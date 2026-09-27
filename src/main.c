@@ -1,5 +1,6 @@
 #include "global.h"
 #include "crt0.h"
+#include "game.h"
 #include "gba/syscall.h"
 #include "gba_com.h"
 #include "heap.h"
@@ -37,7 +38,7 @@ void (*const gMainModeFuncs[])(void) =
 void AgbMain(void)
 {
     InitSystem();
-    gMain.unk44C = TRUE;
+    gMain.dispCopied = TRUE;
     MainLoop();
 }
 
@@ -82,7 +83,7 @@ void InitSystem(void)
     HeapInit(&gMain.heap.heap, sizeof(gMain.heap));
     GbaComInit();
 #endif
-    gMain.unk44C = FALSE;
+    gMain.dispCopied = FALSE;
     SeedRandom();
     CpuCopy16(__data_lma_start, (void *)IWRAM_START, __data_lma_end - __data_lma_start);
     SoundInit();
@@ -114,4 +115,63 @@ void InitOamBuffer(void)
     gMain.unk451 = 0;
 }
 
+// Near-miss. The original hoists gMain.modeState's address out of the loop and
+// rematerializes the GbaFlg buffer address (leaving an unused stack slot); agbcc
+// hoists the buffer address instead. The byte-offset casts are what makes agbcc
+// address gGameState+0x138 and the buffer fields with folded constants, as the
+// original does; plain field access gives base+offset.
+/*
+void MainLoop(void)
+{
+    while (TRUE)
+    {
+        gMain.linked = GbaComMain();
+        if (gMain.linked)
+        {
+            *(u8 *)((u8 *)&gGbaComBufGbaFlg + 2) = *((u8 *)&gGameState + 0x138);
+            *(u16 *)((u8 *)&gGbaComBufGbaFlg + 4) = gMain.bgOfs[3][0] + 8;
+            *(u16 *)((u8 *)&gGbaComBufGbaFlg + 6) = gMain.bgOfs[3][1] + 8;
+            *(u16 *)((u8 *)&gGbaComBufGbaFlg + 0) = gMain.heldKeys;
+            if (gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0
+             && gMain.modeState == 2)
+                *(u8 *)((u8 *)&gGbaComBufGbaFlg + 3) = TRUE;
+            else
+                *(u8 *)((u8 *)&gGbaComBufGbaFlg + 3) = FALSE;
+            GbaComSendDataSet(&gGbaComBufGbaFlg, sizeof(gGbaComBufGbaFlg), GBACOM_SLOT_GBA_FLG, 0);
+        }
+        gGameState.timer = gGameState.flags.timer;
+        gGameState.dungeonChests = gGameState.flags.dungeonChests;
+        gGameState.isFree = gGameState.flags.isFree;
+        gGameState.unk238 = gGameState.flags.unkB_7;
+        if (GbaComRecvStatusCheck(GBACOM_SLOT_FLAGS))
+        {
+            // Ignore an all-zero packet.
+            if (*(u32 *)((u8 *)gGbaComBufFlags + 0) | *(u32 *)((u8 *)gGbaComBufFlags + 4) | *(u32 *)((u8 *)gGbaComBufFlags + 8))
+            {
+                GbaComRecvDataGet(&gGameState.flags, GBACOM_SLOT_FLAGS, sizeof(gGameState.flags));
+                gGameState.flagsReceived = TRUE;
+            }
+            else
+            {
+                GbaComDataStatusReset(GBACOM_SLOT_FLAGS);
+            }
+        }
+        gMain.inDungeon = gGameState.flags.dungeonNo != 0;
+        gGameState.unk1FE = gGameState.flags.rupees - gGameState.unk1FC;
+        if (gGameState.flags.menuOpen || gGameState.flags.eventRunning)
+            gGameState.unk104 = 0;
+        ReadKeys();
+        InitOamBuffer();
+        UpdateRandom();
+        gMainModeFuncs[gMain.mode]();
+        gMain.dispCopied = FALSE;
+        SoundMain();
+        gMain.dispCopied = FALSE;
+        gMain.intrCheck &= ~INTR_FLAG_VBLANK;
+        while (gMain.intrCheck == 0)
+            ;
+        gMain.intrCheck &= ~INTR_FLAG_VBLANK;
+    }
+}
+*/
 INCLUDE_ASM(MainLoop);

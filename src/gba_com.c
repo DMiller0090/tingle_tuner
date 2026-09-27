@@ -6,30 +6,13 @@
 
 // App-side link API: per-slot status checks and copies over JoyCom (docs/protocol.md).
 
-// Receive buffers in EWRAM just below the program. The message and map image slots share one.
-extern u8 gGbaComMessageBuf[0xA000];
-extern u8 gGbaComBuf3[0x100];
-extern u8 gGbaComBufGbaFlg[0x10];
-extern u8 gGbaComBufMail[0x10];
-extern u8 gGbaComBufSwitch[0x10];
-extern u8 gGbaComBufControl[0x10];
-extern u8 gGbaComBufItem[0x10];
-extern u8 gGbaComBufEffect[0x10];
-extern u8 gGbaComBufFlags[0x10];
-extern u8 gGbaComBufName[0x10];
-extern u8 gGbaComBuf11[0x10];
-extern u8 gGbaComBuf14[0x100];
-extern u8 gGbaComBufShop[0x10];
-extern u8 gGbaComBufItemBuy[0x10];
-extern u8 gGbaComBufSE[0x10];
-
 void *const gGbaComBuffers[GBACOM_SLOT_COUNT] =
 {
     [GBACOM_SLOT_MESSAGE]   = gGbaComMessageBuf,
     [GBACOM_SLOT_CONTROL]   = gGbaComBufControl,
     [GBACOM_SLOT_MAP_IMAGE] = gGbaComMessageBuf,
     [GBACOM_SLOT_3]         = gGbaComBuf3,
-    [GBACOM_SLOT_GBA_FLG]   = gGbaComBufGbaFlg,
+    [GBACOM_SLOT_GBA_FLG]   = &gGbaComBufGbaFlg,
     [GBACOM_SLOT_MAIL]      = gGbaComBufMail,
     [GBACOM_SLOT_ITEM]      = gGbaComBufItem,
     [GBACOM_SLOT_EFFECT]    = gGbaComBufEffect,
@@ -55,10 +38,10 @@ void GbaComStop(void)
 
 bool32 GbaComMain(void)
 {
-    if (gJoyCom.active && JoyComMain() && gMain.unk452 != 2)
+    if (gJoyCom.active && JoyComMain() && gMain.mode != 2)
     {
-        gMain.unk452 = 2;
-        gMain.unk453 = 0;
+        gMain.mode = 2;
+        gMain.modeState = 0;
     }
     return gJoyCom.active && gJoyCom.state == JOYCOM_STATE_LINKED;
 }

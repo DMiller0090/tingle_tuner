@@ -27,6 +27,8 @@ UpdateRandom = 0x0201508C; // thumb
 MainMode0 = 0x02018630; // thumb
 MainMode1 = 0x020166FC; // thumb
 MainMode2 = 0x020204A8; // thumb
+// VBlankIntr calls it in mode 1 unless gMain.unk457 is set
+Mode1VBlank = 0x0201ABDC; // thumb
 
 // ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
 GbaComInit = 0x02017190; // thumb
@@ -70,6 +72,11 @@ HeapCompact = 0x020187FC; // thumb
 
 // ---- sound: custom PCM driver (not m4a); sound bank is the packer's raw tail ----
 SoundInit = 0x02020E28; // thumb
+SoundMain = 0x02020E3C; // thumb
+// VBlankIntr: SoundVSync first thing, SoundVSyncProc last; SoundDmaStop on gMain.soundDmaStop
+SoundVSync = 0x02021480; // thumb
+SoundVSyncProc = 0x0202148C; // thumb
+SoundDmaStop = 0x020215D0; // thumb
 SoundDriverInit = 0x020213C0; // thumb
 // ARM, copied to IWRAM by SoundDriverInit and called through pointers
 PcmClipS16ToS8 = 0x020237CC; // arm
@@ -131,6 +138,7 @@ _impure_ptr = 0x030002EC; // data
 gIntrTable = 0x03002F70; // data
 gMain = 0x03003080; // data
 gOamBuffer = 0x03004CE0; // data
+gGameState = 0x030050E0; // data
 gGbaComDataStatus = 0x03005320; // data
 gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
