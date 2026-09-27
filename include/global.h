@@ -13,6 +13,7 @@ typedef volatile u8 vu8;
 typedef volatile u16 vu16;
 typedef volatile u32 vu32;
 typedef u8 bool8;
+typedef u32 bool32;
 
 #define TRUE 1
 #define FALSE 0
