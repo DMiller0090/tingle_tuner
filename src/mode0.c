@@ -16,7 +16,8 @@ void Mode0State3(void);
 const u8 gMode0UsString[] = {0x03, 0x1B, 0x26, 0x26, 0x23, 0x28, 0x21, 0x5F, 0x5F, 0x5F, 0xFF};
 #endif
 
-const s16 gMode0Unk_02023EE4[4] = {0, -1, 0, 1};
+// Title sprite bob, indexed by (frameCount >> 4) & 3.
+const s16 gMode0BobOffsets[4] = {0, -1, 0, 1};
 
 void (*const gMode0StateFuncs[])(void) =
 {
@@ -66,18 +67,54 @@ void Mode0State0(void)
     gMain.bgOfs[0][0] = 0;
     gMain.bgOfs[0][1] = 0;
     gMain.modeState++;
-    gMode0Work[0] = blend = 0;
+    gMode0Work.blend = blend = 0;
     gMain.bldcnt = 0x2071;  // BG0 over BG0-3, OBJ and backdrop
     gMain.bldalpha = ((16 - blend) << 8) | blend;
-    gMode0Work[1] = 1;
-    gMode0Work[2] = 0;
-    gMode0Work[3] = 120;
+    gMode0Work.timer = 1;
+    gMode0Work.fadingOut = 0;
+    gMode0Work.unk3 = 120;
     gGameState.unk034 = 0x20;
     gGameState.unk032 = -24;
     SoundPlay(SE_TITLE, 0);
 }
-INCLUDE_ASM(Mode0Func_020182B0);
-INCLUDE_ASM(Mode0Func_02018324);
+// The title sprite scrolls right (every other frame) and bobs.
+void Mode0DrawTitleSprite(void)
+{
+    s16 bob = gMode0BobOffsets[(gMain.frameCount & 0x30) >> 4];
+
+    if (gMain.frameCount & 1)
+    {
+        if (++gGameState.unk032 > 0xFF)
+            gGameState.unk032 = -24;
+    }
+    DrawSpriteAt(gSprite_0202C938, 0, gGameState.unk032, bob + gGameState.unk034, 0, 0, 0);
+}
+// Every other frame, step the title's blend (gMode0Work.blend, 1-16) toward the end it is
+// heading for (gMode0Work.fadingOut); hold for 8 frames at full.
+void Mode0UpdateBlend(void)
+{
+    if (--gMode0Work.timer == 0)
+    {
+        gMode0Work.timer = 2;
+        if (gMode0Work.fadingOut == 0)
+        {
+            gMode0Work.blend++;
+            if (gMode0Work.blend == 16)
+            {
+                gMode0Work.timer = 8;
+                gMode0Work.fadingOut ^= 1;
+            }
+        }
+        else
+        {
+            gMode0Work.blend--;
+            if (gMode0Work.blend == 1)
+                gMode0Work.fadingOut ^= 1;
+        }
+        gMain.bldalpha = ((16 - gMode0Work.blend) << 8) | gMode0Work.blend;
+    }
+    Mode0DrawTitleSprite();
+}
 INCLUDE_ASM(Mode0State1);
 INCLUDE_ASM(Mode0State2);
 INCLUDE_ASM(Mode0State3);

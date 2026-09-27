@@ -29,8 +29,8 @@ MainMode1 = 0x020166FC; // thumb
 MainMode2 = 0x020204A8; // thumb
 // MainMode0 and MainMode1 dispatch on gMain.modeState through these tables
 Mode0State0 = 0x02018158; // thumb
-Mode0Func_020182B0 = 0x020182B0; // thumb
-Mode0Func_02018324 = 0x02018324; // thumb
+Mode0DrawTitleSprite = 0x020182B0; // thumb
+Mode0UpdateBlend = 0x02018324; // thumb
 Mode0State1 = 0x02018390; // thumb
 Mode0State2 = 0x02018418; // thumb
 Mode0State3 = 0x0201850C; // thumb
@@ -63,6 +63,8 @@ StepToward = 0x020189E0; // thumb
 Func_020209E0 = 0x020209E0; // thumb
 // adds one sprite (sprite data, frame, x, y, ...) to gOamBuffer at gMain.unk450
 DrawSprite = 0x02018AB8; // thumb
+// shorter DrawSprite: (sprite data, frame, x, y, 3 more bytes)
+DrawSpriteAt = 0x02018F0C; // thumb
 Func_0201A69C = 0x0201A69C; // thumb
 Func_0201E190 = 0x0201E190; // thumb
 Func_02020BEC = 0x02020BEC; // thumb
@@ -176,7 +178,7 @@ gMode1Unk_02023E80 = 0x02023E80; // data
 gMode1Unk_02023E86 = 0x02023E86; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
-gMode0Unk_02023EE4 = 0x02023EE4; // data
+gMode0BobOffsets = 0x02023EE4; // data
 gMode0StateFuncs = 0x02023EEC; // data
 // sin(i * 2pi / 256) in 8.8 fixed point; 320 entries so cos(i) = gSinTable[i + 64]
 gSinTable = 0x02023EFC; // data
@@ -191,6 +193,7 @@ gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
 gSprite_0202C438 = 0x0202C438; // data
+gSprite_0202C938 = 0x0202C938; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

@@ -23,8 +23,8 @@ struct MapMarker
 // 0x010 u32 unk010
 // 0x026 u16 unk026
 // 0x030 u16 unk030
-// 0x032 u16 unk032
-// 0x034 u16 unk034
+// 0x032 s16 unk032  // title sprite x
+// 0x034 s16 unk034  // title sprite y
 // 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
 // 0x03D u8 switchStageNo
@@ -104,8 +104,8 @@ struct GameState
     /*0x026*/ u16 unk026;
     /*0x028*/ u8 filler028[0x030 - 0x028];
     /*0x030*/ u16 unk030;
-    /*0x032*/ u16 unk032;
-    /*0x034*/ u16 unk034;
+    /*0x032*/ s16 unk032;                     // title sprite x
+    /*0x034*/ s16 unk034;                     // title sprite y
     /*0x036*/ u8 filler036[0x03A - 0x036];
     /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
     /*0x03C*/ u8 switchNo;                    // 0xFF: none
@@ -234,6 +234,7 @@ extern const u8 gMode2BgMap[];
 extern const u8 gMode1ObjTiles[];
 extern const u16 gMode1ObjPalette[0x100];
 extern const u8 gSprite_0202C438[];
+extern const u8 gSprite_0202C938[];
 extern const u8 *const gSpriteTable[];
 
 void Mode1VBlank(void);
@@ -246,6 +247,8 @@ bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
 void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
+// The definition takes u16 x and y; callers see s16 (they sign-extend).
+void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
 void Func_0201A69C(void);
 void Func_0201E190(void);
 void Func_02020BEC(void);
@@ -266,8 +269,17 @@ struct Obj
 
 extern struct Obj gObjs[16];
 
-// 0x03005640, just before gObjs; Mode0State0 sets the first four bytes.
-extern u8 gMode0Work[0x10];
+// 0x03005640, just before gObjs: the title screen's blend ramp.
+struct Mode0Work
+{
+    /*0x0*/ u8 blend;      // BLDALPHA EVA (EVB = 16 - blend)
+    /*0x1*/ u8 timer;      // frames to the next step
+    /*0x2*/ u8 fadingOut;  // 0: blend counts up to 16, 1: down to 1
+    /*0x3*/ u8 unk3;
+    /*0x4*/ u8 filler4[0xC];
+};
+
+extern struct Mode0Work gMode0Work;
 
 #ifndef VERSION_GZLJ01
 void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);
