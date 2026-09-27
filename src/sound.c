@@ -180,9 +180,14 @@ struct SoundVoice
     /*0x08*/ u8 priority;
     /*0x09*/ u8 key;
     /*0x0A*/ u8 velocity;
-    /*0x0B*/ u8 unk0B[9];
-    /*0x14*/ u32 volume;
-    /*0x18*/ u8 unk18[0x28];
+    /*0x0B*/ u8 unk0B[5];
+    /*0x10*/ u16 cgbFreq;  // GB channels: the frequency register value
+    /*0x12*/ u8 unk12[2];
+    /*0x14*/ u32 volume;   // GB channels: 0-15
+    /*0x18*/ u8 unk18[3];
+    /*0x1B*/ u8 unk1B;
+    /*0x1C*/ u8 pan;
+    /*0x1D*/ u8 unk1D[0x23];
     /*0x40*/ struct VoiceEnvelope env;
     /*0x54*/ u8 unk54[4];
     /*0x58*/ u8 release;  // released: volume * (0xE6 + release) / 512 per frame
@@ -206,6 +211,17 @@ struct SoundInstrument
 
 #define REG_SOUND1CNT_L   (*(vu16 *)0x04000060)
 #define REG_SOUND1CNT_H   (*(vu16 *)0x04000062)
+#define REG_NR11          (*(vu8 *)0x04000062)
+#define REG_NR12          (*(vu8 *)0x04000063)
+#define REG_SOUND1CNT_X   (*(vu16 *)0x04000064)
+#define REG_NR14          (*(vu8 *)0x04000065)
+#define REG_NR21          (*(vu8 *)0x04000068)
+#define REG_NR22          (*(vu8 *)0x04000069)
+#define REG_SOUND2CNT_H   (*(vu16 *)0x0400006C)
+#define REG_NR24          (*(vu8 *)0x0400006D)
+#define REG_NR30          (*(vu8 *)0x04000070)
+#define REG_NR42          (*(vu8 *)0x04000079)
+#define REG_NR44          (*(vu8 *)0x0400007D)
 #define REG_SOUNDCNT_L    (*(vu16 *)0x04000080)
 #define REG_SOUNDCNT_H_LO (*(vu8 *)0x04000082)
 #define REG_SOUNDCNT_H_HI (*(vu8 *)0x04000083)
@@ -219,6 +235,7 @@ struct SoundInstrument
 
 extern u8 gPcmEnabled;
 extern struct SoundInstrument gDrumInstrument;
+extern struct SoundVoice gCgbVoices[4];
 extern struct SoundVoice *gPcmActiveVoices;
 extern struct SoundVoice *gPcmFreeVoices;
 extern struct SoundVoice *gPcmDisabledVoices;
@@ -243,6 +260,9 @@ struct SoundVoice *VoiceAlloc(u8 type, u8 priority);
 u32 EnvelopeStep(struct SoundVoice *voice);
 void VoiceListRemove(struct SoundVoice *voice, struct SoundVoice **list);
 void VoiceListPush(struct SoundVoice *voice, struct SoundVoice **list);
+void VoiceListInsert(struct SoundVoice *voice);
+void VoiceStop(struct SoundVoice *voice);
+void TrackRemoveVoice(struct SoundTrack *track, struct SoundVoice *voice);
 void PcmVSync(void);
 void PcmMixFrame(void);
 void CgbUpdate(void);
@@ -1013,13 +1033,141 @@ INCLUDE_ASM(CgbUpdate);
 
 INCLUDE_ASM(TrackNoteOn);
 
+// Release a note: a PCM voice (and the wave channel) decays in software, the other GB
+// channels get their hardware envelope (release / 32 as the step, or off).
+// Near-miss: with the type local, only the switch differs: the original reads voice->type again.
+// Without it (and the switch reading it anyway) type and freq swap r2/r3.
+//     void VoiceNoteOff(struct SoundVoice *voice)
+//     {
+//         if (voice->state == 1 && !voice->track->tie)
+//         {
+//                     u8 type = voice->type;
+//
+//             if (type == 0)
+//
+//             {
+//                 VoiceListRemove(voice, &gPcmActiveVoices);
+//                 voice->state = 2;
+//                 VoiceListInsert(voice);
+//             }
+//             else
+//             {
+//                             u16 freq = voice->cgbFreq;
+//                 u8 step = voice->release;
+//
+//                             if (type == 3)
+//                 {
+//                     voice->state = 2;
+//                 }
+//                 else
+//                 {
+//                     u8 env;
+//
+//                     step >>= 5;
+//                     if (step == 0)
+//      env = 0;
+//      else
+//      env = step | (voice->volume << 4);
+//                     switch (voice->type)
+//                     {
+//                     case 1:
+//                         REG_NR12 = env;
+//                         REG_SOUND1CNT_X = freq | 0x8000;
+//                         REG_NR11 &= 0xC0;
+//                         break;
+//                     case 2:
+//                         REG_NR22 = env;
+//                         REG_SOUND2CNT_H = freq | 0x8000;
+//                         REG_NR21 &= 0xC0;
+//                         break;
+//                     case 4:
+//                         REG_NR42 = env;
+//                         REG_NR44 = 0x80;
+//                         break;
+//                     }
+//                     voice->state = 0;
+//                 }
+//             }
+//             if (voice->unk1B == 0)
+//                 voice->pan = voice->track->pan;
+//             TrackRemoveVoice(voice->track, voice);
+//         }
+//     }
 INCLUDE_ASM(VoiceNoteOff);
 
-INCLUDE_ASM(VoiceStop);
+void VoiceStop(struct SoundVoice *voice)
+{
+    if (voice->state != 0)
+    {
+        switch (voice->type)
+        {
+        case 0:
+            VoiceListRemove(voice, &gPcmActiveVoices);
+            VoiceListPush(voice, &gPcmFreeVoices);
+            break;
+        case 1:
+            REG_NR12 = 8;
+            REG_NR14 = 0xC0;
+            break;
+        case 2:
+            REG_NR22 = 8;
+            REG_NR24 = 0xC0;
+            break;
+        case 3:
+            REG_NR30 = 0;
+            break;
+        case 4:
+            REG_NR42 = 8;
+            REG_NR44 = 0xC0;
+            break;
+        }
+        TrackRemoveVoice(voice->track, voice);
+        voice->state = 0;
+    }
+}
 
 INCLUDE_ASM(CgbVoiceStart);
 
-INCLUDE_ASM(VoiceAlloc);
+// A voice for a note of this priority: a free PCM voice, else the first in gPcmActiveVoices
+// (released or lowest priority) unless it plays a higher priority; or GB channel `type`.
+struct SoundVoice *VoiceAlloc(u8 type, u8 priority)
+{
+    struct SoundVoice *voice;
+
+    if (type == 0)
+    {
+                if (gPcmFreeVoices != NULL)
+        {
+            voice = gPcmFreeVoices;
+        }
+        else
+        {
+            struct SoundVoice *active = gPcmActiveVoices;
+
+            if (active == NULL)
+                return NULL;
+            if (active->state == 1 && priority < active->priority)
+                return NULL;
+            voice = active;
+            VoiceStop(voice);
+        }
+        VoiceListRemove(voice, &gPcmFreeVoices);
+        voice->state = 1;
+        voice->priority = priority;
+        VoiceListInsert(voice);
+    }
+    else
+    {
+        voice = &gCgbVoices[type - 1];
+        if (voice->state == 1 && priority < voice->priority)
+            return NULL;
+        if (voice->state != 0)
+            VoiceStop(voice);
+        voice->state = 1;
+        voice->priority = priority;
+    }
+    return voice;
+}
 
 INCLUDE_ASM(TracksInit);
 
