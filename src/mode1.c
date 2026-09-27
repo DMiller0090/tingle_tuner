@@ -20,7 +20,8 @@ void Mode1SendSwitch(u8 soundArg);
 void Mode1RecvMarkers(void);
 void Mode1Func_02016350(void);
 
-// Not referenced by any code.
+// Not referenced by any code. It ends in 0xFF, like a short text in the message font's glyph
+// codes (see MsgStep).
 const u8 gMode1Unused_02023E38[12] = {0x7D, 0x7A, 0x01, 0x00, 0xB2, 0xB3, 0x00, 0x2B, 0x00, 0x00, 0x00, 0xFF};
 
 // Sound per dungeon number (gGameState.flags.dungeonNo), played by Mode1State1.

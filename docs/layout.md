@@ -83,16 +83,42 @@ tables are not aligned, and there is no padding between the blocks):
 
 | Functions | Evidence |
 |-----------|----------|
-| `Func_0201A224` ... `Mode1VBlank` (`0201ABDC`) | `Mode1VBlank` uses `02024235`, before `Func_0201A224`'s `0202423A` |
-| `sub_0201AC94` ... `sub_0201AF48` | pointer table `02024244` (targets `AC94`, `ACF8`, `AD90`), used by `AF48` |
-| `sub_0201C660` ... `sub_0201CB10` | `CB10` uses `02024354`, before `C660`'s `02024376`; pointer table `020243A4` lists the 19 handlers `0201C86C-0201CAE8` |
-| `sub_0201DEAC` ... `Func_0201E190` | `DEAC` uses `020244C0`, after `E190`'s `02024460` |
-| `sub_0201EC10` ... `sub_0202081C` | pointer table `020244E4` (18 handlers between `0201EC10` and `02020190`, used by `sub_02020298`), `MainMode2`'s state table `0202452C` (`020202E8`, `020203EC`, `0202081C`), and `02024560` (`02020668`, `020207D4`, used by `0202081C`) |
+| `UpdateMap` (`0201A224`) ... `Mode1VBlank` (`0201ABDC`) | `Mode1VBlank` uses `gSeaAnimFrames` (`02024235`), before `UpdateMap`'s `gSeaAnimPeriods` (`0202423A`) |
+| `MapIconFollowMarker` (`0201AC94`) ... `UpdateMapIcons` (`0201AF48`) | pointer table `gMapIconFuncs` (`02024244`), used by `UpdateMapIcons` |
+| `DrawGlyphRun` (`0201C660`) ... `MsgStep` (`0201CB10`) | `MsgStep` uses `gMsgTingleAnims` (`02024354`), before `DrawGlyphRun`'s `gGlyphRunStart` (`02024376`); `gMsgCmdFuncs` (`020243A4`) lists the 19 handlers `MsgCmd00-12` |
+| `ItemMenuUpdate` (`0201DEAC`) ... `ItemMenuInit` (`0201E190`) | `ItemMenuUpdate` uses `gChestRowIds` (`020244C0`), after `ItemMenuInit`'s `gShopItemsInit` (`02024460`) |
+| `Func_0201EC10` ... `ObjBurst` (`0202081C`) | `gItemEffectFuncs` (`020244E4`, 18 handlers `0201EC10-02020190`, run by `UpdateItemEffect`), `gMode2StateFuncs` (`0202452C`, `Mode2State0-1`), `gObjFuncs` (`02024534`, entry 0 `ObjBurst`) and `gObjBurstStateFuncs` (`02024560`) |
+
+What the range does, in address order (names in symbols.txt; `src/game.c` holds it all):
+
+- `02018884-020190A8`: easing/step helpers (`EaseToward*`, `StepToward*`, `CountDown*`),
+  `DrawSprite`/`DrawSpriteAt` (sprites are `struct SpriteFrame` lists of OAM parts;
+  `gMain.unk450`/`unk451` count the OAM entries and affine matrices used this frame).
+- `020190A8-0201AFCC`: the map screen. BG3 map streaming (`CopyMapColumn/Row`,
+  `ScrollMap`), `DrawMapMarkers`, `HighlightMapRooms`, the view following a marker, the
+  sea chart (`UpdateMap`, the 7x7 squares and their tile animation), the floor number, the
+  map icons (`gGameState.icons`: marker follower, target cursor, blinking target), the target
+  compass (`UpdateTargetCompass`), and `DrawQuestMarkers` (pearls, Triangle Islands, temples
+  from `GbaComFlags` byte 9).
+- `0201AFCC-0201C660`: the text renderer (a font at `0x0600A000` drawn onto a 12-tile
+  canvas at `0x0600F100`, optionally scaled 2x through `TEXT_GLYPH_BUF`), the text box frame
+  and the 2-/3-way choice menu (`ChoiceMenuUpdate`).
+- `0201C660-0201DA78`: messages. `MsgStart` looks the text up through the offset table of
+  the message data (`msg_LZ.bin`, unpacked to `0x02000000`), `MsgStep` runs one character
+  or control code (`F2`-`FF`) per call, and `ShowMessage` (the old `GamePlaySound`) starts
+  one with Tingle's voice and animation. The game's "sound IDs" in `ShowMessage` calls are
+  message IDs.
+- `0201DA78-0201F308`: the item menu (12 items, `struct ItemSlot`: icon, OBJ tile, price
+  in rupees; a 5x3 grid, row 2 the dungeon chests), `UseItem` (slot 6), the HUD panels and
+  the timer.
+- `0201F308-02020E28`: the item effects (`effect[0]` from slot 7; `Effect7` is the shop,
+  slots 12/13), the object system (`gObjs`, `ObjSpawn`, `ObjBurst`), `MainMode2` (the link-lost
+  screen: two states), the per-line wave scroll, the select-button window wipe and the status icon.
 
 `DrawSprite` (`02018AB8`) is the first function in the range that uses `.rodata` (it reads
 `gSinTable + 0x80`, the cosine), so `gSinTable` is either its object's or a data object of
-its own. `gSpriteTable` (`0202417C`, sprite pointers) comes next. Mode 2's states also use
-`gMode0Work`, so the link-lost screen reuses the title's blend.
+its own. `gSpriteTable` (`0202417C`, `struct SpriteFrame` lists) comes next. Mode 2's states
+also use `gMode0Work`, so the link-lost screen reuses the title's blend.
 
 `.rodata` `02024568–0202CD20` is large data (graphics and tables, not yet split) referenced from
 all the game-code ranges, so it is probably separate data objects linked after the code's
@@ -201,13 +227,13 @@ big-endian when bit 7 is set):
   (text/UI; the matcher pairs 337 vs 339 functions, with a few added or reshaped functions).
   Libraries are identical.
 - **GZLE01 vs GZLE01_ud** (`client_ud.bin`): byte-identical except one function,
-  `sub_02024AB8` (JP `sub_0201DEAC`), which grows by `0x234` bytes. Everything after it
+  `ItemMenuUpdate` (`02024AB8`, JP `0201DEAC`), which grows by `0x234` bytes. Everything after it
   shifts by `0x234`, and `.rodata`/`.data` are the same apart from relocated pointers. The
-  extra code is a **sound test**. L (bit 9 of `gMain.newKeys`) toggles bit 5 of
-  `gGameState+0x1E5`; while it is set, Up/Down step a sound ID at `gGameState+0x142` by 1,
-  Left/Right by 10 and R by 100, wrapping within 0-0x437 (the range `GamePlaySound` accepts).
+  extra code is a **message test**. L (bit 9 of `gMain.newKeys`) toggles bit 5 of
+  `gGameState+0x1E5`; while it is set, Up/Down step a message ID at `gGameState+0x142` by 1,
+  Left/Right by 10 and R by 100, wrapping within 0-0x437 (the range `ShowMessage` accepts).
   The ID is shown as four digits at BG map `0x06006464`, in the rupee counter's digit tiles,
-  and passed to `sub_0202453C`, which plays it. "ud" is plausibly "USA debug". The game only
+  and passed to `MsgStartSilent`, which shows it. "ud" is plausibly "USA debug". The game only
   loads `client_u.bin`.
 
 ## Answers to earlier open questions

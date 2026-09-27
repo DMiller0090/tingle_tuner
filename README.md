@@ -69,7 +69,10 @@ from the extracted binary on every build.
 2. Name it and its callees/globals in `config/GZLJ01/symbols.txt`
    (`Name = 0xADDR; // thumb|arm|data`), then `python tools/port_symbols.py GZLJ01 GZLE01 --write`
    (and `GZLE01_ud`) to carry the names over; check what it prints. A symbol only one US
-   build has goes at the end of that version's file; porting keeps it. Addresses outside the image (IWRAM/EWRAM variables,
+   build has goes after the `// <ver> only` line at the end of that version's file; porting keeps it.
+   A JP name listed there too is pinned: porting keeps the address written there. Some data
+   ports to the wrong place when a US function's literal pool differs (see the "pinned" notes
+   in the US files), so check new data symbols against the US asm. Addresses outside the image (IWRAM/EWRAM variables,
    I/O) become absolute symbols. Shared C uses these names so one source serves all versions;
    `VERSION_GZLJ01` etc. are defined for version differences.
 3. Write the C in `src/`, add `src/file.c 0xSTART 0xEND` to each version's `splits.txt` (END =
@@ -86,12 +89,13 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `src/file.c .rodata 0xSTART 0xEND` in `splits.txt` places the file's `.rodata` in the shared
 `.rodata` block (see `main.c`).
 
-In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but
-`VBlankIntr`/`MainLoop`), `src/mode1.c` (all but `Mode1State0` and
-`Mode1SendSwitch`; `Mode1RecvMarkers` is C in GZLJ01 only),
-`src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`,
-`src/multi_sio.c` (all but `MultiSioMain`/`MultiSioRecvDataCheck`), `src/heap.c`
-(`HeapCompact`) and `src/libc/rand.c`. main.c, mode1.c, gba_com.c, multi_sio.c and mode0.c own their `.rodata`.
+In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but `VBlankIntr`),
+`src/mode1.c` (all but `Mode1State0` and `Mode1SendSwitch`; `Mode1RecvMarkers` is C in
+GZLJ01 only), `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c` (all but
+`MultiSioRecvDataCheck`), `src/heap.c` (`HeapInit`, `HeapCompact`), `src/libc/rand.c`, and
+most of `src/game.c`, the game code from `02018884` to the sound driver (122 of its 141
+functions; a few are C in GZLJ01 only). main.c, mode1.c, gba_com.c, multi_sio.c and mode0.c
+own their `.rodata`; game.c's is still asm, since its object boundaries aren't known.
 Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
 doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
 and old_agbcc at least matches its leaf-function prologue.

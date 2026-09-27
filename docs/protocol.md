@@ -125,9 +125,15 @@ TWW decomp uses them, so they look like leftovers of cut features.
   the slot has data, except in state 4 (`Mode1State4` calls it itself) and while a map change is
   pending; when it starts the fade out for a map change it resets slot 3 unread.
 - **14** is a boot-time payload: `Mode0State3` copies 0xC4 bytes of it to IWRAM `0x03002FB0`
-  (`gSlot14Data`), which `sub_02019CAC`, `sub_0201AD90` and `Func_0201B3A4` read. `MainMode1` doesn't touch it.
-- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.unk0F4`) and reset; who
-  reads `unk0F4` is not known yet.
+  (`gSlot14Data`): 49 `struct SeaChartEntry` `{x, y, big, square}`, one spot per sea chart
+  square (`square` = row * 7 + column). `HighlightMapRooms` marks each spot of the rooms shown
+  (2x2 tiles, 4x4 when `big`; square 25 only once `flags.unkA_4` is set), `MapIconCursor`
+  names the square under the cursor, and `Func_0201B3A4` checks whether the player marker is
+  within 8 pixels of its square's spot (32 when `big`). `MainMode1` doesn't touch it.
+- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.unk0F4`) and reset: a
+  7x7 bitmap, one bit per sea chart square. `Func_0201B2C0` draws squares whose bit is clear
+  darkened (palette 6), `MapIconCursor` only names a square whose bit is set, and
+  `Func_0201B0F4` tests square 25 for one map tile. It looks like the "charted" squares.
 
 In GZLE01 each buffer sits at the same offset from `prog_base`: `0x02010800` for slots 0/2
 and `0x0201A800 + (JP address - 0x02014000)` for the rest.
