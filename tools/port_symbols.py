@@ -3,6 +3,9 @@
     python tools/port_symbols.py GZLJ01 GZLE01            # show what would change
     python tools/port_symbols.py GZLJ01 GZLE01 --write    # rewrite config/GZLE01/symbols.txt
 
+Names listed after a `// <dst> only` line in the destination file are kept as they are:
+version-specific symbols, and source names whose ported address would be wrong (pinned).
+
 Functions (build/<ver>/functions.txt) are matched in address order by their mnemonic
 sequence (difflib over per-function hashes; unmatched runs are paired in order). A data
 symbol is ported by finding a function whose literal pool holds its address, then reading
@@ -151,7 +154,12 @@ def main():
     by_name = {n: a for a, (n, _) in existing.items()}
     out = [f'// {args.dst} symbols: name = 0xADDR; // arm|thumb|data',
            f'// Ported from {args.src} by tools/port_symbols.py; edit {args.src} and re-port.']
+    # A name in the destination-only block is pinned there: the porter placed some data
+    # wrongly (e.g. gMode2BgMap, whose pool neighbours differ between versions).
+    pinned = set(dst_only(args.dst).values())
     for name, new, attrs, old in ported:
+        if name in pinned:
+            continue
         if new is None:
             print(f'  unmatched: {name} ({old:#010x})')
             continue
@@ -167,7 +175,7 @@ def main():
     if marker in text:
         for line in text[text.index(marker) + 1:]:
             m = SYM_RE.match(line)
-            if m is None or m.group(1) not in ported_names:
+            if m is None or m.group(1) not in ported_names or m.group(1) in pinned:
                 extra.append(line)
     listed = {SYM_RE.match(l).group(1) for l in extra if SYM_RE.match(l)}
     # Other leftovers are stale when a ported name now has their address (a renamed source
