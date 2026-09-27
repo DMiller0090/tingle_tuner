@@ -233,7 +233,14 @@ INCLUDE_ASM(Func_0201F2C4);
 
 INCLUDE_ASM(Func_0201F308);
 
-INCLUDE_ASM(Func_0201F420);
+void Func_0201F420(void)
+{
+    if (gMain.random & 1)
+        GamePlaySound(0x3A, 14);
+    else
+        GamePlaySound(0x3B, 14);
+    gGameState.unk1E2 = 0;
+}
 
 INCLUDE_ASM(Func_0201F460);
 
@@ -247,11 +254,23 @@ INCLUDE_ASM(Func_0201FCA0);
 
 INCLUDE_ASM(Func_0201FD04);
 
-INCLUDE_ASM(Func_0201FEEC);
+void Func_0201FEEC(void)
+{
+    gGameState.unk132 = 8;
+    gGameState.unk120 = 0;
+    gGameState.unk12B = 4;
+}
 
 INCLUDE_ASM(Func_0201FF14);
 
-INCLUDE_ASM(Func_02020150);
+void Func_02020150(void)
+{
+    GamePlaySound(0x50, 1);
+    gGameState.unk1C8 = 300;
+    gGameState.unk228 = 0;
+    gGameState.unk226 = 5;
+    gGameState.unk227 = 0;
+}
 
 INCLUDE_ASM(Func_02020190);
 
@@ -398,7 +417,10 @@ void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude)
 
 INCLUDE_ASM(Func_020208FC);
 
-INCLUDE_ASM(Func_020209A0);
+void Func_020209A0(void)
+{
+    DrawSprite(gSprite_0202BD78, 0, gGameState.unk1E8, gGameState.unk1EA, 0, 0, 0, 0, 0, 0, 0);
+}
 
 INCLUDE_ASM(Func_020209E0);
 

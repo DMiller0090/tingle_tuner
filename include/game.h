@@ -69,6 +69,7 @@ struct MapMarker
 // 0x123 u8 unk123
 // 0x124 u8 unk124
 // 0x12B u8 unk12B
+// 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
@@ -88,11 +89,12 @@ struct MapMarker
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
 // 0x1E1 u8 unk1E1  // chest bits that changed
+// 0x1E2 u8 unk1E2
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
-// 0x1E8 u16 unk1E8
-// 0x1EA u16 unk1EA
+// 0x1E8 s16 unk1E8
+// 0x1EA s16 unk1EA
 // 0x1EE u8 unk1EE
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
@@ -202,7 +204,8 @@ struct GameState
     /*0x124*/ u8 unk124;
     /*0x125*/ u8 filler125[0x12B - 0x125];
     /*0x12B*/ u8 unk12B;
-    /*0x12C*/ u8 filler12C[0x133 - 0x12C];
+    /*0x12C*/ u8 filler12C[0x132 - 0x12C];
+    /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
     /*0x134*/ u8 filler134[0x136 - 0x134];
     /*0x136*/ u8 unk136;
@@ -238,7 +241,7 @@ struct GameState
     /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
     /*0x1E0*/ u8 unk1E0;
     /*0x1E1*/ u8 unk1E1;                      // chest bits that changed
-    /*0x1E2*/ u8 filler1E2[0x1E3 - 0x1E2];
+    /*0x1E2*/ u8 unk1E2;
     /*0x1E3*/ u8 unk1E3;                      // chests opened
     /*0x1E4*/ u8 unk1E4;
     /*0x1E5*/ u8 unk1E5_0:1;
@@ -248,8 +251,8 @@ struct GameState
               u8 unk1E5_4:1;
               u8 unk1E5_5:3;
     /*0x1E6*/ u8 filler1E6[0x1E8 - 0x1E6];
-    /*0x1E8*/ u16 unk1E8;
-    /*0x1EA*/ u16 unk1EA;
+    /*0x1E8*/ s16 unk1E8;
+    /*0x1EA*/ s16 unk1EA;
     /*0x1EC*/ u8 filler1EC[0x1EE - 0x1EC];
     /*0x1EE*/ u8 unk1EE;
     /*0x1EF*/ u8 filler1EF[0x1F8 - 0x1EF];
@@ -329,7 +332,7 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, s16 a7, s16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
@@ -432,5 +435,6 @@ void ObjFall(struct Obj *obj, s16 gravity);
 void ObjUpdateAll(void);
 s32 ObjFindFree(void);
 bool32 ObjSpawn(u8 type);
+extern const u8 gSprite_0202BD78[];
 
 #endif // GUARD_GAME_H

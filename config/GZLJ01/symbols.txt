@@ -314,6 +314,8 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+gMode2StateFuncs = 0x0202452C; // data
+gObjFuncs = 0x02024534; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data
@@ -322,13 +324,12 @@ gMode1SeaMap = 0x020270B8; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+gSprite_0202BD78 = 0x0202BD78; // data
 gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
 gSoundBankHeader = 0x0202CD20; // data
-gObjFuncs = 0x02024534; // data
-gMode2StateFuncs = 0x0202452C; // data
 
 // ---- .data load image (end of the program) ----
 __data_lma_start = 0x0202D290; // data
