@@ -266,6 +266,7 @@ gMode0BobOffsets = 0x0202AB4C; // data
 gMode0StateFuncs = 0x0202AB54; // data
 gSinTable = 0x0202AB64; // data
 gSpriteTable = 0x0202ADE4; // data
+gSounds_02024278 = 0x0202AEE0; // data
 gTextColorMasks = 0x0202AF04; // data
 gSoundIds_0202430E = 0x0202AF76; // data
 gTable_02024424 = 0x0202B0E0; // data

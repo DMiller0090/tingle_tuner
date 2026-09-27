@@ -70,6 +70,7 @@ struct MapMarker
 // 0x124 u8 unk124
 // 0x12B u8 unk12B
 // 0x133 u8 unk133  // slot 3 byte 1
+// 0x135 u8 unk135
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C
@@ -214,7 +215,8 @@ struct GameState
     /*0x12B*/ u8 unk12B;
     /*0x12C*/ u8 filler12C[0x133 - 0x12C];
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
-    /*0x134*/ u8 filler134[0x136 - 0x134];
+    /*0x134*/ u8 filler134[0x135 - 0x134];
+    /*0x135*/ u8 unk135;
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
     /*0x138*/ u8 unk138_0:2;                  // sent as GbaFlg.unk2
@@ -445,6 +447,9 @@ extern const u32 gTextColorMasks[];
 extern const u16 gSoundIds_0202430E[];
 extern const u8 *const *const gTable_02024424[];
 extern const u8 gSprite_0202C130[];
+extern const s16 gSounds_02024278[];
+void Func_0201B2C0(void);
+void Mode1SendSwitch(u8 soundArg);
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 

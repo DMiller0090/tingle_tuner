@@ -78,12 +78,159 @@ INCLUDE_ASM(Func_0201AFCC);
 
 INCLUDE_ASM(Func_0201B0F4);
 
-INCLUDE_ASM(Func_0201B2C0);
+// Darken the sea chart's 7x7 squares (2x2 tiles each, from map row 17 column 1 of the BG
+// map at 0x06007000) whose bit in gGameState.unk0F4 is clear: palette 6 instead of 0.
+void Func_0201B2C0(void)
+{
+    s32 i;
+    u32 off;
+    u16 *p;
+
+    for (i = 0; i < 49; i++)
+    {
+        off = (((i / 7) * 2 + 17) * 32 + ((i % 7) * 2 + 1)) * 2;
+        p = (u16 *)(0x06007000 + off);
+        if ((gGameState.unk0F4[i >> 3] >> (i & 7)) & 1)
+        {
+            p[0] &= 0xFFF;
+            p[1] &= 0xFFF;
+            p = (u16 *)(0x06007040 + off);
+            *p &= 0xFFF;
+            p = (u16 *)(0x06007042 + off);
+            *p &= 0xFFF;
+        }
+        else
+        {
+            p[0] = (p[0] & 0xFFF) | 0x6000;
+            p[1] = (p[1] & 0xFFF) | 0x6000;
+            p = (u16 *)(0x06007040 + off);
+            *p = (*p & 0xFFF) | 0x6000;
+            p = (u16 *)(0x06007042 + off);
+            *p = (*p & 0xFFF) | 0x6000;
+        }
+    }
+}
 
 INCLUDE_ASM(Func_0201B3A4);
 
+// Play the sound for what the cursor is on: unk135 if set, else the selected marker's.
+// Near-miss: the original computes the (s16) ids in the shifted domain, ((v << 16) +
+// (c << 16)) >> 16, which agbcc only emits for an explicit shift pair (the ID macro below);
+// written that way the code shape matches but the registers of the entry block differ
+// (the original keeps gGameState in r4 and loads it first).
+/*
+#define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
+
+void Func_0201B7D4(void)
+{
+    u8 idx = gGameState.unk119;
+
+    if (gGameState.unk135 != 0)
+    {
+        if (gGameState.unk135 == 0x21 && gGameState.flags.unk5_6)
+            GamePlaySound(0x13E, 1);
+        else
+            GamePlaySound(gGameState.unk135 + 0x14D, 1);
+    }
+    else if (gGameState.markers[idx].type == 0x13)
+        GamePlaySound(gSounds_02024278[gGameState.markers[idx].unk6 - 1], 1);
+    else if (gGameState.markers[idx].type == 0x14)
+        GamePlaySound(0x5D, 1);
+    else if (gGameState.markers[idx].unk7 <= 0x23)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x63), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x27)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x7C), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x2C)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x82), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x38)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x87), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x40)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x8F), 1);
+    else
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x6F), 1);
+}
+*/
 INCLUDE_ASM(Func_0201B7D4);
 
+// Act on the current selection (unk119: a marker, or unk135): 0: send the switch record,
+// 1: a random reaction sound, 2: play the selection's sound via Func_0201B7D4.
+// Near-miss: same code shape, but the original keeps result in r1 (reusing its 1 as the
+// mask in the type 16 test) where agbcc puts it in r4, and orders the dispatch compares
+// as == 2, == 0.
+/*
+void Func_0201B8C8(void)
+{
+    u8 result = 0;
+
+    if (gGameState.unk119 != 0)
+    {
+        if (gGameState.markers[gGameState.unk119].type == 12)
+        {
+            result = 1;
+            if (gGameState.unk11C)
+                result = 2;
+        }
+        else if (gGameState.markers[gGameState.unk119].type == 13)
+        {
+            result = 1;
+            if (gGameState.unk11D)
+                result = 2;
+        }
+        else if (gGameState.markers[gGameState.unk119].type == 5)
+        {
+            if (gGameState.unk010 & (1 << gGameState.markers[gGameState.unk119].unk6))
+                return;
+            result = 1;
+        }
+        else if (gGameState.markers[gGameState.unk119].type == 16)
+        {
+            result = 1;
+            if ((gGameState.unk026 >> gGameState.markers[gGameState.unk119].unk6) & 1)
+                result = 2;
+        }
+        else
+        {
+            result = 2;
+            if (gGameState.markers[gGameState.unk119].type == 7)
+                result = 1;
+        }
+    }
+    else if (gGameState.unk135)
+    {
+        result = 2;
+    }
+    switch (result)
+    {
+    case 2:
+        Func_0201B7D4();
+        SoundPlay(2, 0);
+        break;
+    case 0:
+        if (gGameState.switchType == 15)
+        {
+            gGameState.unk1F8 = gGameState.switchSound;
+            gGameState.switchSound = 0x302;
+        }
+        if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
+        {
+            Mode1SendSwitch(3);
+            SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
+        }
+        break;
+    default:
+        if ((gMain.random & 0xFF) > 0xCB)
+            GamePlaySound(0x17, 1);
+        else if ((gMain.random & 0xFF) > 0x65)
+            GamePlaySound(0x16, 1);
+        else
+            GamePlaySound(0x15, 1);
+        gGameState.unk156 = gMain.random % 60 + 30;
+        if (gGameState.markers[gGameState.unk119].type != 7)
+            gGameState.unk11A = 2;
+        break;
+    }
+}
+*/
 INCLUDE_ASM(Func_0201B8C8);
 
 void Func_0201BA2C(s8 row)

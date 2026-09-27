@@ -316,6 +316,7 @@ gSinTable = 0x02023EFC; // data
 gSpriteTable = 0x0202417C; // data
 // game.c part C tables
 // u32 per text colour, ANDed with the glyph's 4bpp rows
+gSounds_02024278 = 0x02024278; // data
 gTextColorMasks = 0x0202429C; // data
 gSoundIds_0202430E = 0x0202430E; // data
 gTable_02024424 = 0x02024424; // data
