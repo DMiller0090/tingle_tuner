@@ -5,11 +5,13 @@
 
 Names listed after a `// <dst> only` line in the destination file are kept as they are:
 version-specific symbols, and source names whose ported address would be wrong (pinned).
+A `// absent: NameA NameB` line there leaves out source names the destination doesn't have.
 
 Functions (build/<ver>/functions.txt) are matched in address order by their mnemonic
 sequence (difflib over per-function hashes; unmatched runs are paired in order). A data
 symbol is ported by finding a function whose literal pool holds its address, then reading
-the literal at the same place in the matching function. Anything neither finds (IWRAM
+the literal at the same place in the matching function; data that a named table points at
+(sprites in gSpriteTable) is read from the same place in that table instead. Anything neither finds (IWRAM
 variables, I/O) keeps its address; IWRAM layout is identical in every version so far. EWRAM
 below the program (link buffers) moves with prog_base.
 
@@ -82,12 +84,24 @@ def dst_only(dst_ver):
     return out
 
 
+def absent(dst_ver):
+    """Names on `// absent: ...` lines in the destination's `// <ver> only` block."""
+    text = (CONFIG / dst_ver / 'symbols.txt').read_text().splitlines()
+    marker = f'// {dst_ver} only'
+    if marker not in text:
+        return set()
+    return {n for line in text[text.index(marker) + 1:] if line.startswith('// absent:')
+            for n in line[len('// absent:'):].split()}
+
+
 def port(src_ver, dst_ver):
     # Functions only the destination has (named in its file) are left out of the matching,
     # so the pairing in order doesn't give their names' neighbours the wrong function.
     src, dst = Image(src_ver), Image(dst_ver, skip=dst_only(dst_ver))
     pairs = match_functions(src, dst)
     src_index = {f[0]: i for i, f in enumerate(src.funcs)}
+    src_syms = load_symbols(src_ver)
+    dst_syms = {n: a for a, (n, _) in load_symbols(dst_ver).items()}
     lines = []
     path = CONFIG / src_ver / 'symbols.txt'
     for line in path.read_text().splitlines():
@@ -102,7 +116,11 @@ def port(src_ver, dst_ver):
             if j is not None:
                 new = dst.funcs[j][0]
         elif src.base <= addr < src.end:
-            new = port_data(src, dst, pairs, addr)
+            # A word in a named table (e.g. a sprite in gSpriteTable) beats a pool
+            # reference near the address; run the port twice for a chain of tables.
+            new = port_via_tables(src, dst, addr, src_syms, dst_syms)
+            if new is None:
+                new = port_data(src, dst, pairs, addr)
         elif EWRAM_START <= addr < src.base:
             # EWRAM buffers below the program keep their offset from prog_base. (Pool
             # voting is unreliable here: small EWRAM values also turn up as other data.)
@@ -142,6 +160,26 @@ def port_data(src, dst, pairs, addr, outside=False):
     return max(bucket, key=bucket.get)
 
 
+def port_via_tables(src, dst, addr, src_syms, dst_syms):
+    """Find `addr` as a word in a named src data table (e.g. a sprite in gSpriteTable) and
+    read the same word of that table in dst, whose address the previous port gave it."""
+    starts = sorted(a for a, (n, k) in src_syms.items()
+                    if k == 'data' and src.base <= a < src.end)
+    votes = {}
+    for a, nxt in zip(starts, starts[1:] + [src.end]):
+        name = src_syms[a][0]
+        if name not in dst_syms or nxt - a > 0x400:
+            continue
+        for off in range((4 - a) & 3, nxt - a - 3, 4):
+            if struct.unpack_from('<I', src.data, a + off - src.base)[0] == addr:
+                at = dst_syms[name] + off
+                if dst.base <= at <= dst.end - 4:
+                    cand = struct.unpack_from('<I', dst.data, at - dst.base)[0]
+                    if dst.base <= cand < dst.end:
+                        votes[cand] = votes.get(cand, 0) + 1
+    return max(votes, key=votes.get) if votes else None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('src', choices=sorted(versions()))
@@ -156,7 +194,7 @@ def main():
            f'// Ported from {args.src} by tools/port_symbols.py; edit {args.src} and re-port.']
     # A name in the destination-only block is pinned there: the porter placed some data
     # wrongly (e.g. gMode2BgMap, whose pool neighbours differ between versions).
-    pinned = set(dst_only(args.dst).values())
+    pinned = set(dst_only(args.dst).values()) | absent(args.dst)
     for name, new, attrs, old in ported:
         if name in pinned:
             continue
