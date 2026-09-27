@@ -82,6 +82,10 @@ struct MapMarker
 // 0x144 const u8 * unk144  // US: a message in the message data (MSG_DATA)
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
+// 0x14E u8 unk14E
+// 0x14F u8 unk14F
+// 0x150 u8 unk150
+// 0x151 u8 unk151
 // 0x156 u8 unk156
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
@@ -233,7 +237,12 @@ struct GameState
     /*0x148*/ u8 filler148[0x14A - 0x148];
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
-    /*0x14C*/ u8 filler14C[0x156 - 0x14C];
+    /*0x14C*/ u8 filler14C[0x14E - 0x14C];
+    /*0x14E*/ u8 unk14E;
+    /*0x14F*/ u8 unk14F;
+    /*0x150*/ u8 unk150;
+    /*0x151*/ u8 unk151;
+    /*0x152*/ u8 filler152[0x156 - 0x152];
     /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 filler158[0x15A - 0x158];
@@ -475,5 +484,9 @@ void Func_0201FCA0(void);
 void Func_020208FC(u8 open);
 void Func_0201ED08(void);
 void SendItemUse(u8 item, u8 arg);
+#define GBACOM_BUF_SHOP     ((u8 *)(PROG_BASE - 0x570))
+#define GBACOM_BUF_ITEM_BUY ((u8 *)(PROG_BASE - 0x560))
+// Shop purchase requests (slot 12), 3 bytes each.
+extern const u8 gShopRequests[9];
 
 #endif // GUARD_GAME_H

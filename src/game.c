@@ -291,7 +291,169 @@ void Func_0201F420(void)
     gGameState.unk1E2 = 0;
 }
 
-INCLUDE_ASM(Func_0201F460);
+// Item effect 7, the shop: gGameState.unk1E2 steps through choosing an item, sending the purchase request
+// (slot 12) and waiting for the GC's answer (slot 13).
+void EffectShop(void)
+{
+    u16 item;
+    u8 what, result;
+
+    if (gGameState.flags.unk3_2)
+    {
+        Func_0201EBAC();
+        return;
+    }
+    if (gGameState.unk1E2 == 0)
+    {
+        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        {
+            gGameState.unk13C = 0;
+            if ((*(u32 *)gGameState.effect & 0xFFFFFF00) == 0)
+            {
+                GamePlaySound(0x3C, 14);
+                gGameState.unk1E2 = 4;
+            }
+            else if (gGameState.effect[1])
+            {
+                GamePlaySound(0x40, 14);
+                gGameState.unk1E2 = 1;
+            }
+            else if (gGameState.effect[2])
+            {
+                GamePlaySound(0x3F, 14);
+                gGameState.unk1E2 = 1;
+            }
+            else if (gGameState.effect[3])
+            {
+                GamePlaySound(0x3E, 14);
+                gGameState.unk1E2 = 1;
+            }
+            else
+            {
+                GamePlaySound(0x3C, 14);
+                gGameState.unk1E2 = 4;
+            }
+        }
+    }
+    else if (gGameState.unk1E2 == 1)
+    {
+        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+        {
+            if (gGameState.unk142 == 0x3E)
+            {
+                if (gGameState.unk14F == 1)
+                    gGameState.unk1E2 = 5;
+                else
+                    gGameState.unk1E2 = 2;
+            }
+            else if (gGameState.unk142 == 0x3F || gGameState.unk142 == 0x40)
+            {
+                if (gGameState.unk14F == 2)
+                    gGameState.unk1E2 = 5;
+                else
+                    gGameState.unk1E2 = 2;
+            }
+        }
+    }
+    else if (gGameState.unk1E2 == 2)
+    {
+        item = gGameState.unk142;
+        if (item >= 0x41 && item <= 0x45)
+        {
+            if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+            {
+                if (gGameState.unk14F == 0)
+                {
+                    if (gGameState.unk142 == 0x41)
+                        what = 0;
+                    else if (gGameState.unk142 == 0x43)
+                        what = 1;
+                    else
+                        what = 2;
+                    GBACOM_BUF_SHOP[0] = gShopRequests[what * 3];
+                    GBACOM_BUF_SHOP[1] = gShopRequests[what * 3 + 1];
+                    GBACOM_BUF_SHOP[2] = gShopRequests[what * 3 + 2];
+                    GbaComSendDataSet(GBACOM_BUF_SHOP, 4, GBACOM_SLOT_SHOP, *(u32 *)GBACOM_BUF_SHOP);
+                    gGameState.unk1E2 = 3;
+                    gMain.newKeys ^= 1;
+                }
+                else
+                {
+                    gGameState.unk13C = 0;
+                    GamePlaySound(0x3D, 1);
+                    gGameState.unk1E2 = 5;
+                }
+            }
+        }
+    }
+    else if (gGameState.unk1E2 == 3)
+    {
+        if (GbaComRecvStatusCheck(GBACOM_SLOT_ITEM_BUY))
+        {
+            what = GBACOM_BUF_ITEM_BUY[0];
+            result = GBACOM_BUF_ITEM_BUY[1];
+            GbaComDataStatusReset(GBACOM_SLOT_ITEM_BUY);
+            if (result == 0)
+            {
+                gGameState.unk13C = 0;
+                GamePlaySound(0x48, 14);
+                gGameState.unk1E2 = 4;
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+            }
+            else if (result == 1)
+            {
+                gMain.newKeys |= 1;
+                gGameState.unk1E2 = 4;
+            }
+            else if (result == 2)
+            {
+                gGameState.unk13C = 0;
+                gGameState.unk1E2 = 4;
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+                if (what == 0)
+                    GamePlaySound(0x44, 14);
+                else if (what == 1)
+                    GamePlaySound(0x42, 14);
+                else
+                    GamePlaySound(0x49, 14);
+            }
+            else
+            {
+                gGameState.unk13C = 0;
+                GamePlaySound(0x46, 14);
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+                gGameState.unk1E2 = 4;
+            }
+        }
+        else
+        {
+            gMain.newKeys &= 0xFF3E;
+        }
+    }
+    else if (gGameState.unk1E2 == 4)
+    {
+        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        {
+            gGameState.unk13C = 0;
+            GamePlaySound(0x3D, 1);
+            gGameState.unk1E2 = 5;
+        }
+    }
+    else
+    {
+        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+            Func_0201EBAC();
+    }
+}
 
 void Func_0201F878(void)
 {

@@ -177,7 +177,7 @@ Func_0201EF98 = 0x0201EF98; // thumb
 Func_0201F068 = 0x0201F068; // thumb
 Func_0201F2A8 = 0x0201F2A8; // thumb
 Func_0201F308 = 0x0201F308; // thumb
-Func_0201F460 = 0x0201F460; // thumb
+EffectShop = 0x0201F460; // thumb
 Func_0201F878 = 0x0201F878; // thumb
 Func_0201F8C4 = 0x0201F8C4; // thumb
 Func_0201FA2C = 0x0201FA2C; // thumb
@@ -314,6 +314,7 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+gShopRequests = 0x020244D0; // data
 gItemEffectFuncs = 0x020244E4; // data
 gMode2StateFuncs = 0x0202452C; // data
 gObjFuncs = 0x02024534; // data
