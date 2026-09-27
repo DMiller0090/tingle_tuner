@@ -365,7 +365,201 @@ void Func_0201CAE8(void)
     gGameState.unk1E5_1 = 0;
 }
 
-INCLUDE_ASM(Func_0201CB10);
+// Message interpreter, one step per call: draws the next character of gGameState.msgPtr or
+// runs the control codes (0xF2-0xFF) before it. Returns 0 to go on, 2 while it waits (page
+// full, or for A), 3 at the end (0xFF), 1 after code 0xF6.
+s32 Func_0201CB10(void)
+{
+    u8 ch = *gGameState.msgPtr;
+    u32 mosaic = (gMain.bgcnt[0] >> 6) & 1;
+    bool32 repeat = FALSE;  // 0xFB: stay on the code for the next letter of the name
+    u8 n;  // line height, then the argument byte of a code (one variable in the original)
+
+    if ((u16)gGameState.unk140 != 0xFFFF)
+    {
+        if ((u8)(gGameState.unk14B - 2) > 1 || gGameState.unk14D != 0)
+            Func_02021284((u16)gGameState.unk140, gGameState.unk140, 0);
+        else
+            gGameState.unk140 = (u16)gGameState.unk140 | 0xFFFF;
+    }
+    if (gGameState.unk15A)
+        n = 12;
+    else
+        n = 0;
+    if (gGameState.unk159 && (u16)gGameState.unk140 == 0xFFFF)
+        Func_02021284(0, 0, 0);
+    if (gGameState.unk14D != 0)
+    {
+        gGameState.unk14D--;  // delay (code 0xF9)
+    }
+    else
+    {
+        gGameState.unk14D = gGameState.unk14C;
+        if (gGameState.unk14B == 2 || gGameState.textY >= 0x50 - n)
+        {
+            // Page full: show the arrow until A (or the timeout), then clear the window.
+            if (gGameState.flags.unk3_1)
+                gGameState.unk13E++;
+            if (gGameState.unk13E <= 0x12B && !(gMain.newKeys & 1))
+            {
+                DrawSprite(gSprite_0202BDF0, (gMain.frameCount & 0xC) == 0, 0xE0, 0x84, 0, mosaic,
+                           0, 0, 0, 0, 0);
+                return 2;
+            }
+            gMain.newKeys &= ~1;
+            Func_0201C0E8(1);
+            gGameState.unk15A = 0;
+            gGameState.unk13E = 0;
+            gGameState.unk14B = 0;
+            return 0;
+        }
+        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && gGameState.unk151 != 0)
+            return Func_0201C204();
+        while (ch > 0xF1)
+        {
+            if (ch == 0xFF)  // end
+            {
+                gGameState.unk158 = 0;
+                gGameState.unk159 = 0;
+                gGameState.unk15A = 0;
+                #ifndef VERSION_GZLJ01
+                if (gGameState.unk151)
+                    return 1;
+#endif
+                return 3;
+            }
+            if (ch == 0xFD || ch == 0xF4)  // space
+            {
+            space:
+                gGameState.msgPtr++;
+                if (gGameState.unk15A)
+                    gGameState.textX += gGameState.unk157 * 2;
+                else
+                    gGameState.textX += gGameState.unk157;
+                return 0;
+            }
+            if (ch == 0xFA || ch == 0xFE)  // 0xFA: wait, 0xFE: new line
+            {
+                if (gGameState.unk15A)
+                    n = 24;
+                else
+                    n = 12;
+                if (ch != 0xFE)
+                {
+                    gGameState.msgPtr++;
+                    return 2;
+                }
+                gGameState.textY += n;
+                gGameState.textX = 0;
+                n -= 12;
+                if (gGameState.textY >= 0x50 - n)
+                {
+                    gGameState.msgPtr++;
+                    return 2;
+                }
+            }
+            else if (ch == 0xFB)  // the player's name, one letter per step
+            {
+                u8 i = gGameState.playerNameIndex;
+                s32 next;
+
+                ch = gGameState.playerName[i];
+                next = i + 1;
+                if (gGameState.playerName[next] == 0xFF || i == 7)
+                {
+                    gGameState.playerNameIndex = 0;
+                }
+                else
+                {
+                    gGameState.playerNameIndex = next;
+                    repeat = TRUE;
+                }
+                SoundPlay(0x28 - SOUND_ID_SHIFT, 0);
+                break;
+            }
+            else if (ch == 0xF9)  // delay
+            {
+                gGameState.unk14D = *++gGameState.msgPtr;
+                gGameState.msgPtr++;
+                // (A return here would be laid out differently.)
+                goto end;
+            }
+            else if (ch == 0xF8)
+            {
+                n = *++gGameState.msgPtr;
+                if (gGameState.unk150 == 0)
+                    gGameState.unk150 = gGameState.textY;
+                if (n == 0)
+                {
+                    gGameState.unk14F = gGameState.unk14E;
+                    gGameState.unk151 = 1;
+                    gGameState.unk153 = n;
+                    gGameState.unk152 = gSprite_0202C130[4];
+                }
+                else if (gGameState.unk14F == 0xFF)
+                {
+                    gGameState.unk14E++;
+                }
+                goto space;
+            }
+            else if (ch == 0xF7)
+            {
+                n = *++gGameState.msgPtr;
+                if (gGameState.unk150 == 0)
+                    gGameState.unk150 = gGameState.textY;
+                if (n == 0)
+                {
+                    gGameState.unk14F = gGameState.unk14E;
+                    gGameState.unk151 = 2;
+                    gGameState.unk153 = n;
+                    gGameState.unk152 = gSprite_0202C130[4];
+                }
+                else if (gGameState.unk14F == 0xFF)
+                {
+                    gGameState.unk14E++;
+                }
+                goto space;
+            }
+            else if (ch == 0xF6)
+            {
+                n = *++gGameState.msgPtr;
+                Func_0201C484(n);
+                gGameState.msgPtr++;
+                return 1;
+            }
+            else if (ch == 0xF5)
+            {
+                gGameState.unk226 = gTable_02024354[*++gGameState.msgPtr];
+                Func_0201C568();
+            }
+            else if (ch == 0xF3)  // call a handler
+            {
+                gMsgCmdFuncs[*++gGameState.msgPtr]();
+            }
+            else if (ch == 0xF2)  // a glyph run
+            {
+                n = *++gGameState.msgPtr;
+                Func_0201C660(n);
+            }
+            else if (ch == 0xFC)
+            {
+                gGameState.unk14A = *++gGameState.msgPtr;
+            }
+            else
+            {
+                while (1)
+                    ;
+            }
+            ch = *++gGameState.msgPtr;
+        }
+        if (!repeat)
+            gGameState.msgPtr++;
+        if (!DRAW_CHAR(ch))
+            return 2;
+    }
+end:
+    return 0;
+}
 
 INCLUDE_ASM(Func_0201CFE8);
 

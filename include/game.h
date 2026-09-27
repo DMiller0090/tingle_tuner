@@ -98,6 +98,8 @@ struct ItemSlot
 // 0x14F u8 unk14F
 // 0x150 u8 unk150
 // 0x151 u8 unk151
+// 0x152 u8 unk152
+// 0x153 u8 unk153
 // 0x156 u8 unk156
 // 0x157 u8 unk157
 // 0x158 u8 unk158
@@ -126,6 +128,7 @@ struct ItemSlot
 // 0x20E u16 wavePhase  // 8.8; the high byte indexes gSinTable
 // 0x210 u16 timer  // flags.timer
 // 0x212 u8 playerName[8]  // slot 10
+// 0x21A u8 playerNameIndex  // next letter of playerName for message code 0xFB
 // 0x21C u8 unk21C
 // 0x21D u8 unk21D
 // 0x21E u8 unk21E
@@ -253,7 +256,9 @@ struct GameState
     /*0x14F*/ u8 unk14F;
     /*0x150*/ u8 unk150;
     /*0x151*/ u8 unk151;
-    /*0x152*/ u8 filler152[0x156 - 0x152];
+    /*0x152*/ u8 unk152;
+    /*0x153*/ u8 unk153;
+    /*0x154*/ u8 filler154[0x156 - 0x154];
     /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 unk158;
@@ -297,7 +302,8 @@ struct GameState
     /*0x20E*/ u16 wavePhase;                  // 8.8; the high byte indexes gSinTable
     /*0x210*/ u16 timer;                      // flags.timer
     /*0x212*/ u8 playerName[8];               // slot 10
-    /*0x21A*/ u8 filler21A[0x21C - 0x21A];
+    /*0x21A*/ u8 playerNameIndex;             // next letter of playerName for message code 0xFB
+    /*0x21B*/ u8 filler21B[0x21C - 0x21B];
     /*0x21C*/ u8 unk21C;
     /*0x21D*/ u8 unk21D;
     /*0x21E*/ u8 unk21E;
@@ -459,6 +465,13 @@ void Func_0201D8D8(s16 id);
 void DrawItemIcon(u8 item, u16 *map);
 void DrawItemCount(u8 item, u16 *map);
 void Func_0201DCEC(u8 item);
+void Func_0201C660(u8 id);
+s32 Func_0201C204(void);
+s32 Func_0201CB10(void);
+extern const u8 gSprite_0202BDF0[];  // "more text" arrow (Func_0201CB10)
+extern const u8 gSprite_0202C130[];
+extern const u16 gTable_02024354[];  // message code 0xF5: value for gGameState.unk226
+extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: Func_0201C86C ... Func_0201CAE8
 void Func_0201E2FC(void);
 extern const u8 gSprite_0202BDB8[];  // menu slot cursor (Func_0201DA78)
 // One OAM entry (the hardware attribute layout), as Func_0201DB50 fills gOamBuffer.
