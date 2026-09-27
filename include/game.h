@@ -398,6 +398,13 @@ extern const u8 gSprite_0202CA40[];
 
 // ---- game.c part A (GZLJ01 02018884-0201A224) ----
 
+s16 EaseTowardMinMax(s16 *pos, s16 target, s16 div, s16 maxStep, s16 minStep);
+void EaseTowardMax(s16 *pos, s16 target, s16 div, s16 maxStep);
+bool32 StepTowardS8(s8 *pos, s8 target, s8 speed);
+bool32 StepTowardAngle(s16 *pos, s16 target, s16 speed);
+u8 CountDownU8(u8 *timer);
+u16 CountDownU16(u16 *timer);
+
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----

@@ -7,19 +7,123 @@
 // Game code after heap.c, up to the sound driver (GZLJ01 02018884-02020E28). Not split into
 // objects yet: see docs/layout.md for the groups the .rodata order implies.
 
-INCLUDE_ASM(Func_02018884);
+s16 EaseTowardMinMax(s16 *pos, s16 target, s16 div, s16 maxStep, s16 minStep)
+{
+    s16 diff = target - *pos;
+    s16 step;
 
-INCLUDE_ASM(Func_02018944);
+    if (*pos != target)
+    {
+        step = diff / div;
+        if (step > minStep || step < -minStep)
+        {
+            if (step > maxStep)
+                step = maxStep;
+            if (step < -maxStep)
+                step = -maxStep;
+            *pos += step;
+        }
+        else if (diff >= 0)
+        {
+            *pos += minStep;
+            if ((s16)(target - *pos) <= 0)
+                *pos = target;
+        }
+        else
+        {
+            *pos -= minStep;
+            if ((s16)(target - *pos) >= 0)
+                *pos = target;
+        }
+    }
+    return target - *pos;
+}
 
-INCLUDE_ASM(Func_02018988);
+void EaseTowardMax(s16 *pos, s16 target, s16 div, s16 maxStep)
+{
+    s16 step = (s16)(target - *pos) / div;
 
-INCLUDE_ASM(StepToward);
+    if (step > maxStep)
+        *pos += maxStep;
+    else if (step < -maxStep)
+        *pos -= maxStep;
+    else
+        *pos += step;
+}
 
-INCLUDE_ASM(Func_02018A38);
+bool32 StepTowardS8(s8 *pos, s8 target, s8 speed)
+{
+    if (speed != 0)
+    {
+        if (*pos > target)
+            speed = -speed;
+        *pos += speed;
+        if ((*pos - target) * speed >= 0)
+        {
+            *pos = target;
+            return TRUE;
+        }
+    }
+    else if (*pos == target)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
 
-INCLUDE_ASM(Func_02018A90);
+bool32 StepToward(s16 *pos, s16 target, s16 speed)
+{
+    if (speed != 0)
+    {
+        if (*pos > target)
+            speed = -speed;
+        *pos += speed;
+        if ((*pos - target) * speed >= 0)
+        {
+            *pos = target;
+            return TRUE;
+        }
+    }
+    else if (*pos == target)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
 
-INCLUDE_ASM(Func_02018AA4);
+bool32 StepTowardAngle(s16 *pos, s16 target, s16 speed)
+{
+    if (speed != 0)
+    {
+        if ((s16)(*pos - target) > 0)
+            speed = -speed;
+        *pos += speed;
+        if ((s16)(*pos - target) * speed >= 0)
+        {
+            *pos = target;
+            return TRUE;
+        }
+    }
+    else if (*pos == target)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+u8 CountDownU8(u8 *timer)
+{
+    if (*timer != 0)
+        (*timer)--;
+    return *timer;
+}
+
+u16 CountDownU16(u16 *timer)
+{
+    if (*timer != 0)
+        (*timer)--;
+    return *timer;
+}
 
 INCLUDE_ASM(DrawSprite);
 

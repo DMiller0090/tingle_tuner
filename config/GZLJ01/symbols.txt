@@ -102,12 +102,17 @@ Func_0201F420 = 0x0201F420; // thumb
 Func_02020150 = 0x02020150; // thumb
 Func_02020298 = 0x02020298; // thumb
 // placeholders so all versions share INCLUDE_ASM names
-Func_02018884 = 0x02018884; // thumb
-Func_02018944 = 0x02018944; // thumb
-Func_02018988 = 0x02018988; // thumb
-Func_02018A38 = 0x02018A38; // thumb
-Func_02018A90 = 0x02018A90; // thumb
-Func_02018AA4 = 0x02018AA4; // thumb
+// move *pos by (target - *pos) / div, clamped to [minStep, maxStep] in size; returns what is left
+EaseTowardMinMax = 0x02018884; // thumb
+// move *pos by (target - *pos) / div, at most maxStep
+EaseTowardMax = 0x02018944; // thumb
+// StepToward for an s8
+StepTowardS8 = 0x02018988; // thumb
+// StepToward comparing (s16)(*pos - target), so it takes the short way round a wrapping angle
+StepTowardAngle = 0x02018A38; // thumb
+// if (*p) --*p; return *p
+CountDownU8 = 0x02018A90; // thumb
+CountDownU16 = 0x02018AA4; // thumb
 Func_020190A8 = 0x020190A8; // thumb
 Func_0201920C = 0x0201920C; // thumb
 Func_020192D8 = 0x020192D8; // thumb
