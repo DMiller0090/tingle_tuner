@@ -165,8 +165,8 @@ Func_0201FD04 = 0x02026B44; // thumb
 Func_0201FEEC = 0x02026D2C; // thumb
 Func_0201FF14 = 0x02026D54; // thumb
 Func_02020190 = 0x02026FD0; // thumb
-Func_020202E8 = 0x02027128; // thumb
-Func_020203EC = 0x0202727C; // thumb
+Mode2State0 = 0x02027128; // thumb
+Mode2State1 = 0x0202727C; // thumb
 ObjDecelX = 0x02027360; // thumb
 ObjDecelY = 0x02027394; // thumb
 ObjFall = 0x020273C8; // thumb
@@ -272,11 +272,12 @@ gMode1BgTiles = 0x0202B458; // data
 gMode1BgPalette = 0x0202D684; // data
 gMode1BgMap = 0x0202D884; // data
 gMode1SeaMap = 0x0202E0F4; // data
-gMode2BgMap = 0x02030328; // data
+gMode2BgMap = 0x020304D4; // data
 gMode1ObjTiles = 0x0203064C; // data
 gMode1ObjPalette = 0x020323F8; // data
 gSprite_0202BD78 = 0x020325F8; // data
 gSprite_0202C438 = 0x02032CB8; // data
+gSprite_0202C848 = 0x020330C8; // data
 gSprite_0202C938 = 0x020331B8; // data
 gSprite_0202CA08 = 0x02033288; // data
 gSprite_0202CA40 = 0x020332C0; // data
@@ -314,5 +315,7 @@ gBgScrollTables = 0x0201AB40; // data
 // GZLE01_ud only
 DrawString = 0x02024590; // thumb
 gMode0UsString = 0x0202AD74; // data
+// the "link lost" text Mode2State0 draws (US only)
+gMode2UsString = 0x020335A0; // data
 // GZLE01 and GZLE01_ud only: wraps Func_0201C704 (id 0x3F -> 0x18, setting gGameState+0x159)
 UsFunc_02023390 = 0x02023390; // thumb

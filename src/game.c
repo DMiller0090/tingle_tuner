@@ -3,6 +3,7 @@
 #include "game.h"
 #include "sound.h"
 #include "gba_com.h"
+#include "gba/syscall.h"
 
 // Game code after heap.c, up to the sound driver (GZLJ01 02018884-02020E28). Not split into
 // objects yet: see docs/layout.md for the groups the .rodata order implies.
@@ -276,9 +277,73 @@ INCLUDE_ASM(Func_02020190);
 
 INCLUDE_ASM(Func_02020298);
 
-INCLUDE_ASM(Func_020202E8);
+// Link lost: load the title graphics with the "link lost" BG map and fade in (state 1).
+void Mode2State0(void)
+{
+    u8 blend;
 
-INCLUDE_ASM(Func_020203EC);
+    REG_DISPCNT = 0x80;  // forced blank
+    gMain.dispcnt = 0x1100;  // BG0 and OBJ
+    gMain.bgcnt[0] = 0x4C08;
+    LZ77UnCompVram(gMode1BgTiles, (void *)0x06008000);
+    LZ77UnCompVram(gMode2BgMap, (void *)0x06006000);
+#ifndef VERSION_GZLJ01
+    Func_0201BAD8();
+    gGameState.unk144 = MSG_DATA + *(u16 *)(MSG_DATA + *(u16 *)MSG_DATA + 0x3E);
+    gGameState.unk14A = 6;
+    gGameState.unk14B = 0;
+    gGameState.unk157 = 6;
+    gGameState.unk15A = 0;
+    DrawString(gMode2UsString, 0, 0, 8);
+#endif
+    CpuCopy16(gMode1BgPalette, (void *)0x05000000, sizeof(gMode1BgPalette));
+    LZ77UnCompVram(gMode1ObjTiles, (void *)0x06010000);
+    CpuCopy16(gMode1ObjPalette, (void *)0x05000200, sizeof(gMode1ObjPalette));
+    gMain.bgOfs[0][0] = 0;
+    gMain.bgOfs[0][1] = 0;
+    gMain.hblankScroll = 0;
+    gMode0Work.blend = blend = 0;
+    gMain.bldcnt = 0x2071;  // BG0 over BG0-3, OBJ and backdrop
+    gMain.bldalpha = ((16 - blend) << 8) | blend;
+    gGameState.flagsReceived = 0;
+    gGameState.unk23C = 1;
+    gMode0Work.timer = 1;
+    gMode0Work.fadingOut = 0;
+    gMain.modeState++;
+}
+
+// Pulse the blend (between 6 and 16, holding 3 s at full) until the link is back, then
+// restart mode 1.
+void Mode2State1(void)
+{
+    Func_02021284(2, 2, 0);
+    if (--gMode0Work.timer == 0)
+    {
+        gMode0Work.timer = 2;
+        if (gMode0Work.fadingOut == 0)
+        {
+            gMode0Work.blend++;
+            if (gMode0Work.blend == 16)
+            {
+                gMode0Work.timer = 180;
+                gMode0Work.fadingOut ^= 1;
+            }
+        }
+        else
+        {
+            gMode0Work.blend--;
+            if (gMode0Work.blend == 6)
+                gMode0Work.fadingOut ^= 1;
+        }
+        gMain.bldalpha = ((16 - gMode0Work.blend) << 8) | gMode0Work.blend;
+    }
+    if (gMain.linked)
+    {
+        gMain.mode = 1;
+        gMain.modeState = 0;
+    }
+    DrawSpriteAt(gSprite_0202C848, 0, 0xD0, 0x80, 0, 0, 0);
+}
 
 void MainMode2(void)
 {

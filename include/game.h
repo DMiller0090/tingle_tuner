@@ -77,6 +77,7 @@ struct MapMarker
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
 // 0x142 s16 unk142
+// 0x144 const u8 * unk144  // US: a message in the message data (MSG_DATA)
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
 // 0x156 u8 unk156
@@ -222,7 +223,8 @@ struct GameState
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
     /*0x142*/ s16 unk142;
-    /*0x144*/ u8 filler144[0x14A - 0x144];
+    /*0x144*/ const u8 * unk144;              // US: a message in the message data (MSG_DATA)
+    /*0x148*/ u8 filler148[0x14A - 0x148];
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
     /*0x14C*/ u8 filler14C[0x156 - 0x14C];
@@ -436,5 +438,14 @@ void ObjUpdateAll(void);
 s32 ObjFindFree(void);
 bool32 ObjSpawn(u8 type);
 extern const u8 gSprite_0202BD78[];
+extern const u8 gSprite_0202C848[];
+void Mode2State0(void);
+void Mode2State1(void);
+// The message data (slot 0, msg_LZ.bin), unpacked to the start of EWRAM by Mode0State1.
+#define MSG_DATA ((const u8 *)0x02000000)
+void Func_0201BAD8(void);
+#ifndef VERSION_GZLJ01
+extern const u8 gMode2UsString[];
+#endif
 
 #endif // GUARD_GAME_H
