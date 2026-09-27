@@ -55,6 +55,9 @@ Func_0201A570 = 0x0201A570; // thumb
 // sound request wrapper used by the game code (range-checks the id)
 GamePlaySound = 0x0201D978; // thumb
 ObjReset = 0x02020570; // thumb
+// table[line] = BG0HOFS + sin(phase + 4 * line) * amplitude / 256 for the 160 lines
+BuildWaveScrollTable = 0x020208BC; // thumb
+Func_0201A540 = 0x0201A540; // thumb
 ObjResetActive = 0x02020644; // thumb
 Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb
@@ -212,3 +215,5 @@ gGbaComBufItemBuy = 0x020142A0; // data
 gGbaComBufSE = 0x020142B0; // data
 // per-line BG0HOFS tables (u16[160] each), DMAed at HBlank when gMain.hblankScroll is set
 gBgScrollTables = 0x02014340; // data
+// Mode1State1 addresses the second table by its own symbol
+gBgScrollTable1 = 0x02014480; // data

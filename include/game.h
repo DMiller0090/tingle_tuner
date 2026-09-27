@@ -40,6 +40,8 @@
 // 0x1FC s16 rupees  // shown on screen; counts toward flags.rupees
 // 0x1FE s16 rupeeDelta  // flags.rupees - rupees
 // 0x206 u16 unk206
+// 0x20A u16 waveAmplitude  // intro wave (Mode1State1), counts down to 0
+// 0x20E u16 wavePhase  // 8.8; the high byte indexes gSinTable
 // 0x210 u16 timer  // flags.timer
 // 0x21C u8 unk21C
 // 0x221 u8 fadeTimer  // frames to the next mosaic/brightness step
@@ -52,6 +54,7 @@
 // 0x236 u8 isFree  // flags.isFree
 // 0x238 u8 unk238  // flags.unkB_7
 // 0x23B u8 flagsReceived
+// 0x23C u8 unk23C
 // end genstruct
 struct GameState
 {
@@ -111,7 +114,10 @@ struct GameState
     /*0x1FE*/ s16 rupeeDelta;                 // flags.rupees - rupees
     /*0x200*/ u8 filler200[0x206 - 0x200];
     /*0x206*/ u16 unk206;
-    /*0x208*/ u8 filler208[0x210 - 0x208];
+    /*0x208*/ u8 filler208[0x20A - 0x208];
+    /*0x20A*/ u16 waveAmplitude;              // intro wave (Mode1State1), counts down to 0
+    /*0x20C*/ u8 filler20C[0x20E - 0x20C];
+    /*0x20E*/ u16 wavePhase;                  // 8.8; the high byte indexes gSinTable
     /*0x210*/ u16 timer;                      // flags.timer
     /*0x212*/ u8 filler212[0x21C - 0x212];
     /*0x21C*/ u8 unk21C;
@@ -132,7 +138,8 @@ struct GameState
     /*0x238*/ u8 unk238;                      // flags.unkB_7
     /*0x239*/ u8 filler239[0x23B - 0x239];
     /*0x23B*/ u8 flagsReceived;
-    /*0x23C*/ u8 filler23C[0x240 - 0x23C];
+    /*0x23C*/ u8 unk23C;
+    /*0x23D*/ u8 filler23D[0x240 - 0x23D];
 };
 
 extern struct GameState gGameState;
@@ -140,6 +147,8 @@ extern struct GameState gGameState;
 // EWRAM below the program: per-line BG0HOFS tables that VBlankIntr's HBlank DMA reads
 // (gGameState.scrollTable picks one).
 extern u16 gBgScrollTables[][160];
+// gBgScrollTables[1] under its own name: Mode1State1 loads it as a separate constant.
+extern u16 gBgScrollTable1[160];
 
 // Graphics in .rodata (LZ77-compressed except the palettes).
 extern const u8 gMode1BgTiles[];
@@ -155,6 +164,8 @@ void Func_0201A570(void);
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
 void GamePlaySound(s16 id, u8 arg);
 void Func_0201A6D4(void);
+void Func_0201A540(void);
+void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).
 struct Obj

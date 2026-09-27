@@ -42,6 +42,8 @@ Mode1VBlank = 0x020213B4; // thumb
 Func_0201A570 = 0x02020D48; // thumb
 GamePlaySound = 0x02024490; // thumb
 ObjReset = 0x020271CC; // thumb
+BuildWaveScrollTable = 0x02027518; // thumb
+Func_0201A540 = 0x02020D18; // thumb
 ObjResetActive = 0x020272A0; // thumb
 Func_0201A6D4 = 0x02020EAC; // thumb
 Func_0201A224 = 0x020209FC; // thumb
@@ -168,5 +170,6 @@ gGbaComBufShop = 0x0201AA90; // data
 gGbaComBufItemBuy = 0x0201AAA0; // data
 gGbaComBufSE = 0x0201AAB0; // data
 gBgScrollTables = 0x0201AB40; // data
+gBgScrollTable1 = 0x0201AC80; // data
 // GZLE01 only
 gMode0UsString = 0x0202AB40; // data

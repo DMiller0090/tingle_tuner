@@ -153,7 +153,42 @@ void Mode1Func_02015298(void)
     Mode1Func_0201521C();
 }
 INCLUDE_ASM(Mode1State0);
-INCLUDE_ASM(Mode1State1);
+// The screen comes in with a wave (per-line BG0HOFS by HBlank DMA, double-buffered) that
+// dies down; then the dungeon music starts and the game goes to state 2.
+void Mode1State1(void)
+{
+    u16 *table;
+
+    if (gGameState.scrollTableNext)
+        table = gBgScrollTable1;
+    else
+        table = gBgScrollTables[0];
+    gGameState.wavePhase += (gGameState.waveAmplitude << 4) + 0x100;
+    BuildWaveScrollTable(table, gGameState.wavePhase >> 8, gGameState.waveAmplitude);
+    gGameState.scrollTableNext ^= 1;
+    if (--gGameState.waveAmplitude == 0)
+    {
+        gMain.hblankScroll = FALSE;
+        GamePlaySound(gDungeonSounds[gGameState.flags.dungeonNo], 2);
+        SoundPlay(0, 0);
+        gGameState.unk21C = 1;
+        gMain.modeState = 2;
+        if (gGameState.flags.dungeonNo == 0)
+        {
+            gMain.dispcnt = 0x1F00;  // BG0-3 and OBJ
+            gGameState.unk23C = 0;
+        }
+        else if (gGameState.unk23C == 0)
+        {
+            gMain.dispcnt = 0x1B00;  // BG0, BG1, BG3, OBJ
+        }
+        else
+        {
+            gMain.dispcnt = 0x1300;  // BG0, BG1, OBJ
+        }
+    }
+    Func_0201A540();
+}
 // Fade in: step the mosaic and brightness back down every other frame, then go to state 2.
 void Mode1State5(void)
 {
