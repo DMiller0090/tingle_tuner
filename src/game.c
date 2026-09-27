@@ -682,7 +682,98 @@ void Func_0201FEEC(void)
     gGameState.unk12B = 4;
 }
 
-INCLUDE_ASM(Func_0201FF14);
+// Item effect 12.
+void Func_0201FF14(void)
+{
+    struct Main *main = &gMain;
+    s32 m = FindMarker(1);
+    u16 x, y;
+
+    if (gGameState.unk12B == 3)
+    {
+        if (gGameState.unk132 == 0)
+        {
+            if (gGameState.unk134 == 0)
+            {
+                gGameState.unk038 = gGameState.unk034 = main->bgOfs[3][1] - 0x30;
+                gGameState.unk12B = 4;
+            }
+        }
+        else
+        {
+            gGameState.unk132--;
+        }
+    }
+    else if (gGameState.unk12B == 4)
+    {
+        if (main->frameCount & 1)
+        {
+            gGameState.unk034++;
+            gGameState.unk038++;
+        }
+        if (gGameState.markers[m].y - gGameState.unk034 <= 0x18)
+        {
+            gGameState.unk034 = gGameState.markers[m].y - 0x18;
+            gGameState.unk038 = gGameState.markers[m].y - 0x18;
+            SendItemUse(gGameState.effect[0], gGameState.unk164[5].unk2);
+            gGameState.unk12B = 5;
+        }
+        x = gGameState.markers[m].x - 0x15;
+        gGameState.unk036 = gGameState.markers[m].x + 0x11;
+        Func_0201F8C4(x, gGameState.unk034, 2);
+    }
+    else if (gGameState.unk12B == 5)
+    {
+        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 1);
+        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 0);
+        if (gGameState.flags.timer)
+        {
+            gGameState.unk1C8 = 120;
+            gGameState.unk12B = 6;
+        }
+        else
+        {
+            x = gGameState.markers[m].x - main->bgOfs[3][0] + 4;
+            y = gGameState.markers[m].y - main->bgOfs[3][1] - 0x24;
+            Func_0201EF98(x, y);
+        }
+    }
+    else if (gGameState.unk12B == 6)
+    {
+        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 1);
+        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 0);
+        if (!gGameState.flags.timer)
+        {
+            gGameState.unk032 = gGameState.markers[m].x - 0x15;
+            gGameState.unk036 = gGameState.markers[m].x + 0x11;
+            gGameState.unk034 = gGameState.markers[m].y - 0x18;
+            gGameState.unk038 = gGameState.markers[m].y - 0x18;
+            gGameState.unk12B = 7;
+        }
+        else
+        {
+            x = gGameState.markers[m].x - main->bgOfs[3][0] + 4;
+            y = gGameState.markers[m].y - main->bgOfs[3][1] - 0x24;
+            Func_0201EF98(x, y);
+        }
+    }
+    else if (gGameState.unk12B == 7)
+    {
+        gGameState.unk034--;
+        gGameState.unk038--;
+        gGameState.unk032 = gGameState.markers[m].x - 0x15;
+        gGameState.unk036 = gGameState.markers[m].x + 0x11;
+        Func_0201F8C4(gGameState.unk032, gGameState.unk034, 2);
+        if (gGameState.unk034 < (s16)main->bgOfs[3][1] - 0x30)
+        {
+            GamePlaySound(0x30, 1);
+            gGameState.unk12B = 0;
+            Func_0201EBAC();
+        }
+        if (gGameState.unk038 < (s16)main->bgOfs[3][1] - 0x30)
+            gGameState.unk038 = main->bgOfs[3][1] - 0x30;
+    }
+}
 
 void Func_02020150(void)
 {

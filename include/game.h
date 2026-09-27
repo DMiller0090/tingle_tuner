@@ -36,8 +36,8 @@ struct Unk164
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
 // 0x034 s16 unk034  // title sprite y
-// 0x036 u16 unk036
-// 0x038 u16 unk038
+// 0x036 s16 unk036
+// 0x038 s16 unk038
 // 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
 // 0x03D u8 switchStageNo
@@ -167,8 +167,8 @@ struct GameState
     /*0x030*/ u16 unk030;
     /*0x032*/ s16 unk032;                     // title sprite x
     /*0x034*/ s16 unk034;                     // title sprite y
-    /*0x036*/ u16 unk036;
-    /*0x038*/ u16 unk038;
+    /*0x036*/ s16 unk036;
+    /*0x038*/ s16 unk038;
     /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
     /*0x03C*/ u8 switchNo;                    // 0xFF: none
     /*0x03D*/ u8 switchStageNo;
@@ -509,5 +509,7 @@ extern const u8 gSprite_0202C490[];
 void Func_0201F8C4(s16 x, s16 y, u8 kind);
 void Func_0201FEEC(void);
 void Func_0201DCEC(u8 arg);
+void Func_0201EDF8(s16 x, s16 y, u8 arg);
+void Func_0201EF98(s16 x, s16 y);
 
 #endif // GUARD_GAME_H
