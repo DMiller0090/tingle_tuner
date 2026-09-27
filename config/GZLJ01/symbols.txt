@@ -43,15 +43,21 @@ Mode1State5 = 0x02015744; // thumb
 Mode1Func_020150A4 = 0x020150A4; // thumb
 Mode1Func_0201521C = 0x0201521C; // thumb
 Mode1Func_02015298 = 0x02015298; // thumb
-Mode1Func_02015840 = 0x02015840; // thumb
+Mode1SendSwitch = 0x02015840; // thumb
 Mode1Func_020160C8 = 0x020160C8; // thumb
 Mode1Func_02016350 = 0x02016350; // thumb
-Mode1Func_02016684 = 0x02016684; // thumb
+Mode1StartFadeOut = 0x02016684; // thumb
 // VBlankIntr calls it in mode 1 unless gMain.unk457 is set
 Mode1VBlank = 0x0201ABDC; // thumb
 
 // ---- game code 02018884-02020E28 (not split yet) ----
 Func_0201A570 = 0x0201A570; // thumb
+// sound request wrapper used by the game code (range-checks the id)
+GamePlaySound = 0x0201D978; // thumb
+// runs Func_02020570 on each active entry of the 16 x 0x24 array at 0x03005650
+Func_02020644 = 0x02020644; // thumb
+Func_0201A224 = 0x0201A224; // thumb
+Func_0201CFE8 = 0x0201CFE8; // thumb
 
 // ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
 GbaComInit = 0x02017190; // thumb

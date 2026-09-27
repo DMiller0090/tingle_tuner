@@ -154,12 +154,80 @@ void Mode1Func_02015298(void)
 }
 INCLUDE_ASM(Mode1State0);
 INCLUDE_ASM(Mode1State1);
-INCLUDE_ASM(Mode1State5);
-INCLUDE_ASM(Mode1Func_02015840);
+// Fade in: step the mosaic and brightness back down every other frame, then go to state 2.
+void Mode1State5(void)
+{
+    if (--gGameState.fadeTimer == 0)
+    {
+        gMain.mosaic -= 0x1111;
+        gMain.bldy = (gMain.mosaic & 0xF) >> 1;
+        if (gMain.mosaic == 0)
+        {
+            if (gMain.bgcnt[0] & 0x40)
+                gMain.bgcnt[0] ^= 0x40;
+            if (gMain.bgcnt[1] & 0x40)
+                gMain.bgcnt[1] ^= 0x40;
+            if (gMain.bgcnt[2] & 0x40)
+                gMain.bgcnt[2] ^= 0x40;
+            if (gMain.bgcnt[3] & 0x40)
+                gMain.bgcnt[3] ^= 0x40;
+            if (gGameState.unk121)
+            {
+                GamePlaySound(0x63, 1);
+                gGameState.unk121 = 0;
+            }
+            gMain.bldcnt = 0;
+            gMain.bldy = 0;
+            gMain.modeState = 2;
+        }
+        else
+        {
+            gGameState.fadeTimer = 2;
+        }
+    }
+    Func_0201A224();
+    Func_0201CFE8();
+}
+// Near-miss: the original loads &gGbaComBufSwitch[1] as its own pool constant after the
+// first store; agbcc derives one address from the other (either way round).
+/*
+void Mode1SendSwitch(u8 soundArg)
+{
+    u8 *p = &gGbaComBufSwitch[1];
+
+    gGbaComBufSwitch[0] = gGameState.switchNo;
+    *p++ = gGameState.switchStageNo;
+    *p++ = gGameState.switchRoomNo;
+    *p++ = gGameState.switchType;
+    *p = gGameState.switchNo2;
+    GbaComSendDataSet(gGbaComBufSwitch, 6, GBACOM_SLOT_SWITCH,
+                      ((u32 *)gGbaComBufSwitch)[0] + ((u32 *)gGbaComBufSwitch)[1]);
+    GamePlaySound(gGameState.switchSound, soundArg);
+    gGameState.unk21C = 1;
+    gGameState.unk206 = 0x100;
+    if ((u8)(gGameState.switchType - 1) > 2 && gGameState.switchType != 14 && gGameState.switchType != 15)
+    {
+        gGameState.unk042 = 0;
+        gGameState.switchType = 0;
+    }
+}
+*/
+INCLUDE_ASM(Mode1SendSwitch);
 INCLUDE_ASM(Mode1State2);
 INCLUDE_ASM(Mode1State3);
 INCLUDE_ASM(Mode1Func_020160C8);
 INCLUDE_ASM(Mode1Func_02016350);
 INCLUDE_ASM(Mode1State4);
-INCLUDE_ASM(Mode1Func_02016684);
+void Mode1StartFadeOut(void)
+{
+    Func_02020644();
+    gGameState.unk10E = 0;
+    gMain.bgcnt[2] |= 0x40;  // mosaic
+    gMain.bgcnt[3] |= 0x40;
+    gMain.mosaic = 0;
+    gMain.bldcnt = 0x2FEF;  // darken everything
+    gMain.bldy = 0;
+    gGameState.fadeTimer = 2;
+    gMain.modeState = 3;
+}
 INCLUDE_ASM(MainMode1);

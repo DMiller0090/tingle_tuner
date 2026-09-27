@@ -106,7 +106,8 @@ typedef u32 bool32;
 // Keep a not-yet-decompiled function as asm inside a C file: it is taken from
 // build/<ver>/asm/funcs/<name>.s, which disasm.py writes for every function in a C range.
 // It is wrapped in .pushsection so that it lands in .text even where agbcc has just
-// emitted .rodata (e.g. right after a const table).
-#define INCLUDE_ASM(name) asm(".pushsection .text\n.include \"funcs/" #name ".s\"\n.popsection")
+// emitted .rodata (e.g. right after a const table). Every function starts 4-aligned, as
+// agbcc's own do; a C function before it may end on a halfword.
+#define INCLUDE_ASM(name) asm(".pushsection .text\n.align 2, 0\n.include \"funcs/" #name ".s\"\n.popsection")
 
 #endif // GUARD_GLOBAL_H
