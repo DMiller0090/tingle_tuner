@@ -324,10 +324,11 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
-                u8 a9, u8 a10);
-// The definition takes u16 x and y; callers see s16 (they sign-extend).
-void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
+// sprite points to struct SpriteFrame[]; scale is 8.8 (0: no affine unless angle is set)
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic, u16 scale, s16 ofsX, s16 ofsY,
+                u8 tileOfs, u8 palette);
+// sprite points to struct SpriteFrame[]; palette 0 keeps each part's palette, n uses palette n - 1
+void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 palette, u8 priority);
 void Func_0201A69C(void);
 void Func_0201E190(void);
 void Func_02020BEC(void);
@@ -404,6 +405,57 @@ bool32 StepTowardS8(s8 *pos, s8 target, s8 speed);
 bool32 StepTowardAngle(s16 *pos, s16 target, s16 speed);
 u8 CountDownU8(u8 *timer);
 u16 CountDownU16(u16 *timer);
+
+// A hardware OAM entry, as DrawSprite writes it into gOamBuffer.
+struct OamData
+{
+    /*0x0*/ u32 y:8;
+            u32 affineMode:2;
+            u32 objMode:2;
+            u32 mosaic:1;
+            u32 bpp:1;
+            u32 shape:2;
+    /*0x2*/ u32 x:9;
+            u32 matrixNum:3;
+            u32 hFlip:1;
+            u32 vFlip:1;
+            u32 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 affineParam;
+};
+
+// One OBJ of a sprite frame: OAM attributes relative to the sprite's position.
+struct SpritePart
+{
+    /*0x0*/ u8 y;
+    /*0x1*/ u8 affineMode:2;
+            u8 objMode:2;
+            u8 mosaic:1;
+            u8 bpp:1;
+            u8 shape:2;
+    /*0x2*/ s8 x;
+    /*0x3*/ u8 xHi:1;
+            u8 matrixNum:3;
+            u8 hFlip:1;
+            u8 vFlip:1;
+            u8 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 end;  // 0xFFFF: past the last part
+};
+
+// What DrawSprite's sprite argument points to (indexed by frame).
+struct SpriteFrame
+{
+    /*0x0*/ const struct SpritePart *parts;
+    /*0x4*/ u32 unk4;
+};
+
+// sin(i * 2pi / 256) in 8.8 fixed point; 320 entries, so cos(i) = (gSinTable + 64)[i].
+extern const s16 gSinTable[];
 
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
 

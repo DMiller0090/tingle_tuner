@@ -125,9 +125,139 @@ u16 CountDownU16(u16 *timer)
     return *timer;
 }
 
-INCLUDE_ASM(DrawSprite);
+// Add a sprite frame to gOamBuffer at gMain.unk450 (the OAM entries used so far this frame).
+// With no angle and scale it draws every part at its offset; otherwise each part gets its own
+// double-size affine OBJ and matrix (gMain.unk451 counts those), rotated and scaled about
+// (x - ofsX, y - ofsY). The parts' own offsets are ignored then, and ofsX/ofsY flip sign for
+// every part, so it only works right for one-part sprites or zero offsets (all callers so far).
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic, u16 scale, s16 ofsX, s16 ofsY,
+                u8 tileOfs, u8 palette)
+{
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    const struct SpriteFrame *frames = sprite;
+    const struct SpritePart *part;
+    s32 shake;
+    s16 cos, sin;
+    struct OamData *mtx;
 
-INCLUDE_ASM(DrawSpriteAt);
+    frames += frame;
+    part = frames->parts;
+    shake = (gGameState.shake >> 1) & 1;
+
+    if (angle == 0 && scale == 0)
+    {
+        while (part->end != 0xFFFF)
+        {
+            oam->y = y + part->y + shake;
+            oam->objMode = part->objMode;
+            oam->mosaic = mosaic;
+            oam->shape = part->shape;
+            oam->x = x + part->x;
+            oam->hFlip = part->hFlip;
+            oam->vFlip = part->vFlip;
+            oam->size = part->size;
+            oam->tileNum = part->tileNum + tileOfs;
+            oam->priority = part->priority;
+            if (palette)
+                oam->paletteNum = palette - 1;
+            else
+                oam->paletteNum = part->paletteNum;
+            oam++;
+            gMain.unk450++;
+            part++;
+        }
+    }
+    else
+    {
+        s16 negSin;
+
+        cos = (gSinTable + 64)[angle];
+        sin = gSinTable[angle];
+        negSin = -sin;
+        mtx = (struct OamData *)gOamBuffer + gMain.unk451 * 4;
+        if (scale == 0)
+            scale = 0x100;
+        while (part->end != 0xFFFF)
+        {
+            s32 px, py;
+            s32 rx32;
+            s32 rx;
+            s16 ry;
+            u16 half;
+            s16 w;
+
+            half = 4 << part->size;
+            ofsX = -ofsX;
+            ofsY = -ofsY;
+            px = (ofsX << 8) / scale;
+            rx32 = cos * px;
+            py = (ofsY << 8) / scale;
+            rx = (rx32 + sin * py) << 8;  // (s16)(... >> 8), finished below
+            ry = (cos * py - sin * px) >> 8;
+            rx >>= 16;
+            w = half * 2;
+            oam->x = x - (w + ofsX - rx);
+            oam->y = y + shake - (w + ofsY - ry);
+            oam->objMode = part->objMode;
+            oam->mosaic = mosaic;
+            oam->shape = part->shape;
+            oam->size = part->size;
+            oam->tileNum = part->tileNum + tileOfs;
+            oam->priority = part->priority;
+            if (palette)
+                oam->paletteNum = palette - 1;
+            else
+                oam->paletteNum = part->paletteNum;
+            oam->affineMode = 3;
+            oam->matrixNum = gMain.unk451;
+            oam->hFlip = gMain.unk451 >> 3;
+            oam->vFlip = gMain.unk451 >> 4;
+            mtx[0].affineParam = scale * cos >> 8;
+            mtx[1].affineParam = negSin * scale >> 8;
+            mtx[2].affineParam = scale * sin >> 8;
+            mtx[3].affineParam = scale * cos >> 8;
+            oam++;
+            mtx += 4;
+            gMain.unk450++;
+            gMain.unk451++;
+            part++;
+        }
+    }
+}
+
+// DrawSprite without rotation, tile offset or the parts' own priority.
+void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 palette, u8 priority)
+{
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    const struct SpriteFrame *frames = sprite;
+    const struct SpritePart *part;
+    s32 shake;
+
+    frames += frame;
+    part = frames->parts;
+    shake = (gGameState.shake >> 1) & 1;
+
+    while (part->end != 0xFFFF)
+    {
+        oam->y = y + part->y + shake;
+        oam->objMode = part->objMode;
+        oam->mosaic = mosaic;
+        oam->shape = part->shape;
+        oam->x = x + part->x;
+        oam->hFlip = part->hFlip;
+        oam->vFlip = part->vFlip;
+        oam->size = part->size;
+        oam->tileNum = part->tileNum;
+        oam->priority = priority;
+        if (palette)
+            oam->paletteNum = palette - 1;
+        else
+            oam->paletteNum = part->paletteNum;
+        oam++;
+        gMain.unk450++;
+        part++;
+    }
+}
 
 INCLUDE_ASM(Func_020190A8);
 
