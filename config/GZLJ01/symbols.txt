@@ -59,9 +59,8 @@ SendItemUse = 0x0201E354; // thumb
 // draw item idx's 2x2 icon / two-digit count (8-byte entries at gGameState+0x160) into a BG map
 DrawItemIcon = 0x0201DC10; // thumb
 DrawItemCount = 0x0201DC5C; // thumb
-// sound request wrapper used by the game code (range-checks the id)
 // shows message id (0-0x437) with Tingle's voice (sound 0x13); callers' "sound IDs" are message IDs
-GamePlaySound = 0x0201D978; // thumb
+ShowMessage = 0x0201D978; // thumb
 ObjReset = 0x02020570; // thumb
 // table[line] = BG0HOFS + sin(phase + 4 * line) * amplitude / 256 for the 160 lines
 BuildWaveScrollTable = 0x020208BC; // thumb

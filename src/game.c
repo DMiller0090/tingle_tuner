@@ -1304,7 +1304,7 @@ u32 MarkerDistance(u8 arg)
 //     {
 //         if (gGameState.unk224 == 0)
 //         {
-//             GamePlaySound(0x1A5, 1);
+//             ShowMessage(0x1A5, 1);
 //             gGameState.icons[2].type = 0;
 //             gGameState.icons[1].type = 0;
 //             gGameState.unk105 = 0;
@@ -1316,7 +1316,7 @@ u32 MarkerDistance(u8 arg)
 //     {
 //         if (gGameState.unk224 == 0 && gGameState.targetNear == 0)
 //         {
-//             GamePlaySound(0x1A4, 1);
+//             ShowMessage(0x1A4, 1);
 //             gGameState.targetNear = 1;
 //         }
 //         level = 1;
@@ -1361,7 +1361,7 @@ u32 MarkerDistance(u8 arg)
 //
 //             if (gGameState.targetDir != dir && gGameState.unk1FA == 0)
 //             {
-//                 GamePlaySound(0x19C + dir, 1);
+//                 ShowMessage(0x19C + dir, 1);
 //                 gGameState.targetDir = dir;
 //             }
 //         }
@@ -1542,9 +1542,9 @@ void MapIconCursor(struct MapIcon *icon)
                 else
                 {
                     if (square == 32 && gGameState.flags.unk5_6)
-                        GamePlaySound(0x13E, 1);
+                        ShowMessage(0x13E, 1);
                     else
-                        GamePlaySound(0x14E + gSlot14Data[i].square, 1);
+                        ShowMessage(0x14E + gSlot14Data[i].square, 1);
 #ifndef VERSION_GZLJ01
                     gGameState.unk13E = 0;
 #endif
@@ -1916,26 +1916,26 @@ void Func_0201B7D4(void)
     if (gGameState.unk135 != 0)
     {
         if (gGameState.unk135 == 0x21 && gGameState.flags.unk5_6)
-            GamePlaySound(0x13E, 1);
+            ShowMessage(0x13E, 1);
         else
-            GamePlaySound(gGameState.unk135 + 0x14D, 1);
+            ShowMessage(gGameState.unk135 + 0x14D, 1);
     }
     else if (gGameState.markers[idx].type == 0x13)
-        GamePlaySound(gSounds_02024278[gGameState.markers[idx].unk6 - 1], 1);
+        ShowMessage(gSounds_02024278[gGameState.markers[idx].unk6 - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
-        GamePlaySound(0x5D, 1);
+        ShowMessage(0x5D, 1);
     else if (gGameState.markers[idx].unk7 <= 0x23)
-        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x63), 1);
+        ShowMessage(ID(gGameState.markers[idx].unk7, 0x63), 1);
     else if (gGameState.markers[idx].unk7 <= 0x27)
-        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x7C), 1);
+        ShowMessage(ID(gGameState.markers[idx].unk7, 0x7C), 1);
     else if (gGameState.markers[idx].unk7 <= 0x2C)
-        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x82), 1);
+        ShowMessage(ID(gGameState.markers[idx].unk7, 0x82), 1);
     else if (gGameState.markers[idx].unk7 <= 0x38)
-        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x87), 1);
+        ShowMessage(ID(gGameState.markers[idx].unk7, 0x87), 1);
     else if (gGameState.markers[idx].unk7 <= 0x40)
-        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x8F), 1);
+        ShowMessage(ID(gGameState.markers[idx].unk7, 0x8F), 1);
     else
-        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x6F), 1);
+        ShowMessage(ID(gGameState.markers[idx].unk7, 0x6F), 1);
 }
 */
 INCLUDE_ASM(Func_0201B7D4);
@@ -2007,11 +2007,11 @@ void Func_0201B8C8(void)
         break;
     default:
         if ((gMain.random & 0xFF) > 0xCB)
-            GamePlaySound(0x17, 1);
+            ShowMessage(0x17, 1);
         else if ((gMain.random & 0xFF) > 0x65)
-            GamePlaySound(0x16, 1);
+            ShowMessage(0x16, 1);
         else
-            GamePlaySound(0x15, 1);
+            ShowMessage(0x15, 1);
         gGameState.unk156 = gMain.random % 60 + 30;
         if (gGameState.markers[gGameState.unk119].type != 7)
             gGameState.unk11A = 2;
@@ -2406,7 +2406,7 @@ u8 ChoiceMenuUpdate_(void)
             }
             if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0x1A7)
                 gGameState.unk11E = 1;
-            GamePlaySound(gTwoChoiceSounds[i * 2 + gGameState.unk14F], gGameState.unk226);
+            ShowMessage(gTwoChoiceSounds[i * 2 + gGameState.unk14F], gGameState.unk226);
         }
         else
         {
@@ -2420,7 +2420,7 @@ u8 ChoiceMenuUpdate_(void)
                 gGameState.unk14E = 0;
                 return 3;
             }
-            GamePlaySound(gThreeChoiceSounds[i * 3 + gGameState.unk14F], gGameState.unk226);
+            ShowMessage(gThreeChoiceSounds[i * 3 + gGameState.unk14F], gGameState.unk226);
         }
         gGameState.unk151 = 0;
         gGameState.unk150 = 0;
@@ -3384,10 +3384,10 @@ void MsgStart(s16 id)
     }
 }
 
-// Play a message sound (0-0x437) with its text. Callers see an s16 parameter (the prototype
+// Show message id (0-0x437) with Tingle's voice. Callers see an s16 parameter (the prototype
 // in game.h); it is narrowed to u16 here.
-bool32 GamePlaySound_(u16 id, u8 arg) asm("GamePlaySound");
-bool32 GamePlaySound_(u16 id, u8 arg)
+bool32 ShowMessage_(u16 id, u8 arg) asm("ShowMessage");
+bool32 ShowMessage_(u16 id, u8 arg)
 {
     u32 params[2];
 
@@ -3877,14 +3877,14 @@ bool32 SendItemUse(u8 item, u8 arg)
 //          && ((item >= 3 && item <= 5) || item == 8 || item == 9 || item == 10 || item == 16))
 //         {
 //             if (item == 16)
-//                 GamePlaySound(0x1F, 1);
+//                 ShowMessage(0x1F, 1);
 //             else
-//                 GamePlaySound(0xE, 1);
+//                 ShowMessage(0xE, 1);
 //             return FALSE;
 //         }
 //         if (item == 6)
 //         {
-//             GamePlaySound(0xD, 1);
+//             ShowMessage(0xD, 1);
 //         }
 //         else if (item == 11)
 //         {
@@ -3898,7 +3898,7 @@ bool32 SendItemUse(u8 item, u8 arg)
 //             {
 //                 if (MarkerDistance(1) <= 24)
 //                 {
-//                     GamePlaySound(0xC, 1);
+//                     ShowMessage(0xC, 1);
 //                 }
 //                 else if (gGameState.icons[2].type == 0)
 //                 {
@@ -3911,12 +3911,12 @@ bool32 SendItemUse(u8 item, u8 arg)
 //                 }
 //                 else
 //                 {
-//                     GamePlaySound(0x1A6, 1);
+//                     ShowMessage(0x1A6, 1);
 //                 }
 //             }
 //             else
 //             {
-//                 GamePlaySound(0xE, 1);
+//                 ShowMessage(0xE, 1);
 //             }
 //         }
 //         else if (item >= 3 && item <= 4)
@@ -3929,7 +3929,7 @@ bool32 SendItemUse(u8 item, u8 arg)
 //         {
 //             if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
 //             {
-//                 GamePlaySound(0xF, 1);
+//                 ShowMessage(0xF, 1);
 //                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
 //             }
 //             else
@@ -3943,7 +3943,7 @@ bool32 SendItemUse(u8 item, u8 arg)
 //             if (item == 5 && gGameState.rupees - gGameState.rupeeDelta < entry->price)
 //             {
 //             no_money:
-//                 GamePlaySound(0xF, 1);
+//                 ShowMessage(0xF, 1);
 //                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
 //                 return FALSE;
 //             }
@@ -4271,7 +4271,7 @@ void Func_0201EDC4(void)
     Func_0201ECC4();
     gGameState.unk12E = gSprite_0202C928[0].duration;
     gGameState.unk12F = 0;
-    GamePlaySound(0x23, 1);
+    ShowMessage(0x23, 1);
 }
 
 // Draw the item effect sprite (kind 0: gSprite_0202C928, else gSprite_0202C940) at a map
@@ -4394,11 +4394,11 @@ void Func_0201F068(void)
             gGameState.unk032 = gGameState.markers[i].x - main->bgOfs[3][0];
             gGameState.unk034 = gGameState.markers[i].y - main->bgOfs[3][1];
             if (gGameState.unk1DE == 5)
-                GamePlaySound(0x30, 1);
+                ShowMessage(0x30, 1);
             else if (!notType3)
-                GamePlaySound(0x2E, 1);
+                ShowMessage(0x2E, 1);
             else
-                GamePlaySound(0x2F, 1);
+                ShowMessage(0x2F, 1);
         }
         else
         {
@@ -4431,7 +4431,7 @@ void Func_0201F240(void)
     Func_0201ECC4();
     gGameState.unk130 = gSprite_0202C940[0].duration;
     gGameState.unk131 = 0;
-    GamePlaySound(0x25, 1);
+    ShowMessage(0x25, 1);
 }
 
 void Func_0201F274(void)
@@ -4454,15 +4454,15 @@ void Func_0201F2C4(void)
     if (gGameState.effect[1] == 13)
     {
         gGameState.effect[0] = gGameState.effect[1];
-        GamePlaySound(0x29, 1);
+        ShowMessage(0x29, 1);
     }
     else if (gGameState.effect[1] == 12)
     {
-        GamePlaySound(0x2A, 1);
+        ShowMessage(0x2A, 1);
     }
     else
     {
-        GamePlaySound(0x2B, 1);
+        ShowMessage(0x2B, 1);
     }
 }
 
@@ -4478,7 +4478,7 @@ void Effect5(void)
             {
                 if (gGameState.effect[1] == 10)
                 {
-                    GamePlaySound(0x2C, 1);
+                    ShowMessage(0x2C, 1);
                     gGameState.effect[0] = gGameState.effect[1];
                     gGameState.unk120 = 0;
                     gGameState.unk132 = 8;
@@ -4511,7 +4511,7 @@ void Effect5(void)
         {
             gMain.newKeys &= ~(gMain.newKeys & 0x30F);
             gGameState.unk120 = 0;
-            GamePlaySound(0x30, 1);
+            ShowMessage(0x30, 1);
             Func_0201EBAC();
         }
     }
@@ -4520,9 +4520,9 @@ void Effect5(void)
 void Func_0201F420(void)
 {
     if (gMain.random & 1)
-        GamePlaySound(0x3A, 14);
+        ShowMessage(0x3A, 14);
     else
-        GamePlaySound(0x3B, 14);
+        ShowMessage(0x3B, 14);
     gGameState.unk1E2 = 0;
 }
 
@@ -4545,27 +4545,27 @@ void Effect7(void)
             gGameState.unk13C = 0;
             if ((*(u32 *)gGameState.effect & 0xFFFFFF00) == 0)
             {
-                GamePlaySound(0x3C, 14);
+                ShowMessage(0x3C, 14);
                 gGameState.unk1E2 = 4;
             }
             else if (gGameState.effect[1])
             {
-                GamePlaySound(0x40, 14);
+                ShowMessage(0x40, 14);
                 gGameState.unk1E2 = 1;
             }
             else if (gGameState.effect[2])
             {
-                GamePlaySound(0x3F, 14);
+                ShowMessage(0x3F, 14);
                 gGameState.unk1E2 = 1;
             }
             else if (gGameState.effect[3])
             {
-                GamePlaySound(0x3E, 14);
+                ShowMessage(0x3E, 14);
                 gGameState.unk1E2 = 1;
             }
             else
             {
-                GamePlaySound(0x3C, 14);
+                ShowMessage(0x3C, 14);
                 gGameState.unk1E2 = 4;
             }
         }
@@ -4615,7 +4615,7 @@ void Effect7(void)
                 else
                 {
                     gGameState.unk13C = 0;
-                    GamePlaySound(0x3D, 1);
+                    ShowMessage(0x3D, 1);
                     gGameState.unk1E2 = 5;
                 }
             }
@@ -4631,7 +4631,7 @@ void Effect7(void)
             if (result == 0)
             {
                 gGameState.unk13C = 0;
-                GamePlaySound(0x48, 14);
+                ShowMessage(0x48, 14);
                 gGameState.unk1E2 = 4;
                 gGameState.unk151 = 0;
                 gGameState.unk150 = 0;
@@ -4652,16 +4652,16 @@ void Effect7(void)
                 gGameState.unk14F = 0xFF;
                 gGameState.unk14E = 0;
                 if (what == 0)
-                    GamePlaySound(0x44, 14);
+                    ShowMessage(0x44, 14);
                 else if (what == 1)
-                    GamePlaySound(0x42, 14);
+                    ShowMessage(0x42, 14);
                 else
-                    GamePlaySound(0x49, 14);
+                    ShowMessage(0x49, 14);
             }
             else
             {
                 gGameState.unk13C = 0;
-                GamePlaySound(0x46, 14);
+                ShowMessage(0x46, 14);
                 gGameState.unk151 = 0;
                 gGameState.unk150 = 0;
                 gGameState.unk14F = 0xFF;
@@ -4679,7 +4679,7 @@ void Effect7(void)
         if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
         {
             gGameState.unk13C = 0;
-            GamePlaySound(0x3D, 1);
+            ShowMessage(0x3D, 1);
             gGameState.unk1E2 = 5;
         }
     }
@@ -4697,7 +4697,7 @@ void Func_0201F878(void)
     gGameState.unk1E5_2 = 1;
     gGameState.unk12E = gSprite_0202C928[0].duration;
     gGameState.unk12F = 0;
-    GamePlaySound(0x27, 1);
+    ShowMessage(0x27, 1);
 }
 
 // Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gSprite_0202C490 with a
@@ -4789,7 +4789,7 @@ INCLUDE_ASM(Func_0201F8C4);
 //                 gGameState.unk132 = (idx + 2) * 60;
 //                 gGameState.unk034 = gGameState.markers[m].y - 0x18;
 //                 gGameState.unk12B = 6;
-//                 GamePlaySound(0x28, 1);
+//                 ShowMessage(0x28, 1);
 //             }
 //             Func_0201F8C4(gGameState.markers[m].x - 0x18, gGameState.unk034, 1);
 //         }
@@ -4829,9 +4829,9 @@ INCLUDE_ASM(Func_0201F8C4);
 //             {
 //                 gGameState.unk12B = 0;
 //                 if (gGameState.unk1DE == 5)
-//                     GamePlaySound(0x30, 1);
+//                     ShowMessage(0x30, 1);
 //                 else
-//                     GamePlaySound(gGameState.effect[0] + 0x10, 1);
+//                     ShowMessage(gGameState.effect[0] + 0x10, 1);
 //                 Func_0201EBAC();
 //             }
 //         }
@@ -4842,9 +4842,9 @@ INCLUDE_ASM(Effect8);
 void Func_0201FCA0(void)
 {
     if (!gGameState.unk1E5_3)
-        GamePlaySound(0xD2, 1);
+        ShowMessage(0xD2, 1);
     else
-        GamePlaySound(0xDB, 1);
+        ShowMessage(0xDB, 1);
     gGameState.effect[0] = 11;
     gGameState.unk1E5_2 = 1;
     gGameState.unk1E5_1 = 0;
@@ -4876,7 +4876,7 @@ void Effect11(void)
         if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
         {
             gMain.newKeys &= ~(gMain.newKeys & 0x30F);
-            GamePlaySound(0xD8, 1);
+            ShowMessage(0xD8, 1);
             gGameState.unk1E2 = 3;
         }
     }
@@ -4888,9 +4888,9 @@ void Effect11(void)
             {
                 gMain.newKeys ^= 1;
                 if (!gGameState.unk1E5_3)
-                    GamePlaySound(0xD4, 1);
+                    ShowMessage(0xD4, 1);
                 else
-                    GamePlaySound(0xDD, 1);
+                    ShowMessage(0xDD, 1);
                 gGameState.unk1E2 = 1;
             }
             else
@@ -5001,7 +5001,7 @@ void Effect12(void)
         Func_0201F8C4(gGameState.unk032, gGameState.unk034, 2);
         if (gGameState.unk034 < (s16)main->bgOfs[3][1] - 0x30)
         {
-            GamePlaySound(0x30, 1);
+            ShowMessage(0x30, 1);
             gGameState.unk12B = 0;
             Func_0201EBAC();
         }
@@ -5012,7 +5012,7 @@ void Effect12(void)
 
 void Func_02020150(void)
 {
-    GamePlaySound(0x50, 1);
+    ShowMessage(0x50, 1);
     gGameState.unk1C8 = 300;
     gGameState.unk228 = 0;
     gGameState.unk226 = 5;

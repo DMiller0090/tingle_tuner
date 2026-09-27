@@ -132,7 +132,7 @@ struct ItemSlot
 // 0x135 u8 unk135
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
-// 0x13C u8 unk13C  // a sound is playing (GamePlaySound)
+// 0x13C u8 unk13C  // a sound is playing (ShowMessage)
 // 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while unk13C is set, else 0
 // 0x13E u16 unk13E
 // 0x140 u16 unk140  // id passed to SoundPlayLoop (Func_0201C484)
@@ -330,7 +330,7 @@ struct GameState
               u8 unk138_5:1;
               u8 unk138_6:2;
     /*0x139*/ u8 filler139[0x13C - 0x139];
-    /*0x13C*/ u8 unk13C;                      // a sound is playing (GamePlaySound)
+    /*0x13C*/ u8 unk13C;                      // a sound is playing (ShowMessage)
     /*0x13D*/ s8 msgBoxPos;                   // message box slide, steps toward 10 while unk13C is set, else 0
     /*0x13E*/ u16 unk13E;
     /*0x140*/ u16 unk140;                     // id passed to SoundPlayLoop (Func_0201C484)
@@ -468,7 +468,7 @@ void Mode1VBlank(void);
 void DrawFloorNumber(void);
 // Shows message id (0-0x437) with Tingle's voice; arg goes to gGameState.unk226 (his animation).
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
-bool32 GamePlaySound(s16 id, u8 arg);
+bool32 ShowMessage(s16 id, u8 arg);
 bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);

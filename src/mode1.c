@@ -283,7 +283,7 @@ void Mode1State1(void)
     if (--gGameState.waveAmplitude == 0)
     {
         gMain.hblankScroll = FALSE;
-        GamePlaySound(gDungeonSounds[gGameState.flags.dungeonNo], 2);
+        ShowMessage(gDungeonSounds[gGameState.flags.dungeonNo], 2);
         SoundPlay(0, 0);
         gGameState.unk21C = 1;
         gMain.modeState = 2;
@@ -322,7 +322,7 @@ void Mode1State5(void)
                 gMain.bgcnt[3] ^= 0x40;
             if (gGameState.unk121)
             {
-                GamePlaySound(0x63, 1);
+                ShowMessage(0x63, 1);
                 gGameState.unk121 = 0;
             }
             gMain.bldcnt = 0;
@@ -352,7 +352,7 @@ void Mode1SendSwitch(u8 soundArg)
     *p = gGameState.switchNo2;
     GbaComSendDataSet(GBACOM_BUF_SWITCH, 6, GBACOM_SLOT_SWITCH,
                       ((u32 *)GBACOM_BUF_SWITCH)[0] + *(u32 *)p);
-    GamePlaySound(gGameState.switchSound, soundArg);
+    ShowMessage(gGameState.switchSound, soundArg);
     gGameState.unk21C = 1;
     gGameState.unk206 = 0x100;
     if ((u8)(gGameState.switchType - 1) > 2 && gGameState.switchType != 14 && gGameState.switchType != 15)
@@ -371,7 +371,7 @@ void Mode1State2(void)
 
     if (gGameState.flags.unk3_2 && gGameState.unk1CC == 0 && gGameState.unk1EE == 0
      && gGameState.unk224 == 0)
-        GamePlaySound(0x51, 0xF);
+        ShowMessage(0x51, 0xF);
     if (gGameState.flags.unk5_2 && !gGameState.flags.busy && gGameState.unk1CC == 0
      && gGameState.unk1EE == 0)
     {
@@ -438,12 +438,12 @@ void Mode1State2(void)
                     }
                     else if ((u16)(gGameState.unk142 - 0xE6) <= 4)
                     {
-                        GamePlaySound(gGameState.unk1E3 + 0xEA, 1);
+                        ShowMessage(gGameState.unk1E3 + 0xEA, 1);
                         gMain.newKeys &= 0xF0;
                     }
                     else if (gGameState.unk1F8 != -1)
                     {
-                        GamePlaySound(gGameState.unk1F8, 1);
+                        ShowMessage(gGameState.unk1F8, 1);
                         gGameState.unk1F8 = 0xFFFF;
                         gMain.newKeys &= 0xF0;
                     }
@@ -907,7 +907,7 @@ void MainMode1(void)
             if (gGameState.unk1E1 & (1 << i))
                 chest = i;
         }
-        GamePlaySound(gChestSounds[chest], 1);
+        ShowMessage(gChestSounds[chest], 1);
     }
 
     if (gGameState.unk238 != gGameState.flags.unkB_7)
@@ -915,7 +915,7 @@ void MainMode1(void)
     if (gGameState.unk239 && gGameState.unk104 && gMain.modeState == 2 && gGameState.unk1FA == 0)
     {
         gGameState.unk239 = 0;
-        GamePlaySound(0x10, 1);
+        ShowMessage(0x10, 1);
         SetSlotItem(4, 5);
         SetSlotItem(8, 9);
         SetSlotItem(9, 10);
@@ -927,7 +927,7 @@ void MainMode1(void)
         if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0)
         {
             if (gGameState.flags.unkA_3)
-                GamePlaySound(0x110, 1);
+                ShowMessage(0x110, 1);
             else if (gGameState.life > gGameState.flags.life)
             {
                 if (gGameState.flags.life <= 7)
@@ -936,7 +936,7 @@ void MainMode1(void)
                     {
                         gGameState.lowLifeWarned = 1;
                         gGameState.life = gGameState.flags.life;
-                        GamePlaySound(0x10F, 1);
+                        ShowMessage(0x10F, 1);
                     }
                 }
                 else
@@ -968,41 +968,41 @@ void MainMode1(void)
                 if (gGameState.flags.hour == 6)
                 {
                     if (gGameState.flags.dayOfWeek == 0)
-                        GamePlaySound(0x145, 1);
+                        ShowMessage(0x145, 1);
                     else if (gGameState.flags.dayOfWeek == 1 || gGameState.flags.dayOfWeek == 3
                           || gGameState.flags.dayOfWeek == 5)
-                        GamePlaySound(0x146, 1);
+                        ShowMessage(0x146, 1);
                     else
-                        GamePlaySound(0x147, 1);
+                        ShowMessage(0x147, 1);
                     gGameState.chimed = 1;
                 }
                 else if (gGameState.flags.hour == 12)
                 {
                     if (gGameState.flags.dayOfWeek == 0 || gGameState.flags.dayOfWeek == 6)
-                        GamePlaySound(0x148, 1);
+                        ShowMessage(0x148, 1);
                     else if (gGameState.flags.dayOfWeek == 1 || gGameState.flags.dayOfWeek == 3
                           || gGameState.flags.dayOfWeek == 5)
-                        GamePlaySound(0x149, 1);
+                        ShowMessage(0x149, 1);
                     else
-                        GamePlaySound(0x14A, 1);
+                        ShowMessage(0x14A, 1);
                     gGameState.chimed = 1;
                 }
                 else if (gGameState.flags.hour == 20)
                 {
                     if (gGameState.flags.dayOfWeek == 6)
                     {
-                        GamePlaySound(0x14B, 1);
+                        ShowMessage(0x14B, 1);
                         gGameState.chimed = 1;
                     }
                     else if (gGameState.flags.dayOfWeek == 0 || gGameState.flags.dayOfWeek == 2
                           || gGameState.flags.dayOfWeek == 4)
                     {
-                        GamePlaySound(0x14C, 1);
+                        ShowMessage(0x14C, 1);
                         gGameState.chimed = 1;
                     }
                     else if (gGameState.flags.dayOfWeek == 3 || gGameState.flags.dayOfWeek == 5)
                     {
-                        GamePlaySound(0x14D, 1);
+                        ShowMessage(0x14D, 1);
                         gGameState.chimed = 1;
                     }
                     else
@@ -1089,7 +1089,7 @@ void MainMode1(void)
                             gGameState.unk121 = 2;
                             gGameState.unk124 = 0;
                             gGameState.unk123 = gSprite_0202CA40[4];
-                            GamePlaySound(0x5B, 0);
+                            ShowMessage(0x5B, 0);
                         }
                     }
                     if (gGameState.unk121 <= 1)
@@ -1133,14 +1133,14 @@ void MainMode1(void)
                 SoundPlay(SE_KEY_BLOCKED, 0);
             else if (result == 1)
             {
-                GamePlaySound(0xF, 1);
+                ShowMessage(0xF, 1);
                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
                 gGameState.unk21C = result;
             }
             else if (result == 2)
-                GamePlaySound(0xE, 1);
+                ShowMessage(0xE, 1);
             else if (result == 3)
-                GamePlaySound((gGameState.effect[3] << 8) + gGameState.effect[2], 1);
+                ShowMessage((gGameState.effect[3] << 8) + gGameState.effect[2], 1);
             gGameState.unk12B = 0;
             Func_0201EBAC();
         }
@@ -1161,15 +1161,15 @@ void MainMode1(void)
                 SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
                 if (gGameState.unk121)
                 {
-                    GamePlaySound(gGameState.unk122 + 0x60, 1);
+                    ShowMessage(gGameState.unk122 + 0x60, 1);
                     if (gGameState.unk122 <= 2)
                         gGameState.unk122++;
                 }
             }
             else if (gGameState.effect[0] == 3)
-                GamePlaySound(0x24, 1);
+                ShowMessage(0x24, 1);
             else if (gGameState.effect[0] == 4)
-                GamePlaySound(0x26, 1);
+                ShowMessage(0x26, 1);
             else if (gGameState.effect[0] == 5)
                 Func_0201F2C4();
             else if (gGameState.effect[0] == 7)
@@ -1177,7 +1177,7 @@ void MainMode1(void)
             else if (gGameState.effect[0] == 8 || gGameState.effect[0] == 9 || gGameState.effect[0] == 10)
                 gGameState.unk12B = 7;
             else if (gGameState.effect[0] == 13)
-                GamePlaySound(0x26, 1);
+                ShowMessage(0x26, 1);
             else if (gGameState.effect[0] == 14)
                 Func_02020150();
             else if (gGameState.effect[0] == 17)
@@ -1194,7 +1194,7 @@ void MainMode1(void)
                 gGameState.effect[0] = gGameState.unk1E4;
             else if (gGameState.effect[0] == 19)
             {
-                GamePlaySound(0x2D, 1);
+                ShowMessage(0x2D, 1);
                 gGameState.effect[0] = 5;
                 gGameState.unk12B = 6;
             }
@@ -1275,9 +1275,9 @@ void MainMode1(void)
             // The square (7 per row) goes into i too: a separate local shifts the registers.
             i = (gGameState.markers[i].y >> 8) * 7 + (gGameState.markers[i].x >> 8);
             if (i == 25 && gGameState.flags.unkA_4)
-                GamePlaySound(0x437, 1);
+                ShowMessage(0x437, 1);
             else
-                GamePlaySound(i + 0x406, 1);
+                ShowMessage(i + 0x406, 1);
         }
     }
 }
