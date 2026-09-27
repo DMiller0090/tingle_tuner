@@ -3,8 +3,36 @@
 #include "gba/syscall.h"
 #include "gba_com.h"
 #include "heap.h"
+#include "joy_com.h"
 #include "main.h"
 #include "sound.h"
+
+const IntrFunc gIntrTableInit[14] =
+{
+    JoyComIntr,  // serial
+    VBlankIntr,
+    IntrDummy,   // HBlank
+    IntrDummy,   // VCount
+    IntrDummy,   // DMA0
+    IntrDummy,   // DMA1
+    IntrDummy,   // DMA2
+    IntrDummy,   // DMA3
+    IntrDummy,   // keypad
+    IntrDummy,   // cartridge
+    IntrDummy,
+    IntrDummy,
+    IntrDummy,
+    IntrDummy,
+};
+
+const struct OamPair gOamHiddenEntry = {160, 0};
+
+void (*const gMainModeFuncs[])(void) =
+{
+    MainMode0,
+    MainMode1,
+    MainMode2,
+};
 
 void AgbMain(void)
 {

@@ -45,6 +45,9 @@ void InitSystem(void);
 void InitOamBuffer(void);
 void MainLoop(void);
 void SeedRandom(void);
+void MainMode0(void);
+void MainMode1(void);
+void MainMode2(void);
 void UpdateRandom(void);
 
 #endif // GUARD_MAIN_H

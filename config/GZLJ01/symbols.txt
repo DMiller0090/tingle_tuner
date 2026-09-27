@@ -23,6 +23,11 @@ InitDisplayIntr = 0x02015054; // thumb
 SeedRandom = 0x02015080; // thumb
 UpdateRandom = 0x0201508C; // thumb
 
+// ---- game modes run by MainLoop (gMainModeFuncs[gMain.mode]) ----
+MainMode0 = 0x02018630; // thumb
+MainMode1 = 0x020166FC; // thumb
+MainMode2 = 0x020204A8; // thumb
+
 // ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
 GbaComInit = 0x02017190; // thumb
 GbaComStop = 0x020171B8; // thumb
@@ -111,6 +116,7 @@ rand = 0x02023DC4; // thumb
 // ---- .rodata (starts at the end of .text) ----
 gIntrTableInit = 0x02023DEC; // data
 gOamHiddenEntry = 0x02023E24; // data
+gMainModeFuncs = 0x02023E2C; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
 gSoundBankHeader = 0x0202CD20; // data
