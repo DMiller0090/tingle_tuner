@@ -114,11 +114,18 @@ See the enum in `include/gba_com.h`. The GBA receive buffer per slot is `gGbaCom
 | 15 SE | GC->GBA | `daAgbsw0_c` bomb SE | `020142B0` |
 
 Slots 3, 11 and 14 have GBA handlers, but no `mDoGac_SendDataSet`/`mDoGaC_SendEntry` in the
-TWW decomp uses them, so they look like leftovers of cut features. On the GBA, 3 (`Mode0State3`,
-`MainMode1`, `Mode1State4`, `sub_020160C8`) and 11 (`MainMode1`) are only waited for and reset:
-the data is never copied, so they would act as signals. 14 is copied (`GbaComRecvDataGet`,
-0x100 bytes) in `Mode0State3` right after the name (slot 10), so it would have been a
-boot-time payload.
+TWW decomp uses them, so they look like leftovers of cut features.
+
+- **3** is the map-marker list, and it is copied: `Mode1RecvMarkers` (`020160C8`) takes a count
+  byte, one more byte (`gGameState.unk133`, which also drives `unk104`), then 8-byte markers
+  (`struct MapMarker`: `x`, `y`, a 6-bit `type` at +5) into `gGameState.markers`. It looks up
+  the type-1 marker, and if the high byte of its x or y changed it resets a set of game-state fields
+  (the US builds test the new position against `0x6FF` where JP tests the old one).
+  `Mode0State3` waits for slot 3 before starting mode 1; `Mode1State4` and `MainMode1` also call
+  the handler.
+- **14** is a boot-time payload: `Mode0State3` copies 0xC4 bytes of it to IWRAM `0x03002FB0`
+  (`gSlot14Data`), which `sub_02019CAC`, `sub_0201AD90` and `sub_0201B3A4` read.
+- **11** is waited for and reset in `MainMode1`; the data is never copied.
 
 In GZLE01 each buffer sits at the same offset from `prog_base`: `0x02010800` for slots 0/2
 and `0x0201A800 + (JP address - 0x02014000)` for the rest.

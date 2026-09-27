@@ -58,11 +58,11 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 |--------|--------|--------|----------|
 | `02014800` | `0201B000` | `crt0.s` | stock AGB SDK: `_start`, header, `start_vector`, `intr_main` |
 | `02014A0C` | `0201B20C` | `main.c` | `AgbMain` ... `MainLoop` (ends `02015054`); `.rodata` `02023DEC–02023E38` |
-| `02015054` | `0201B854` | game code (mode 1) | `InitDisplayIntr`, `SeedRandom`, `UpdateRandom`, `Mode1State0-5`, `MainMode1` (ends `02017190`); `.rodata` `02023E38–02023E90` (u16 tables, then `gMode1StateFuncs` at `02023E68`). One object or several: not known yet |
+| `02015054` | `0201B854` | `mode1.c` | `InitDisplayIntr`, `SeedRandom`, `UpdateRandom`, the HUD/graphics helpers, `Mode1State0-5`, `Mode1RecvMarkers` (slot 3), `MainMode1` (ends `02017190`); `.rodata` `02023E38-02023E90`: an unreferenced 12-byte block, `gDungeonSounds`, `gMode1StateFuncs`, two u16 tables. The tables on both sides of `gMode1StateFuncs` put them in one object with `MainMode1`. The random/display functions have no `.rodata` or other marker, so whether they are a separate object can't be told from the binary; they stay in mode1.c |
 | `02017190` | `0201D980` | `gba_com.c` | app-side link API over JoyCom (status per slot, send/recv) |
 | `020173B8` | `0201DBA8` | `multi_sio.c` | Nintendo MultiSio (`"MultiSioSync010316"` is its `.rodata`); nothing calls it |
 | `02017824` | `0201E014` | `joy_com.c` | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue (ends `02018158`) |
-| `02018158` | `0201E948` | `mode0.c` | `Mode0State0-3`, two helpers, `MainMode0 = gMode0StateFuncs[gMain.modeState]()`; `.rodata` `02023EE4–02023EFC` (US: `0202AB40–0202AB64`, which adds a 12-byte `0xFF`-terminated string for `Mode0State0`) |
+| `02018158` | `0201E948` | `mode0.c` | title screen while the GC sends the boot data: `Mode0State0-3`, `Mode0DrawTitleSprite`, `Mode0UpdateBlend`, `MainMode0`; `.rodata` `02023EE4-02023EFC` (US: `0202AB40-0202AB64`, which adds `gMode0UsString` for the US-only `DrawString`) |
 | `02018658` | `0201EE3C` | `heap.c` | `HeapInit`/`HeapAlloc`/`HeapFree`/`HeapCompact` (the JOY IRQ copy lives in this heap) |
 | `02018884` | `0201F068` | game code | `Mode1VBlank` (`0201ABDC`), `MainMode2` (`020204A8`), ~140 functions; `.rodata` starts with `gSinTable` (`02023EFC–0202417C`, 320 × s16 8.8 sine, so `cos(i) = gSinTable[i + 64]`), then small tables up to `02024568`, referenced roughly in code order |
 | `02020E28` | `02027A84` | sound | `SoundInit` -> `SoundDriverInit(gSoundBankHeader)`; custom PCM driver, not m4a |
@@ -70,6 +70,28 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 | `02023A84` | `0202A6E0` | libagbsyscall | `ArcTan2 CpuFastSet CpuSet Div LZ77UnCompVram LZ77UnCompWram Sqrt`, then `JoyHardReset` |
 | `02023AC0` | `0202A71C` | libgcc | `_call_via_*`, `__divsi3 __div0 __modsi3 __udivsi3 __umodsi3` |
 | `02023D9C` | `0202A9F8` | newlib | `bzero`, `srand`, `rand` |
+
+### Game code `02018884–02020E28`: what the `.rodata` says
+
+Each object's `.rodata` is one block, in link order, so a table referenced by only one
+function belongs to that function's object. Two such tables in the wrong order therefore put
+their functions (and everything between them) in one object. Function-pointer tables tie
+their targets to the object too. That gives these groups (GZLJ01; none of them has a
+recoverable start or end yet, because nothing in the binary marks an object boundary: u8
+tables are not aligned, and there is no padding between the blocks):
+
+| Functions | Evidence |
+|-----------|----------|
+| `Func_0201A224` ... `Mode1VBlank` (`0201ABDC`) | `Mode1VBlank` uses `02024235`, before `Func_0201A224`'s `0202423A` |
+| `sub_0201AC94` ... `sub_0201AF48` | pointer table `02024244` (targets `AC94`, `ACF8`, `AD90`), used by `AF48` |
+| `sub_0201C660` ... `sub_0201CB10` | `CB10` uses `02024354`, before `C660`'s `02024376`; pointer table `020243A4` lists the 19 handlers `0201C86C-0201CAE8` |
+| `sub_0201DEAC` ... `Func_0201E190` | `DEAC` uses `020244C0`, after `E190`'s `02024460` |
+| `sub_0201EC10` ... `sub_0202081C` | pointer table `020244E4` (18 handlers between `0201EC10` and `02020190`, used by `sub_02020298`), `MainMode2`'s state table `0202452C` (`020202E8`, `020203EC`, `0202081C`), and `02024560` (`02020668`, `020207D4`, used by `0202081C`) |
+
+`DrawSprite` (`02018AB8`) is the first function in the range that uses `.rodata` (it reads
+`gSinTable + 0x80`, the cosine), so `gSinTable` is either its object's or a data object of
+its own. `gSpriteTable` (`0202417C`, sprite pointers) comes next. Mode 2's states also use
+`gMode0Work`, so the link-lost screen reuses the title's blend.
 
 `.rodata` `02024568–0202CD20` is large data (graphics and tables, not yet split) referenced from
 all the game-code ranges, so it is probably separate data objects linked after the code's

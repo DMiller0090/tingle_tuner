@@ -52,6 +52,13 @@ Mode1VBlank = 0x0201ABDC; // thumb
 
 // ---- game code 02018884-02020E28 (not split yet) ----
 Func_0201A570 = 0x0201A570; // thumb
+// index (0-15) of the first gGameState.markers entry of the given type, or 0xFF
+FindMarker = 0x0201A878; // thumb
+// sends {item, arg} on slot 6 (daAgb_c::GbaItemUse); FALSE if the slot is busy
+SendItemUse = 0x0201E354; // thumb
+// draw item idx's 2x2 icon / two-digit count (8-byte entries at gGameState+0x160) into a BG map
+DrawItemIcon = 0x0201DC10; // thumb
+DrawItemCount = 0x0201DC5C; // thumb
 // sound request wrapper used by the game code (range-checks the id)
 GamePlaySound = 0x0201D978; // thumb
 ObjReset = 0x02020570; // thumb
