@@ -2,6 +2,7 @@
 #define GUARD_MAIN_H
 
 #include "global.h"
+#include "heap.h"
 
 // Main work area in IWRAM (0x03003080 in every version).
 struct Main
@@ -22,7 +23,7 @@ struct Main
     /*0x452*/ u8 unk452;            // set to 2 when the link drops (GbaComMain)
     /*0x453*/ u8 unk453;
     /*0x454*/ u8 filler454[0x45C - 0x454];
-    /*0x45C*/ u8 heap[0x1800];      // HeapInit(gMain.heap, sizeof(gMain.heap))
+    /*0x45C*/ union { struct Heap heap; u8 raw[0x1800]; } heap;
 };
 
 extern struct Main gMain;

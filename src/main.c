@@ -77,9 +77,9 @@ void InitSystem(void)
     gMain.gameCode = *(u32 *)0x020000AC;  // the packer's header game code
 #ifdef VERSION_GZLJ01
     GbaComInit();
-    HeapInit(gMain.heap, sizeof(gMain.heap));
+    HeapInit(&gMain.heap.heap, sizeof(gMain.heap));
 #else
-    HeapInit(gMain.heap, sizeof(gMain.heap));
+    HeapInit(&gMain.heap.heap, sizeof(gMain.heap));
     GbaComInit();
 #endif
     gMain.unk44C = FALSE;

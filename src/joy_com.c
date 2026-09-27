@@ -27,7 +27,7 @@ void JoyComInit(void *const *buffers, u8 *status, u32 gameCode, u8 numSlots)
 
     REG_IME = 0;
     REG_IE &= ~INTR_FLAG_SERIAL;
-    intrCopy = HeapAlloc(gMain.heap, size = (u32)JoyComMain - (u32)JoyComIntr);
+    intrCopy = HeapAlloc(&gMain.heap.heap, size = (u32)JoyComMain - (u32)JoyComIntr);
     gJoyCom.intrCopy = intrCopy;
     if (intrCopy != NULL)
     {
@@ -55,7 +55,7 @@ void JoyComStop(void)
         REG_IME = 0;
         gIntrTable[0] = JoyComIntr;
         REG_IME = 1;
-        HeapFree(gMain.heap, gJoyCom.intrCopy);
+        HeapFree(&gMain.heap.heap, gJoyCom.intrCopy);
         gJoyCom.intrCopy = NULL;
     }
     REG_RCNT = 0;

@@ -66,6 +66,7 @@ JoyComStatusSendSet = 0x020180E4; // thumb
 HeapInit = 0x02018658; // thumb
 HeapAlloc = 0x02018690; // thumb
 HeapFree = 0x020187C8; // thumb
+HeapCompact = 0x020187FC; // thumb
 
 // ---- sound: custom PCM driver (not m4a); sound bank is the packer's raw tail ----
 SoundInit = 0x02020E28; // thumb

@@ -50,6 +50,7 @@ JoyComStatusSendSet = 0x0201E8D4; // thumb
 HeapInit = 0x0201EE3C; // thumb
 HeapAlloc = 0x0201EE74; // thumb
 HeapFree = 0x0201EFAC; // thumb
+HeapCompact = 0x0201EFE0; // thumb
 SoundInit = 0x02027CB8; // thumb
 SoundDriverInit = 0x02028250; // thumb
 PcmClipS16ToS8 = 0x0202A65C; // arm
