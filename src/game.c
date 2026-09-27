@@ -1090,7 +1090,8 @@ void FollowMarkerStreamedMap(void)
 //             ScrollMap(&gGameState);
 //         }
 //         if (gGameState.unk224 == 0)
-//             DrawMapMarkers(&gGameState, gMain.frameCount);
+//             // DrawMapMarkers takes no parameters, but this passes two.
+//             ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
 //     }
 INCLUDE_ASM(UpdateMap);
 
