@@ -38,6 +38,8 @@ struct MapMarker
 // 0x058 u8 unk058
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
+// 0x0E5 u8 unk0E5
+// 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
 // 0x102 u8 unk102
@@ -63,6 +65,9 @@ struct MapMarker
 // 0x11E u8 unk11E
 // 0x120 u8 unk120
 // 0x121 u8 unk121
+// 0x122 u8 unk122
+// 0x123 u8 unk123
+// 0x124 u8 unk124
 // 0x12B u8 unk12B
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
@@ -76,10 +81,15 @@ struct MapMarker
 // 0x156 u8 unk156
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
+// 0x15C u8 effect[4] size=4  // slot 7: item use result
+// 0x1C8 u16 unk1C8
+// 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
-// 0x1E3 u8 unk1E3
+// 0x1E1 u8 unk1E1  // chest bits that changed
+// 0x1E3 u8 unk1E3  // chests opened
+// 0x1E4 u8 unk1E4
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
 // 0x1EE u8 unk1EE
 // 0x1F8 s16 unk1F8
@@ -107,10 +117,15 @@ struct MapMarker
 // 0x228 u8 unk228
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
+// 0x230 u8 life  // flags.life as last seen
+// 0x231 u8 lowLifeWarned  // the low-life sound has played
+// 0x232 u8 chimed  // the clock sound for this hour has played
 // 0x233 u8 dungeonChests  // flags.dungeonChests
+// 0x235 u8 unk235  // gMain.unk457 at the last fade out
 // 0x236 u8 isFree  // flags.isFree
 // 0x237 u8 unk237
 // 0x238 u8 unk238  // flags.unkB_7
+// 0x239 u8 unk239  // flags.unkB_7 changed
 // 0x23B u8 flagsReceived
 // 0x23C u8 unk23C
 // end genstruct
@@ -143,7 +158,9 @@ struct GameState
     /*0x059*/ u8 filler059[0x064 - 0x059];
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
-    /*0x0E5*/ u8 filler0E5[0x0FC - 0x0E5];
+    /*0x0E5*/ u8 unk0E5;
+    /*0x0E6*/ u8 filler0E6[0x0F4 - 0x0E6];
+    /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
     /*0x0FE*/ u8 filler0FE[0x102 - 0x0FE];
@@ -178,7 +195,10 @@ struct GameState
     /*0x11F*/ u8 filler11F[0x120 - 0x11F];
     /*0x120*/ u8 unk120;
     /*0x121*/ u8 unk121;
-    /*0x122*/ u8 filler122[0x12B - 0x122];
+    /*0x122*/ u8 unk122;
+    /*0x123*/ u8 unk123;
+    /*0x124*/ u8 unk124;
+    /*0x125*/ u8 filler125[0x12B - 0x125];
     /*0x12B*/ u8 unk12B;
     /*0x12C*/ u8 filler12C[0x133 - 0x12C];
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
@@ -205,15 +225,20 @@ struct GameState
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 filler158[0x15A - 0x158];
     /*0x15A*/ u8 unk15A;
-    /*0x15B*/ u8 filler15B[0x1CC - 0x15B];
+    /*0x15B*/ u8 filler15B[0x15C - 0x15B];
+    /*0x15C*/ u8 effect[4];                   // slot 7: item use result
+    /*0x160*/ u8 filler160[0x1C8 - 0x160];
+    /*0x1C8*/ u16 unk1C8;
+    /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
     /*0x1CD*/ u8 filler1CD[0x1DE - 0x1CD];
     /*0x1DE*/ u8 unk1DE;
     /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
     /*0x1E0*/ u8 unk1E0;
-    /*0x1E1*/ u8 filler1E1[0x1E3 - 0x1E1];
-    /*0x1E3*/ u8 unk1E3;
-    /*0x1E4*/ u8 filler1E4[0x1E5 - 0x1E4];
+    /*0x1E1*/ u8 unk1E1;                      // chest bits that changed
+    /*0x1E2*/ u8 filler1E2[0x1E3 - 0x1E2];
+    /*0x1E3*/ u8 unk1E3;                      // chests opened
+    /*0x1E4*/ u8 unk1E4;
     /*0x1E5*/ u8 unk1E5_0:1;
               u8 unk1E5_1:1;
               u8 unk1E5_2:1;
@@ -253,13 +278,18 @@ struct GameState
     /*0x229*/ u8 filler229[0x22D - 0x229];
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
-    /*0x22F*/ u8 filler22F[0x233 - 0x22F];
+    /*0x22F*/ u8 filler22F[0x230 - 0x22F];
+    /*0x230*/ u8 life;                        // flags.life as last seen
+    /*0x231*/ u8 lowLifeWarned;               // the low-life sound has played
+    /*0x232*/ u8 chimed;                      // the clock sound for this hour has played
     /*0x233*/ u8 dungeonChests;               // flags.dungeonChests
-    /*0x234*/ u8 filler234[0x236 - 0x234];
+    /*0x234*/ u8 filler234[0x235 - 0x234];
+    /*0x235*/ u8 unk235;                      // gMain.unk457 at the last fade out
     /*0x236*/ u8 isFree;                      // flags.isFree
     /*0x237*/ u8 unk237;
     /*0x238*/ u8 unk238;                      // flags.unkB_7
-    /*0x239*/ u8 filler239[0x23B - 0x239];
+    /*0x239*/ u8 unk239;                      // flags.unkB_7 changed
+    /*0x23A*/ u8 filler23A[0x23B - 0x23A];
     /*0x23B*/ u8 flagsReceived;
     /*0x23C*/ u8 unk23C;
     /*0x23D*/ u8 filler23D[0x240 - 0x23D];
@@ -349,5 +379,21 @@ void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
 void Func_0201DEAC(void);
 void Func_02020C10(void);
+u8 Func_0201B3A4(void);
+void Func_0201C484(u8 id);
+void Func_0201C568(void);
+void Func_0201DD20(u8 a, u8 b);
+void Func_0201E5E0(void);
+void Func_0201EBAC(void);
+void Func_0201EBD4(void);
+void Func_0201EDC4(void);
+void Func_0201F240(void);
+void Func_0201F274(void);
+void Func_0201F2C4(void);
+void Func_0201F420(void);
+void Func_02020150(void);
+void Func_02020298(void);
+extern const u8 gSprite_0202CA08[];
+extern const u8 gSprite_0202CA40[];
 
 #endif // GUARD_GAME_H

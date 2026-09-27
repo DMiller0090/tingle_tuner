@@ -87,6 +87,20 @@ Func_0201B0F4 = 0x0201B0F4; // thumb
 Func_0201B8C8 = 0x0201B8C8; // thumb
 Func_0201DEAC = 0x0201DEAC; // thumb
 Func_02020C10 = 0x02020C10; // thumb
+Func_0201B3A4 = 0x0201B3A4; // thumb
+Func_0201C484 = 0x0201C484; // thumb
+Func_0201C568 = 0x0201C568; // thumb
+Func_0201DD20 = 0x0201DD20; // thumb
+Func_0201E5E0 = 0x0201E5E0; // thumb
+Func_0201EBAC = 0x0201EBAC; // thumb
+Func_0201EBD4 = 0x0201EBD4; // thumb
+Func_0201EDC4 = 0x0201EDC4; // thumb
+Func_0201F240 = 0x0201F240; // thumb
+Func_0201F274 = 0x0201F274; // thumb
+Func_0201F2C4 = 0x0201F2C4; // thumb
+Func_0201F420 = 0x0201F420; // thumb
+Func_02020150 = 0x02020150; // thumb
+Func_02020298 = 0x02020298; // thumb
 
 // ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
 GbaComInit = 0x02017190; // thumb
@@ -190,8 +204,10 @@ gMainModeFuncs = 0x02023E2C; // data
 gMode1Unused_02023E38 = 0x02023E38; // data
 gDungeonSounds = 0x02023E44; // data
 gMode1StateFuncs = 0x02023E68; // data
-gMode1Unk_02023E80 = 0x02023E80; // data
-gMode1Unk_02023E86 = 0x02023E86; // data
+// BG map entry of the rupee icon per wallet size (MainMode1)
+gRupeeIconTiles = 0x02023E80; // data
+// sound per dungeon chest bit (flags.dungeonChests), played by MainMode1
+gChestSounds = 0x02023E86; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
 gMode0BobOffsets = 0x02023EE4; // data
@@ -210,6 +226,8 @@ gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
 gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C938 = 0x0202C938; // data
+gSprite_0202CA08 = 0x0202CA08; // data
+gSprite_0202CA40 = 0x0202CA40; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

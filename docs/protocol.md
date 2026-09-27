@@ -121,11 +121,13 @@ TWW decomp uses them, so they look like leftovers of cut features.
   (`struct MapMarker`: `x`, `y`, a 6-bit `type` at +5) into `gGameState.markers`. It looks up
   the type-1 marker, and if the high byte of its x or y changed it resets a set of game-state fields
   (the US builds test the new position against `0x6FF` where JP tests the old one).
-  `Mode0State3` waits for slot 3 before starting mode 1; `Mode1State4` and `MainMode1` also call
-  the handler.
+  `Mode0State3` waits for slot 3 before starting mode 1. `MainMode1` calls the handler each frame
+  the slot has data, except in state 4 (`Mode1State4` calls it itself) and while a map change is
+  pending; when it starts the fade out for a map change it resets slot 3 unread.
 - **14** is a boot-time payload: `Mode0State3` copies 0xC4 bytes of it to IWRAM `0x03002FB0`
-  (`gSlot14Data`), which `sub_02019CAC`, `sub_0201AD90` and `sub_0201B3A4` read.
-- **11** is waited for and reset in `MainMode1`; the data is never copied.
+  (`gSlot14Data`), which `sub_02019CAC`, `sub_0201AD90` and `Func_0201B3A4` read. `MainMode1` doesn't touch it.
+- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.unk0F4`) and reset; who
+  reads `unk0F4` is not known yet.
 
 In GZLE01 each buffer sits at the same offset from `prog_base`: `0x02010800` for slots 0/2
 and `0x0201A800 + (JP address - 0x02014000)` for the rest.

@@ -56,14 +56,18 @@ struct GbaComFlags
             u8 unk3_2:1;        // field_0x3_5
             u8 dungeonChests:5; // field_0x3_0..4: isStageTbox(0xF) for WT, ET, TOTG, FW, DRC
     /*0x4*/ u8 timer;           // field_0x4: (field_0x65c + 29) / 30
-    /*0x5*/ u8 unk5_0:2;
-            u8 unk5_2:3;        // Mode1State2 passes (unk5_2 - 1) ^ 3 to Func_02021284
-            u8 unk5_5:3;
-    /*0x6*/ u8 unk6;
+    /*0x5*/ u8 walletSize:2;    // field_0x5_6: dComIfGs_getWalletSize()
+            u8 unk5_2:3;        // field_0x5_3; Mode1State2 passes (unk5_2 - 1) ^ 3 to Func_02021284
+            u8 unk5_5:1;        // field_0x5_2 (MainMode1 sets it on a type 12 mail)
+            u8 unk5_6:1;        // field_0x5_1
+            u8 unk5_7:1;        // field_0x5_0
+    /*0x6*/ u8 hour:5;          // field_0x6_3: dKy_getdaytime_hour()
+            u8 dayOfWeek:3;     // field_0x6_0: dKy_get_dayofweek()
     /*0x7*/ u8 unk7_0:6;
             u8 unk7_6:1;        // copied to GameState.unk138 bit 4 (Mode0State3)
             u8 unk7_7:1;        // copied to GameState.unk138 bit 5
-    /*0x8*/ u8 unk8;
+    /*0x8*/ u8 life:7;          // field_0x8_1: dComIfGs_getLife()
+            u8 unk8_7:1;        // field_0x8_0
     /*0x9*/ u8 unk9;
     /*0xA*/ u8 unkA_0:1;        // field_0xa_7
             u8 busy:2;          // bit 0: field_0xa_6 dMenu_flag(), bit 1: field_0xa_5
@@ -110,7 +114,10 @@ extern u8 gGbaComBufSE[0x10];
 // then loads each address it needs (buf, buf + 1, ...) from the pool, where with a symbol
 // it would derive buf + 1 from buf.
 #define GBACOM_BUF_3      ((u8 *)(PROG_BASE - 0x800))
+#define GBACOM_BUF_MAIL   ((u8 *)(PROG_BASE - 0x6F0))
 #define GBACOM_BUF_SWITCH ((u8 *)(PROG_BASE - 0x6E0))
+#define GBACOM_BUF_11     ((u8 *)(PROG_BASE - 0x680))
+#define GBACOM_BUF_SE     ((u8 *)(PROG_BASE - 0x550))
 
 extern void *const gGbaComBuffers[GBACOM_SLOT_COUNT];
 extern u8 gGbaComDataStatus[GBACOM_SLOT_COUNT];

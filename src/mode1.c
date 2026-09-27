@@ -36,8 +36,12 @@ void (*const gMode1StateFuncs[])(void) =
     Mode1State5,
 };
 
-const u16 gMode1Unk_02023E80[3] = {0xC044, 0xA044, 0x4044};
-const u16 gMode1Unk_02023E86[5] = {0xE6, 0xE7, 0xE8, 0xEA, 0xE9};
+// BG map entry of the rupee icon (tile 0x44) per wallet size: the palette gives its colour.
+const u16 gRupeeIconTiles[3] = {0xC044, 0xA044, 0x4044};
+// Sound per dungeon chest bit (flags.dungeonChests: WT, ET, TOTG, FW, DRC).
+const s16 gChestSounds[5] = {0xE6, 0xE7, 0xE8, 0xEA, 0xE9};
+
+void Mode1SendSwitch(u8 soundArg);
 
 void InitDisplayIntr(void)
 {
@@ -863,4 +867,417 @@ void Mode1StartFadeOut(void)
     gGameState.fadeTimer = 2;
     gMain.modeState = 3;
 }
-INCLUDE_ASM(MainMode1);
+// Per frame in mode 1: react to what the GC's flags (slot 9) changed (chests, life, the
+// clock), run the current state, handle the link slots (1/2 map change, 3 markers, 5 mail,
+// 7 item use result, 11, 15 SE) and redraw the rupee counter and icon.
+void MainMode1(void)
+{
+    s32 i;
+    s32 chest = 0;
+
+    Func_02020298();
+
+    // A dungeon chest was opened: count them and play the newest one's sound.
+    if (gGameState.dungeonChests != gGameState.flags.dungeonChests && gGameState.unk1E0 == 0)
+    {
+        gGameState.unk1E1 = gGameState.flags.dungeonChests ^ gGameState.dungeonChests;
+        gGameState.unk1E0 = 1;
+        gMain.bgOfs[1][1] = -4;
+    }
+#ifdef VERSION_GZLJ01
+    if (gGameState.unk1E0 == 1 && gGameState.unk1FA == 0 && gGameState.unk104 != 0)
+#else
+    // The US builds wait for no menu or event instead. FAKEMATCH: `!flags.busy` gives the
+    // same code but puts chest in r8 (the extra insns before combine shift the priorities).
+    if (gGameState.unk1E0 == 1 && !*(u16 *)&gGameState.unk1FA && !((gGameState.flags.busy << 1) & 6))
+#endif
+    {
+        gGameState.unk1CA = 0;
+        gGameState.unk1CC = 1;
+        gGameState.unk1FA = 0;
+        gGameState.unk226 = 0;
+        gGameState.unk227 = 0;
+        gGameState.unk228 = 0;
+        gGameState.unk1E0 += 1;
+        gGameState.unk1E3 = 0;
+        for (i = 0; i <= 4; i++)
+        {
+            if (gGameState.flags.dungeonChests & (1 << i))
+                gGameState.unk1E3++;
+            if (gGameState.unk1E1 & (1 << i))
+                chest = i;
+        }
+        GamePlaySound(gChestSounds[chest], 1);
+    }
+
+    if (gGameState.unk238 != gGameState.flags.unkB_7)
+        gGameState.unk239 = 1;
+    if (gGameState.unk239 && gGameState.unk104 && gMain.modeState == 2 && gGameState.unk1FA == 0)
+    {
+        gGameState.unk239 = 0;
+        GamePlaySound(0x10, 1);
+        Func_0201DD20(4, 5);
+        Func_0201DD20(8, 9);
+        Func_0201DD20(9, 10);
+    }
+
+    if (gMain.modeState == 2)
+    {
+        // Life: a sound when it drops to 7 or below (once), Func_0201C484(15) on other drops.
+        if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0)
+        {
+            if (gGameState.flags.unkA_3)
+                GamePlaySound(0x110, 1);
+            else if (gGameState.life > gGameState.flags.life)
+            {
+                if (gGameState.flags.life <= 7)
+                {
+                    if (!gGameState.lowLifeWarned)
+                    {
+                        gGameState.lowLifeWarned = 1;
+                        gGameState.life = gGameState.flags.life;
+                        GamePlaySound(0x10F, 1);
+                    }
+                }
+                else
+                {
+                    gGameState.life = gGameState.flags.life;
+                    Func_0201C484(15);
+                }
+            }
+            else if (gGameState.life < gGameState.flags.life)
+            {
+                if (gGameState.flags.life > 7)
+                    gGameState.lowLifeWarned = 0;
+                gGameState.life = gGameState.flags.life;
+            }
+        }
+        else if ((u16)(gGameState.unk142 - 0x10E) <= 2)
+        {
+            gGameState.life = gGameState.flags.life;
+            if (gGameState.flags.life > 7)
+                gGameState.lowLifeWarned = 0;
+        }
+
+        // On the sea: a clock sound at 6:00, 12:00 and 20:00 that depends on the weekday.
+        if (gGameState.flags.dungeonNo == 0 && gGameState.unk1FA == 0 && gGameState.unk1CC == 0
+         && gGameState.unk224 == 0)
+        {
+            if (!gGameState.chimed)
+            {
+                if (gGameState.flags.hour == 6)
+                {
+                    if (gGameState.flags.dayOfWeek == 0)
+                        GamePlaySound(0x145, 1);
+                    else if (gGameState.flags.dayOfWeek == 1 || gGameState.flags.dayOfWeek == 3
+                          || gGameState.flags.dayOfWeek == 5)
+                        GamePlaySound(0x146, 1);
+                    else
+                        GamePlaySound(0x147, 1);
+                    gGameState.chimed = 1;
+                }
+                else if (gGameState.flags.hour == 12)
+                {
+                    if (gGameState.flags.dayOfWeek == 0 || gGameState.flags.dayOfWeek == 6)
+                        GamePlaySound(0x148, 1);
+                    else if (gGameState.flags.dayOfWeek == 1 || gGameState.flags.dayOfWeek == 3
+                          || gGameState.flags.dayOfWeek == 5)
+                        GamePlaySound(0x149, 1);
+                    else
+                        GamePlaySound(0x14A, 1);
+                    gGameState.chimed = 1;
+                }
+                else if (gGameState.flags.hour == 20)
+                {
+                    if (gGameState.flags.dayOfWeek == 6)
+                    {
+                        GamePlaySound(0x14B, 1);
+                        gGameState.chimed = 1;
+                    }
+                    else if (gGameState.flags.dayOfWeek == 0 || gGameState.flags.dayOfWeek == 2
+                          || gGameState.flags.dayOfWeek == 4)
+                    {
+                        GamePlaySound(0x14C, 1);
+                        gGameState.chimed = 1;
+                    }
+                    else if (gGameState.flags.dayOfWeek == 3 || gGameState.flags.dayOfWeek == 5)
+                    {
+                        GamePlaySound(0x14D, 1);
+                        gGameState.chimed = 1;
+                    }
+                    else
+                    {
+                        gGameState.chimed = 0;
+                    }
+                }
+            }
+            else if (gGameState.flags.hour != 6 && gGameState.flags.hour != 12
+                  && gGameState.flags.hour != 20)
+            {
+                gGameState.chimed = 0;
+            }
+        }
+    }
+
+    // Map change: fade out (state 3); Mode1State4 waits for the new map.
+    if (gGameState.flags.unkA_0 || gMain.inDungeon != gMain.unk457
+     || GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL)
+     || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVING)
+     || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVED)
+     || !gGameState.unk10E)
+    {
+        if (gMain.modeState == 2)
+        {
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
+                GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
+            Mode1StartFadeOut();
+            gGameState.unk10E = 0;
+            gGameState.unk224 = 0;
+            gGameState.unk235 = gMain.unk457;
+            if (gGameState.unk1CC || gGameState.unk1FA)
+            {
+                Func_0201DA50();
+                gGameState.unk142 = 0xFFFF;
+                if (gGameState.unk1FA)
+                    gGameState.unk21C = 0;
+                if (gGameState.unk1CC)
+                    gGameState.unk1CC = 0;
+            }
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                GbaComDataStatusReset(GBACOM_SLOT_3);
+        }
+    }
+    else if (gMain.modeState != 4 && GbaComRecvStatusCheck(GBACOM_SLOT_3))
+    {
+        Mode1RecvMarkers();
+    }
+
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_SE))
+    {
+        Func_0201C484(GBACOM_BUF_SE[0] - 1);
+        GbaComDataStatusReset(GBACOM_SLOT_SE);
+    }
+
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
+    {
+        if (gMain.modeState == 2)
+        {
+            if (GBACOM_BUF_MAIL[7])
+                Func_0201C484(GBACOM_BUF_MAIL[7] - 1);
+            if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk224 == 0
+             && gGameState.unk1FB == 0)
+            {
+                GbaComRecvDataGet(&gGameState.switchSound, GBACOM_SLOT_MAIL, 8);
+                if (gGameState.switchType == 5 || gGameState.switchType == 6
+                 || gGameState.switchType == 9 || gGameState.switchType == 7
+                 || gGameState.switchType == 11 || gGameState.switchType == 12
+                 || (gGameState.switchType == 13 && !(((u16 *)&gGameState.flags)[5] & 0x180)))
+                {
+                    if (gGameState.switchType == 12)
+                    {
+                        if (gGameState.unk121 == 0)
+                        {
+                            if (!gGameState.flags.unk5_5)
+                                gGameState.flags.unk5_5 = 1;
+                            gGameState.unk121 = 1;
+                            gGameState.unk122 = 0;
+                            gGameState.unk124 = 0;
+                            gGameState.unk123 = gSprite_0202CA08[4];
+                        }
+                        else if (gGameState.unk121 == 1)
+                        {
+                            gGameState.unk121 = 2;
+                            gGameState.unk124 = 0;
+                            gGameState.unk123 = gSprite_0202CA40[4];
+                            GamePlaySound(0x5B, 0);
+                        }
+                    }
+                    if (gGameState.unk121 <= 1)
+                    {
+                        Mode1SendSwitch(0);
+                        gGameState.unk0E5 = 0;
+                    }
+                }
+                else if (gGameState.switchType == 0)
+                {
+                    gGameState.unk0E5 = 0;
+                }
+                else
+                {
+                    gGameState.unk042 = 0;
+                }
+            }
+            else if (GBACOM_BUF_MAIL[5] == 0)
+            {
+                GbaComRecvDataGet(&gGameState.switchSound, GBACOM_SLOT_MAIL, 8);
+                gGameState.unk0E5 = 0;
+            }
+            else
+            {
+                GbaComDataStatusReset(GBACOM_SLOT_MAIL);
+            }
+        }
+        else
+        {
+            GbaComDataStatusReset(GBACOM_SLOT_MAIL);
+        }
+    }
+
+    if (GbaComRecvDataGet(gGameState.effect, GBACOM_SLOT_EFFECT, 4))
+    {
+        if (gGameState.effect[0] == 0)
+        {
+            s32 result = gGameState.effect[1];
+
+            if (result == 0)
+                SoundPlay(SE_KEY_BLOCKED, 0);
+            else if (result == 1)
+            {
+                GamePlaySound(0xF, 1);
+                SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+                gGameState.unk21C = result;
+            }
+            else if (result == 2)
+                GamePlaySound(0xE, 1);
+            else if (result == 3)
+                GamePlaySound((gGameState.effect[3] << 8) + gGameState.effect[2], 1);
+            gGameState.unk12B = 0;
+            Func_0201EBAC();
+        }
+        else
+        {
+            GbaComRecvDataGet(gGameState.effect, GBACOM_SLOT_EFFECT, 4);
+            gGameState.unk1E5_1 = 0;
+            gGameState.unk1E5_2 = 1;
+            if (gGameState.effect[0] == 2 || gGameState.effect[0] == 15 || gGameState.effect[0] == 21)
+            {
+                gGameState.effect[0] = 2;
+                Func_0201EBD4();
+                SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
+            }
+            else if (gGameState.effect[0] == 16)
+            {
+                Func_0201F274();
+                SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
+                if (gGameState.unk121)
+                {
+                    GamePlaySound(gGameState.unk122 + 0x60, 1);
+                    if (gGameState.unk122 <= 2)
+                        gGameState.unk122++;
+                }
+            }
+            else if (gGameState.effect[0] == 3)
+                GamePlaySound(0x24, 1);
+            else if (gGameState.effect[0] == 4)
+                GamePlaySound(0x26, 1);
+            else if (gGameState.effect[0] == 5)
+                Func_0201F2C4();
+            else if (gGameState.effect[0] == 7)
+                Func_0201F420();
+            else if (gGameState.effect[0] == 8 || gGameState.effect[0] == 9 || gGameState.effect[0] == 10)
+                gGameState.unk12B = 7;
+            else if (gGameState.effect[0] == 13)
+                GamePlaySound(0x26, 1);
+            else if (gGameState.effect[0] == 14)
+                Func_02020150();
+            else if (gGameState.effect[0] == 17)
+            {
+                gGameState.effect[0] = 3;
+                Func_0201EDC4();
+            }
+            else if (gGameState.effect[0] == 18)
+            {
+                gGameState.effect[0] = 4;
+                Func_0201F240();
+            }
+            else if (gGameState.effect[0] == 20)
+                gGameState.effect[0] = gGameState.unk1E4;
+            else if (gGameState.effect[0] == 19)
+            {
+                GamePlaySound(0x2D, 1);
+                gGameState.effect[0] = 5;
+                gGameState.unk12B = 6;
+            }
+            else
+                gGameState.unk1C8 = 0;
+        }
+    }
+
+    // Slot 11: 8 bytes to unk0F4.
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_11))
+    {
+        CpuCopy16(GBACOM_BUF_11, gGameState.unk0F4, 8);
+        GbaComDataStatusReset(GBACOM_SLOT_11);
+    }
+
+    if (gMain.modeState == 2)
+    {
+        gGameState.unk119 = Func_0201B3A4();
+        if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk1E5_1)
+        {
+            if (gGameState.unk11A && gGameState.unk224 == 0)
+            {
+                if (gGameState.unk226 != 11)
+                {
+                    gGameState.unk226 = 11;
+                    Func_0201C568();
+                }
+            }
+            else if (gGameState.unk226)
+            {
+                gGameState.unk226 = 0;
+                Func_0201C568();
+            }
+        }
+        // Darken the screen and show the wait sprite while a menu or event runs on the GC.
+        if ((gGameState.unk1FB | gGameState.unk1FA | gGameState.unk224 | gGameState.unk1CC) == 0
+         && gGameState.flags.busy)
+        {
+            gMain.bldcnt = 0x2FEF;
+            gMain.bldy = 7;
+            DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
+        }
+        else
+        {
+            gMain.bldcnt = 0;
+            gMain.bldy = 0;
+        }
+    }
+
+    gMode1StateFuncs[gMain.modeState]();
+    Func_0201E5E0();
+    if (gMain.modeState != 0)
+    {
+        u16 *map;
+
+        Mode1Func_020150A4();
+        map = (u16 *)0x0600644C;
+        map[0] = gRupeeIconTiles[gGameState.flags.walletSize];
+        map[0x20] = gRupeeIconTiles[gGameState.flags.walletSize] + 1;
+    }
+
+    // Some seconds after a marker update (Mode1RecvMarkers), a sound for the chart square
+    // that marker 1 (Link?) is in.
+    if (gMain.modeState == 2 && gGameState.unk106)
+    {
+        if (gGameState.unk030 != 0)
+            gGameState.unk030--;
+        else if (gGameState.unk1CC == 0 && *(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0)
+        {
+            gGameState.unk106 = 0;
+            i = 0;
+            do
+            {
+                if (gGameState.markers[i].type == 1 || i >= gGameState.markerCount)
+                    break;
+                i++;
+            } while (1);
+            // The square (7 per row) goes into i too: a separate local shifts the registers.
+            i = (gGameState.markers[i].y >> 8) * 7 + (gGameState.markers[i].x >> 8);
+            if (i == 25 && gGameState.flags.unkA_4)
+                GamePlaySound(0x437, 1);
+            else
+                GamePlaySound(i + 0x406, 1);
+        }
+    }
+}
