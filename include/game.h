@@ -353,7 +353,9 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+// The definition narrows a5 to u8; callers see a wider type (DrawQuestMarkers passes its
+// 0/1 mosaic flag without the copy agbcc makes for a u8 argument).
+void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u32 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
@@ -450,6 +452,11 @@ extern const u8 gSprite_0202C130[];
 extern const s16 gSounds_02024278[];
 void Func_0201B2C0(void);
 void Mode1SendSwitch(u8 soundArg);
+void DrawQuestMarkers(void);
+extern const u8 gPearlMarkerPos[6];
+extern const u8 gTriangleIslandPos[6];
+extern const u8 gTempleMarkerPos[4];
+extern const u8 gSprite_0202C200[];
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 

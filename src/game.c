@@ -74,7 +74,35 @@ INCLUDE_ASM(Func_0201AD90);
 
 INCLUDE_ASM(Func_0201AF48);
 
-INCLUDE_ASM(Func_0201AFCC);
+// Mark the current quest goals on the sea chart: the pearl to find next, else the Triangle
+// Islands still missing their pearl, else the temples whose boss is still alive.
+void DrawQuestMarkers(void)
+{
+    u32 mosaic = gMain.mosaic != 0;
+    s32 i;
+
+    if (gGameState.flags.pearlToFind)
+    {
+        for (i = 0; i < 3; i++)
+            if ((gGameState.flags.pearlToFind >> i) & 1)
+                DrawSprite(gSprite_0202C200, 0, gPearlMarkerPos[i * 2] + 12,
+                           gPearlMarkerPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
+    }
+    else if (gGameState.flags.pearlsToPlace)
+    {
+        for (i = 0; i < 3; i++)
+            if ((gGameState.flags.pearlsToPlace >> i) & 1)
+                DrawSprite(gSprite_0202C200, 0, gTriangleIslandPos[i * 2] + 12,
+                           gTriangleIslandPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
+    }
+    else if (gGameState.flags.bossesToBeat)
+    {
+        for (i = 0; i < 2; i++)
+            if ((gGameState.flags.bossesToBeat >> i) & 1)
+                DrawSprite(gSprite_0202C200, 0, gTempleMarkerPos[i * 2] + 12,
+                           gTempleMarkerPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
+    }
+}
 
 INCLUDE_ASM(Func_0201B0F4);
 
