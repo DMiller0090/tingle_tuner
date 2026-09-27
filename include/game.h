@@ -480,6 +480,7 @@ void Func_0201DB50(u8 item, u8 x, u8 y, u8 mosaic);
 void Func_0201DDA0(void);
 u8 Func_02018A90(u8 *timer);  // counts *timer down to 0 and returns it
 extern const s16 gChestRowIds[5];
+extern const u16 gHudPanelTiles[3];
 u32 Func_0201A8AC(u8 arg);
 void Func_0201FCA0(void);
 void Func_0201F878(void);

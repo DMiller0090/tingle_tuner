@@ -318,6 +318,8 @@ gSpriteTable = 0x0202417C; // data
 gShopItemsInit = 0x02024460; // data
 // id per dungeon chest (flags.dungeonChests bit) for the item menu's third row, passed to Func_0201DA24
 gChestRowIds = 0x020244C0; // data
+/ first tile of the left HUD panel per gGameState.unk0FC (Func_0201E5E0)
+gHudPanelTiles = 0x020244CA; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data

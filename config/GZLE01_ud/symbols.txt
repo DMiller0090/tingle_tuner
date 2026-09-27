@@ -268,6 +268,7 @@ gSinTable = 0x0202AD98; // data
 gSpriteTable = 0x0202B018; // data
 gShopItemsInit = 0x0202B350; // data
 gChestRowIds = 0x0202B3B0; // data
+gHudPanelTiles = 0x0202B3BA; // data
 gMode1BgTiles = 0x0202B458; // data
 gMode1BgPalette = 0x0202D684; // data
 gMode1BgMap = 0x0202D884; // data

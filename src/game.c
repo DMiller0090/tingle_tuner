@@ -504,6 +504,214 @@ void Func_0201E584(void)
     }
 }
 
+// Slide the two HUD panels at the top of the screen in and out (unk21F/unk21D: the left one,
+// unk220/unk21E: the right one with the held item and its price) depending on the game's
+// state, and draw them.
+// Nearly matches. The conditions of the second `else if` (unk220) come out with one jump
+// threaded differently (the original re-tests dungeonNo and unk224 after the unk224 test
+// fails), and in cases 0 and 1 the original keeps the digit doubled ((u8)x * 2, in r3, the
+// same register as the tile in cases 2 and 3); writing it that way shifts the register
+// allocation of the whole function.
+//     void Func_0201E5E0(void)
+//     {
+//         u16 *map;
+//         u16 tile;
+//         s32 i;
+//
+//         if (gGameState.unk224 != 0)
+//             gGameState.unk0FC = 2;
+//         else if (gGameState.unk11A != 0)
+//             gGameState.unk0FC = 0;
+//         else
+//             gGameState.unk0FC = 1;
+//
+//         if (gGameState.unk21F == 0)
+//         {
+//             if (gMain.modeState != 2 || !gGameState.unk1E5_1
+//              || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
+//              || gGameState.unk1CC != 0
+//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
+//                  && gGameState.unk104 == 0))
+//                 gGameState.unk21F = 1;
+//         }
+//         else if (gGameState.unk1E5_1 && gGameState.unk1CC == 0 && gMain.modeState == 2)
+//         {
+//             if (((gGameState.flags.dungeonNo != 0 || gGameState.unk224 == 0) && gGameState.flags.busy == 0
+//                  && gGameState.unk104 != 0)
+//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0))
+//                 gGameState.unk21F = 0;
+//         }
+//
+//         if (gGameState.unk220 == 0)
+//         {
+//             if (gGameState.unk1CC == 0)
+//             {
+//                 if (gMain.modeState != 2 || (!gGameState.unk1E5_1 && gGameState.unk1DE != 11)
+//                  || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
+//                  || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
+//                      && gGameState.unk104 == 0)
+//                  || gGameState.unk121 != 0)
+//                     gGameState.unk220 = 1;
+//             }
+//         }
+//         else if (gGameState.unk1E5_1 && gMain.modeState == 2)
+//         {
+//             if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.unk104 != 0
+//                  && gGameState.unk121 == 0)
+//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
+//                  && gGameState.unk104 != 0 && gGameState.unk121 == 0)
+//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
+//              || gGameState.unk1CC != 0)
+//                 gGameState.unk220 = 0;
+//         }
+//
+//         if (gGameState.unk21F != 0)
+//         {
+//             if (gGameState.unk21D <= 3)
+//             {
+//                 gGameState.unk21D++;
+//                 map = (u16 *)0x06006440 + (0x1C - gGameState.unk21D);
+//                 tile = 0xE01B;
+//                 for (i = 0; i < gGameState.unk21D; i++)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile | 0x800;
+//                     tile ^= 0x400;
+//                     map++;
+//                 }
+//             }
+//             else
+//             {
+//                 gGameState.unk21D = 4;
+//             }
+//         }
+//         else
+//         {
+//             tile = gHudPanelTiles[gGameState.unk0FC];
+//             map = (u16 *)0x06006470;
+//             if (gGameState.unk21D != 0)
+//             {
+//                 gGameState.unk21D--;
+//                 for (i = 4; i != gGameState.unk21D; i--)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile + 0x10;
+//                     tile++;
+//                     map++;
+//                 }
+//                 tile = 0xE01B;
+//                 for (; i != 0; i--)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile | 0x800;
+//                     tile ^= 0x400;
+//                     map++;
+//                 }
+//             }
+//             else
+//             {
+//                 for (i = 0; i < 4; i++)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile + 0x10;
+//                     tile++;
+//                     map++;
+//                 }
+//             }
+//         }
+//
+//         if (gGameState.unk220 != 0)
+//         {
+//             if (gGameState.unk21E <= 3)
+//             {
+//                 gGameState.unk21E++;
+//                 map = (u16 *)0x06006440 + (0x16 - gGameState.unk21E);
+//                 tile = 0xE01B;
+//                 for (i = 0; i < gGameState.unk21E; i++)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile | 0x800;
+//                     tile ^= 0x400;
+//                     map++;
+//                 }
+//             }
+//             else
+//             {
+//                 gGameState.unk21E = 4;
+//             }
+//         }
+//         else if (gGameState.unk21E != 0)
+//         {
+//             gGameState.unk21E--;
+//             if (gGameState.unk0FD == 0)
+//             {
+//                 u8 n = gGameState.unk21E;
+//                 u8 num;
+//
+//                 map = (u16 *)0x06006440 + (0x15 - n);
+//                 switch (n)
+//                 {
+//                 case 0:
+//                     num = gGameState.items[gGameState.unk1DE].price % 10;
+//                     map[0] = num * 2 + 0x4030;
+//                     map[0x20] = num * 2 + 0x4031;
+//                     break;
+//                 case 1:
+//                     num = gGameState.items[gGameState.unk1DE].price / 10;
+//                     if (num != 0)
+//                     {
+//                         map[0] = num * 2 + 0x4030;
+//                         map[0x20] = num * 2 + 0x4031;
+//                     }
+//                     else
+//                     {
+//                         map[0] = 0xD09F;
+//                         map[0x20] = 0xD09F;
+//                     }
+//                     break;
+//                 case 2:
+//                     tile = gGameState.items[gGameState.unk1DE].tile;
+//                     map[0] = tile + 1;
+//                     map[0x20] = tile + 1 + 0x10;
+//                     break;
+//                 case 3:
+//                     tile = gGameState.items[gGameState.unk1DE].tile;
+//                     map[0] = tile;
+//                     map[0x20] = tile + 0x10;
+//                     break;
+//                 }
+//                 map++;
+//                 tile = 0xE01B;
+//                 for (i = gGameState.unk21E; i != 0; i--)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile | 0x800;
+//                     tile ^= 0x400;
+//                     map++;
+//                 }
+//             }
+//             else
+//             {
+//                 map = (u16 *)0x06006464;
+//                 tile = 0xB080;
+//                 for (i = 4; i != gGameState.unk21E; i--)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile + 0x10;
+//                     tile++;
+//                     map++;
+//                 }
+//                 tile = 0xE01B;
+//                 for (; i != 0; i--)
+//                 {
+//                     map[0] = tile;
+//                     map[0x20] = tile | 0x800;
+//                     tile ^= 0x400;
+//                     map++;
+//                 }
+//             }
+//         }
+//     }
 INCLUDE_ASM(Func_0201E5E0);
 
 void Func_0201EBAC(void)
