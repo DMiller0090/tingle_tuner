@@ -135,3 +135,20 @@ gGbaComDataStatus = 0x03005320; // data
 gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
+
+// ---- EWRAM below the program: link receive buffers (gGbaComBuffers) ----
+gGbaComMessageBuf = 0x0200A000; // data
+gGbaComBuf3 = 0x02014000; // data
+gGbaComBufGbaFlg = 0x02014100; // data
+gGbaComBufMail = 0x02014110; // data
+gGbaComBufSwitch = 0x02014120; // data
+gGbaComBufControl = 0x02014130; // data
+gGbaComBufItem = 0x02014140; // data
+gGbaComBufEffect = 0x02014150; // data
+gGbaComBufFlags = 0x02014160; // data
+gGbaComBufName = 0x02014170; // data
+gGbaComBuf11 = 0x02014180; // data
+gGbaComBuf14 = 0x02014190; // data
+gGbaComBufShop = 0x02014290; // data
+gGbaComBufItemBuy = 0x020142A0; // data
+gGbaComBufSE = 0x020142B0; // data

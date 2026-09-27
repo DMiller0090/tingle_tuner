@@ -83,8 +83,11 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `src/file.c .rodata 0xSTART 0xEND` in `splits.txt` places the file's `.rodata` in the shared
 `.rodata` block (see `main.c`).
 
-In C so far: `src/main.c` (all but `VBlankIntr`/`MainLoop`, plus its `.rodata`),
-`src/gba_com.c`, `src/joy_com.c` (all but `JoyComIntr`) and `src/libc/rand.c`. Newlib's `bzero`
+In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but
+`VBlankIntr`/`MainLoop`), `src/gba_com.c`, `src/joy_com.c` (all but `JoyComIntr`),
+`src/multi_sio.c` (all but `MultiSioMain`/`MultiSioRecvDataCheck`), `src/heap.c`
+(`HeapCompact`) and `src/libc/rand.c`. main.c, gba_com.c and multi_sio.c own their `.rodata`.
+Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
 doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
 and old_agbcc at least matches its leaf-function prologue.
 

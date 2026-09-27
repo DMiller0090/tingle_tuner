@@ -7,7 +7,8 @@ Functions (build/<ver>/functions.txt) are matched in address order by their mnem
 sequence (difflib over per-function hashes; unmatched runs are paired in order). A data
 symbol is ported by finding a function whose literal pool holds its address, then reading
 the literal at the same place in the matching function. Anything neither finds (IWRAM
-variables, I/O) keeps its address; IWRAM layout is identical in every version so far.
+variables, I/O) keeps its address; IWRAM layout is identical in every version so far. EWRAM
+below the program (link buffers) moves with prog_base.
 
 Run tools/build.py (or disasm.py) for both versions first so functions.txt is current.
 """
@@ -21,6 +22,7 @@ import capstone
 from common import BUILD, CONFIG, versions
 from disasm import SYM_RE, load_symbols
 
+EWRAM_START = 0x02000000
 MODES = {'arm': capstone.CS_MODE_ARM, 'thumb': capstone.CS_MODE_THUMB}
 
 
@@ -82,6 +84,10 @@ def port(src_ver, dst_ver):
                 new = dst.funcs[j][0]
         elif src.base <= addr < src.end:
             new = port_data(src, dst, pairs, addr)
+        elif EWRAM_START <= addr < src.base:
+            # EWRAM buffers below the program keep their offset from prog_base. (Pool
+            # voting is unreliable here: small EWRAM values also turn up as other data.)
+            new = addr - src.base + dst.base
         else:
             new = port_data(src, dst, pairs, addr, outside=True)
             if new is None:

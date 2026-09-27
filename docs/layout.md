@@ -40,9 +40,10 @@ IWRAM layout (identical in all three versions):
 | `03005510` | `gJoyCom` | 0x130, JOY bus work area, see [protocol.md](protocol.md) |
 | `0300213C` | | IWRAM copy of the three ARM PCM routines |
 
-EWRAM below the program holds the link receive buffers (`gGbaComBuffers`, one per slot):
-`prog_base - 0xA800` (0xA000 bytes, slots 0 and 2: message data and map image) and small
-buffers from `prog_base - 0x800`.
+EWRAM below the program holds the link receive buffers (`gGbaComBuffers`, one per slot,
+named `gGbaComBuf*` in symbols.txt): `prog_base - 0xA800` (`gGbaComMessageBuf`, 0xA000
+bytes, slots 0 and 2: message data and map image) and small buffers from `prog_base - 0x800`.
+They keep their offset from `prog_base` in every version, and `port_symbols.py` relies on that.
 
 ## `.text` modules
 
@@ -53,12 +54,12 @@ mixer, libagbsyscall, libgcc, newlib. Object boundaries marked "?" are guesses; 
 | GZLJ01 | GZLE01 | Module | Contents |
 |--------|--------|--------|----------|
 | `02014800` | `0201B000` | `crt0.s` | stock AGB SDK: `_start`, header, `start_vector`, `intr_main` |
-| `02014A0C` | `0201B20C` | `main.c` | `AgbMain`, `VBlankIntr`, `IntrDummy`, `ReadKeys`, `InitSystem`, `MainLoop`, ... |
+| `02014A0C` | `0201B20C` | `main.c` | `AgbMain` ... `MainLoop` (ends `02015054`); `.rodata` `02023DEC–02023E38` |
 | `02015xxx` | | game code | not yet mapped |
-| `02017190` | `0201D980` | `gba_com.c`? | app-side link API over JoyCom (status per slot, send/recv) |
+| `02017190` | `0201D980` | `gba_com.c` | app-side link API over JoyCom (status per slot, send/recv) |
 | `020173B8` | `0201DBA8` | `multi_sio.c` | Nintendo MultiSio (`"MultiSioSync010316"` is its `.rodata`); nothing calls it |
-| `02017824` | `0201E014` | `joy_com.c`? | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue |
-| `02018658` | `0201EE3C` | `heap.c`? | `HeapInit`/`HeapAlloc`/`HeapFree` (the JOY IRQ copy lives in this heap) |
+| `02017824` | `0201E014` | `joy_com.c` | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue |
+| `02018658` | `0201EE3C` | `heap.c` | `HeapInit`/`HeapAlloc`/`HeapFree`/`HeapCompact` (the JOY IRQ copy lives in this heap) |
 | `02018xxx` | | game code | not yet mapped |
 | `02020E28` | `02027A84` | sound | `SoundInit` -> `SoundDriverInit(gSoundBankHeader)`; custom PCM driver, not m4a |
 | `020237CC` | `0202A428` | ARM mixer | `PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix` (run from IWRAM) |
