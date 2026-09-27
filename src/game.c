@@ -566,7 +566,7 @@ INCLUDE_ASM(Func_0201CFE8);
 bool32 MsgReset(void)
 {
     gGameState.unk13C = 0;
-    gGameState.unk13D = 0;
+    gGameState.msgBoxPos = 0;
     gGameState.unk142 = 0xFFFF;
     return TRUE;
 }
@@ -650,7 +650,61 @@ void MsgClose(void)
 }
 
 #ifndef VERSION_GZLJ01
-INCLUDE_ASM(DrawString);
+// Draw a whole string at (x, y) at once (the title screen's US text): control codes only
+// move the cursor.
+void DrawString(const u8 *str, u8 x, u8 y, u8 lineHeight)
+{
+    u8 ch;
+
+    gGameState.msgPtr = (u8 *)str;
+    gGameState.textX = x;
+    gGameState.textY = y;
+    do
+    {
+        ch = *gGameState.msgPtr;
+        while (ch > 0xF1)
+        {
+            if (ch == 0xFD || ch == 0xF4)
+            {
+                gGameState.textX += gGameState.unk157;
+            }
+            else if (ch == 0xFA || ch == 0xFE)
+            {
+                if (ch == 0xFE)
+                {
+                    gGameState.textX = x;
+                    gGameState.textY += lineHeight;
+                }
+            }
+            else if (ch == 0xF6)
+            {
+                gGameState.msgPtr++;
+            }
+            else if (ch == 0xF5)
+            {
+                gGameState.msgPtr++;
+            }
+            else if (ch == 0xF3)
+            {
+                gGameState.msgPtr++;
+            }
+            else if (ch == 0xF2)
+            {
+                s32 n = gGlyphRunLength[*++gGameState.msgPtr];
+                s32 i;
+
+                for (i = 0; i < n; i++)
+                    gGameState.textX += gGameState.unk157;
+            }
+            else if (ch == 0xFC)
+            {
+                gGameState.msgPtr++;
+            }
+            ch = *++gGameState.msgPtr;
+        }
+        DrawChar(ch);
+    } while (*++gGameState.msgPtr != 0xFF);
+}
 #endif
 
 // Draw the blinking cursor on menu slot (rows 0-1: the item grid, row 2: the bottom row).

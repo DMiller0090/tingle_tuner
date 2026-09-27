@@ -52,6 +52,8 @@ struct ItemSlot
 // 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
+// 0x0FF u8 unk0FF  // frames left in the frame of gSprite_0202C400
+// 0x100 u8 unk100  // its frame (0-3)
 // 0x102 u8 unk102
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
 // 0x106 u8 unk106
@@ -83,7 +85,7 @@ struct ItemSlot
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C  // a sound is playing (GamePlaySound)
-// 0x13D u8 unk13D
+// 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while unk13C is set, else 0
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
 // 0x142 s16 unk142  // message id (MsgStart)
@@ -123,7 +125,10 @@ struct ItemSlot
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
 // 0x1FC s16 rupees  // shown on screen; counts toward flags.rupees
 // 0x1FE s16 rupeeDelta  // flags.rupees - rupees
+// 0x202 u16 unk202  // Tingle animation: frames left in the current frame
+// 0x204 u16 unk204
 // 0x206 u16 unk206
+// 0x208 u16 unk208
 // 0x20A u16 waveAmplitude  // intro wave (Mode1State1), counts down to 0
 // 0x20E u16 wavePhase  // 8.8; the high byte indexes gSinTable
 // 0x210 u16 timer  // flags.timer
@@ -142,7 +147,10 @@ struct ItemSlot
 // 0x226 u8 unk226
 // 0x227 u8 unk227
 // 0x228 u8 unk228
+// 0x229 u8 unk229
+// 0x22A u8 unk22A
 // 0x22B u8 unk22B
+// 0x22C u8 unk22C
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
 // 0x230 u8 life  // flags.life as last seen
@@ -191,7 +199,10 @@ struct GameState
     /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
-    /*0x0FE*/ u8 filler0FE[0x102 - 0x0FE];
+    /*0x0FE*/ u8 filler0FE[0x0FF - 0x0FE];
+    /*0x0FF*/ u8 unk0FF;                      // frames left in the frame of gSprite_0202C400
+    /*0x100*/ u8 unk100;                      // its frame (0-3)
+    /*0x101*/ u8 filler101[0x102 - 0x101];
     /*0x102*/ u8 unk102;
     /*0x103*/ u8 filler103[0x104 - 0x103];
     /*0x104*/ u8 unk104;                      // cleared while a menu or event runs on the GC
@@ -241,7 +252,7 @@ struct GameState
               u8 unk138_6:2;
     /*0x139*/ u8 filler139[0x13C - 0x139];
     /*0x13C*/ u8 unk13C;                      // a sound is playing (GamePlaySound)
-    /*0x13D*/ u8 unk13D;
+    /*0x13D*/ s8 msgBoxPos;                   // message box slide, steps toward 10 while unk13C is set, else 0
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
     /*0x142*/ s16 unk142;                     // message id (MsgStart)
@@ -294,9 +305,11 @@ struct GameState
     /*0x1FB*/ u8 unk1FB;
     /*0x1FC*/ s16 rupees;                     // shown on screen; counts toward flags.rupees
     /*0x1FE*/ s16 rupeeDelta;                 // flags.rupees - rupees
-    /*0x200*/ u8 filler200[0x206 - 0x200];
+    /*0x200*/ u8 filler200[0x202 - 0x200];
+    /*0x202*/ u16 unk202;                     // Tingle animation: frames left in the current frame
+    /*0x204*/ u16 unk204;
     /*0x206*/ u16 unk206;
-    /*0x208*/ u8 filler208[0x20A - 0x208];
+    /*0x208*/ u16 unk208;
     /*0x20A*/ u16 waveAmplitude;              // intro wave (Mode1State1), counts down to 0
     /*0x20C*/ u8 filler20C[0x20E - 0x20C];
     /*0x20E*/ u16 wavePhase;                  // 8.8; the high byte indexes gSinTable
@@ -317,9 +330,10 @@ struct GameState
     /*0x226*/ u8 unk226;
     /*0x227*/ u8 unk227;
     /*0x228*/ u8 unk228;
-    /*0x229*/ u8 filler229[0x22B - 0x229];
+    /*0x229*/ u8 unk229;
+    /*0x22A*/ u8 unk22A;
     /*0x22B*/ u8 unk22B;
-    /*0x22C*/ u8 filler22C[0x22D - 0x22C];
+    /*0x22C*/ u8 unk22C;
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
     /*0x22F*/ u8 filler22F[0x230 - 0x22F];
@@ -514,6 +528,17 @@ extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: MsgCmd00 ... M
 extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
 extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
 extern const u8 gSprite_0202C130[];
+
+void Mode1StartFadeOut(void);
+void Func_02018988(s8 *pos, u8 target, s8 speed);  // steps *pos toward target
+void Func_0201BA2C(s8 pos);
+void Func_0201BA9C(s8 pos);
+void Func_0201BEA0(s8 pos);
+// Tingle's animations (gGameState.unk226), each a list of sprites (gGameState.unk227 picks one).
+extern const u8 *const *const gTingleAnims[21];
+extern const u8 gSprite_0202C400[];
+extern const u8 gSprite_0202C650[];
+extern const u8 gSprite_0202C740[];
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
 
