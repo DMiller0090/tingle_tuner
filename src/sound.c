@@ -1,5 +1,6 @@
 #include "global.h"
 #include "sound.h"
+#include "gba/dma.h"
 #include "gba/syscall.h"
 
 // The sound driver (GZLJ01 02020E28-020237CC): the API the game calls, then the sequencer,
@@ -38,6 +39,7 @@ extern s16 gSoundLoop9TempoOfs;
 extern u8 gSoundLoop9Param;
 extern struct SoundLoopSlot gSoundLoopSlots[2];
 
+struct SoundBankHeader;
 void SoundDriverInit(const struct SoundBankHeader *header);
 void SoundApiInit(void);
 void SoundApiUpdate(void);
@@ -163,10 +165,57 @@ struct SoundVoice
     /*0x00*/ u8 type;   // 0 PCM, 1-4 GB channel
     /*0x01*/ u8 state;  // 0 free, 1 on, 2 released
     /*0x04*/ struct SoundTrack *track;
-    /*0x08*/ u8 unk08[0x68];
+    /*0x08*/ u8 priority;
+    /*0x09*/ u8 unk09[0x5F];
+    /*0x68*/ struct SoundVoice *prev;  // in gPcmActiveVoices / gPcmFreeVoices
+    /*0x6C*/ struct SoundVoice *next;
     /*0x70*/ struct SoundVoice *trackPrev;
     /*0x74*/ struct SoundVoice *trackNext;
 };
+
+// An instrument record in a bank (8 bytes), see docs/layout.md "Raw tail block".
+struct SoundInstrument
+{
+    /*0x0*/ u8 type;      // 0 PCM, 1-4 GB channel, 0x10-0x12 key split, drum kit, key ranges
+    /*0x1*/ u8 flags;
+    /*0x2*/ u16 arg;
+    /*0x4*/ u16 envelope;
+    /*0x6*/ u8 release;
+    /*0x7*/ u8 baseKey;
+};
+
+#define REG_SOUND1CNT_L   (*(vu16 *)0x04000060)
+#define REG_SOUND1CNT_H   (*(vu16 *)0x04000062)
+#define REG_SOUNDCNT_L    (*(vu16 *)0x04000080)
+#define REG_SOUNDCNT_H_LO (*(vu8 *)0x04000082)
+#define REG_SOUNDCNT_X    (*(vu8 *)0x04000084)
+#define REG_SOUNDBIAS     (*(vu16 *)0x04000088)
+
+extern u8 gPcmEnabled;
+extern struct SoundInstrument gDrumInstrument;
+extern struct SoundVoice *gPcmActiveVoices;
+extern u32 gPcmCode[];
+extern void *gPcmClipFunc;
+extern void *gPcmMixFunc;
+extern void *gPcmEchoFunc;
+extern u8 gPcmDmaBuffers[];
+
+// ARM, run from the IWRAM copy in gPcmCode.
+void PcmClipS16ToS8(void);
+void PcmMixChannel(void);
+void PcmEchoMix(void);
+
+void PcmInit(void *buffers);
+void PcmVSync(void);
+void PcmMixFrame(void);
+void CgbUpdate(void);
+void SoundCmdQueueInit(void);
+void SoundCmdProcess(void);
+void DrumInstrumentInit(void);
+void VoicesInit(void);
+void TracksInit(void);
+void PlayersInit(void);
+void PlayerUpdateAll(void);
 
 extern struct SoundPlayer gSoundPlayers[20];
 extern struct SoundTrack gSoundTracks[24];
@@ -629,33 +678,135 @@ s16 SoundLoop9Tempo(struct SoundParams *params)
 //     }
 INCLUDE_ASM(SoundPlayLoop);
 
-INCLUDE_ASM(SoundDriverInit);
+void SoundDriverInit(const struct SoundBankHeader *header)
+{
+    gSoundBank = header;
+    REG_SOUNDCNT_X = 0;
+    REG_SOUNDCNT_X = 0x80;
+    REG_SOUNDCNT_L = 0xFF77;
+    REG_SOUNDCNT_H_LO = 0x0D;
+    REG_SOUNDBIAS = (REG_SOUNDBIAS & 0x3FFF) | 0x4000;
+    REG_SOUND1CNT_L = 8;
+    REG_SOUND1CNT_H = 0xF000;
+    CpuFastSet(PcmClipS16ToS8, gPcmCode, 0xD8);
+    gPcmClipFunc = (void *)gPcmCode;
+    gPcmMixFunc = (void *)((u32)PcmMixChannel - (u32)PcmClipS16ToS8 + (u32)gPcmCode);
+    gPcmEchoFunc = (void *)((u32)PcmEchoMix - (u32)PcmClipS16ToS8 + (u32)gPcmCode);
+    PcmInit(gPcmDmaBuffers);
+    SoundCmdQueueInit();
+    DrumInstrumentInit();
+    VoicesInit();
+    TracksInit();
+    PlayersInit();
+}
 
-INCLUDE_ASM(SoundVSync);
+void SoundVSync(void)
+{
+    PcmVSync();
+}
 
-INCLUDE_ASM(SoundVSyncProc);
+void SoundVSyncProc(void)
+{
+    SoundCmdProcess();
+    PlayerUpdateAll();
+    CgbUpdate();
+    if (gPcmEnabled)
+        PcmMixFrame();
+}
 
 INCLUDE_ASM(PcmInit);
 
 INCLUDE_ASM(PcmVSync);
 
-INCLUDE_ASM(SoundDmaStop);
+void SoundDmaStop(void)
+{
+    gPcmEnabled = FALSE;
+    DmaStop(1);
+    DmaStop(2);
+}
 
-INCLUDE_ASM(SoundDmaStart);
+void SoundDmaStart(void)
+{
+    gPcmEnabled = TRUE;
+}
 
 INCLUDE_ASM(PcmMixVoice);
 
-INCLUDE_ASM(DrumInstrumentInit);
+// The instrument of a drum kit key: PCM, default envelope, played at its natural pitch.
+void DrumInstrumentInit(void)
+{
+    gDrumInstrument.type = 0;
+    gDrumInstrument.flags = 0;
+    gDrumInstrument.arg = 0;
+    gDrumInstrument.envelope = 0;
+    gDrumInstrument.release = 0;
+    gDrumInstrument.baseKey = 0x30;
+}
 
 INCLUDE_ASM(TrackLookupInstrument);
 
 INCLUDE_ASM(VoicesInit);
 
-INCLUDE_ASM(VoiceListRemove);
+void VoiceListRemove(struct SoundVoice *voice, struct SoundVoice **list)
+{
+    struct SoundVoice *prev = voice->prev;
+    struct SoundVoice *next = voice->next;
 
-INCLUDE_ASM(VoiceListPush);
+    if (prev != NULL)
+        prev->next = next;
+    else
+        *list = next;
+    if (next != NULL)
+        next->prev = prev;
+}
 
-INCLUDE_ASM(VoiceListInsert);
+void VoiceListPush(struct SoundVoice *voice, struct SoundVoice **list)
+{
+    struct SoundVoice *head = *list;
+
+    voice->next = head;
+    voice->prev = NULL;
+    if (head != NULL)
+        head->prev = voice;
+    *list = voice;
+}
+
+// Insert voice into gPcmActiveVoices, kept in order: released voices (lowest priority first),
+// then playing ones (lowest priority first), so VoiceAlloc steals from the front.
+void VoiceListInsert(struct SoundVoice *voice)
+{
+    struct SoundVoice *prev = NULL;
+    struct SoundVoice *cur = gPcmActiveVoices;
+
+    if (voice->state == 1)
+    {
+        while (cur != NULL && (cur->state != 1 || voice->priority >= cur->priority))
+        {
+            prev = cur;
+            cur = prev->next;
+        }
+    }
+    else if (voice->state == 2)
+    {
+        while (cur != NULL && cur->state != 1 && voice->priority >= cur->priority)
+        {
+            prev = cur;
+            cur = prev->next;
+        }
+    }
+    else
+    {
+        return;
+    }
+    voice->next = cur;
+    if (cur != NULL)
+        cur->prev = voice;
+    voice->prev = prev;
+    if (prev != NULL)
+        prev->next = voice;
+    else
+        gPcmActiveVoices = voice;
+}
 
 INCLUDE_ASM(VoiceNoteFreq);
 
@@ -663,7 +814,9 @@ INCLUDE_ASM(NoiseFreq);
 
 INCLUDE_ASM(EnvelopeStep);
 
-INCLUDE_ASM(SoundCmdNop);
+void SoundCmdNop(u8 arg)
+{
+}
 
 INCLUDE_ASM(SetPcmVoiceCount);
 
