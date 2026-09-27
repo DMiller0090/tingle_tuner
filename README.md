@@ -75,7 +75,14 @@ from the extracted binary on every build.
    the next function's start, so the literal pool is included).
 4. `python tools/build.py all`. On a mismatch it reports the first differing address and function.
 
-`src/main.c` (`AgbMain`) is the worked example.
+`src/main.c` (`AgbMain`) is the worked example. Also in C: `src/gba_com.c` (the whole
+object) and `src/libc/rand.c` (newlib `srand`/`rand`).
+
+Limits of the current build: an object's `.rodata` is linked right after its `.text`, so
+tables that live in the program's shared `.rodata` block (e.g. `gGbaComBuffers`) stay in asm
+and are `extern` in C. A split must be one contiguous range per C file. Newlib's `bzero`
+doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
+and old_agbcc at least matches its leaf-function prologue.
 
 ## Layout
 
