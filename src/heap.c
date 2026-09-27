@@ -3,16 +3,20 @@
 
 // First-fit heap. gMain.heap is the only instance (JoyCom keeps its IRQ copy there).
 
-// Nearly matches; the stores of 0xFFFF and 0 are scheduled differently:
-//     u16 *blocks = heap->blocks;
-//     u16 *end = (u16 *)((u8 *)blocks + (size - 10));
-//     heap->blocks[0] = (size - 12) & ~HEAP_BLOCK_USED;
-//     *end = HEAP_END;
-//     heap->firstFree = blocks;
-//     heap->size = size - 8;
-//     heap->unk6 = 0;
-//     heap->unk7 = 0;
-INCLUDE_ASM(HeapInit);
+// The block headers are written through an s16 pointer (the size mask stays 0xFFFE) and the
+// end marker through a u16 one (0xFFFF from the pool rather than -1).
+void HeapInit(struct Heap *heap, u32 size)
+{
+    s16 *blocks = (s16 *)heap->blocks;
+    u16 *end = (u16 *)((u8 *)blocks + (size - 10));
+
+    *blocks = (size - 12) & ~HEAP_BLOCK_USED;
+    *end = HEAP_END;
+    heap->firstFree = (u16 *)blocks;
+    heap->size = size - 8;
+    heap->unk6 = 0;
+    heap->unk7 = 0;
+}
 
 INCLUDE_ASM(HeapAlloc);
 
