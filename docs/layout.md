@@ -65,7 +65,11 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 | `02017824` | `0201E014` | `joy_com.c` | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue (ends `02018158`) |
 | `02018158` | `0201E948` | `mode0.c` | title screen while the GC sends the boot data: `Mode0State0-3`, `Mode0DrawTitleSprite`, `Mode0UpdateBlend`, `MainMode0`; `.rodata` `02023EE4-02023EFC` (US: `0202AB40-0202AB64`, which adds `gMode0UsString` for the US-only `DrawString`) |
 | `02018658` | `0201EE3C` | `heap.c` | `HeapInit`/`HeapAlloc`/`HeapFree`/`HeapCompact` (the JOY IRQ copy lives in this heap) |
-| `02018884` | `0201F068` | game code | `Mode1VBlank` (`0201ABDC`), `MainMode2` (`020204A8`), ~140 functions; `.rodata` starts with `gSinTable` (`02023EFC–0202417C`, 320 × s16 8.8 sine, so `cos(i) = gSinTable[i + 64]`), then small tables up to `02024568`, referenced roughly in code order |
+| `02018884` | `0201F068` | `sprite.c` | easing/step helpers, `DrawSprite`/`DrawSpriteAt`/`DrawSpriteParts`; `.rodata` `gSinTable` (`02023EFC–0202417C`, 320 × s16 8.8 sine, so `cos(i) = gSinTable[i + 64]`) and `gSpriteTable` |
+| `0201920C` | `0201F9F0` | `map.c` | the map screen, map icons, quest markers, `Func_0201B3A4`-`Func_0201B8C8`; `.rodata` `020241D4–0202429C` |
+| `0201BA2C` | `02022228` | `message.c` | text renderer, choice menu, messages (`MsgStep`, `ShowMessage`, US `DrawString`); `.rodata` `0202429C–02024460` |
+| `0201DA78` | `02024684` | `item_menu.c` | item menu, `UseItem`, HUD panels; `.rodata` `02024460–020244D0` |
+| `0201EBAC` | `020257B8` | `effect.c` | item effects, `MainMode2`, objects, wave scroll, Select window, status icon; `.rodata` `020244D0–02024568` |
 | `02020E28` | `02027A84` | sound | custom driver, not m4a: API (`SoundInit` ... `SoundPlayLoop`), core from `SoundDriverInit` (`020213C0`), command wrappers `0202328C–02023510`; `.rodata` `gSoundBankHeader` ... `gVibratoTable` (`0202CD20–0202D28C`). See [Sound driver](#sound-driver) |
 | `020237CC` | `0202A428` | ARM mixer | `PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix` (run from IWRAM) |
 | `02023A84` | `0202A6E0` | libagbsyscall | `ArcTan2 CpuFastSet CpuSet Div LZ77UnCompVram LZ77UnCompWram Sqrt`, then `JoyHardReset` |
@@ -77,19 +81,37 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 Each object's `.rodata` is one block, in link order, so a table referenced by only one
 function belongs to that function's object. Two such tables in the wrong order therefore put
 their functions (and everything between them) in one object. Function-pointer tables tie
-their targets to the object too. That gives these groups (GZLJ01; none of them has a
-recoverable start or end yet, because nothing in the binary marks an object boundary: u8
-tables are not aligned, and there is no padding between the blocks):
+their targets to the object too. And a block starts at its object's largest alignment (4 once
+it holds a pointer table), in every version. Nothing in the binary marks where an object
+ends, so this only ever puts functions together:
 
 | Functions | Evidence |
 |-----------|----------|
 | `UpdateMap` (`0201A224`) ... `Mode1VBlank` (`0201ABDC`) | `Mode1VBlank` uses `gSeaAnimFrames` (`02024235`), before `UpdateMap`'s `gSeaAnimPeriods` (`0202423A`) |
 | `MapIconFollowMarker` (`0201AC94`) ... `UpdateMapIcons` (`0201AF48`) | pointer table `gMapIconFuncs` (`02024244`), used by `UpdateMapIcons` |
+| `ChoiceMenuUpdate` (`0201C204`) ... `MsgStep` (`0201CB10`) | `MsgStep`'s pointer table `gMsgCmdFuncs` makes its block 4-aligned. In the US builds `gMsgTingleAnims` (`0202AFBA`) and `gSoundIds_0202430E` (`0202AF76`) are not, so the block starts at `gTwoChoiceIds` (`ChoiceMenuUpdate`) or earlier |
 | `DrawGlyphRun` (`0201C660`) ... `MsgStep` (`0201CB10`) | `MsgStep` uses `gMsgTingleAnims` (`02024354`), before `DrawGlyphRun`'s `gGlyphRunStart` (`02024376`); `gMsgCmdFuncs` (`020243A4`) lists the 19 handlers `MsgCmd00-12` |
 | `ItemMenuUpdate` (`0201DEAC`) ... `ItemMenuInit` (`0201E190`) | `ItemMenuUpdate` uses `gChestRowIds` (`020244C0`), after `ItemMenuInit`'s `gShopItemsInit` (`02024460`) |
 | `Func_0201EC10` ... `ObjBurst` (`0202081C`) | `gItemEffectFuncs` (`020244E4`, 18 handlers `0201EC10-02020190`, run by `UpdateItemEffect`), `gMode2StateFuncs` (`0202452C`, `Mode2State0-1`), `gObjFuncs` (`02024534`, entry 0 `ObjBurst`) and `gObjBurstStateFuncs` (`02024560`) |
 
-What the range does, in address order (names in symbols.txt; `src/game.c` holds it all):
+The five source files keep these groups whole. Between two groups the boundary is a choice
+within the range the tables allow, made by who calls the functions in between:
+
+- `sprite.c` / `map.c` at `CopyMapColumn`: `DrawSpriteAt`/`DrawSpriteParts` are called from
+  everywhere, `CopyMapColumn`/`CopyMapRow` only by the map code (`ScrollMap`,
+  `InitMapView`). The easing helpers have no `.rodata` and nothing separates them from
+  `DrawSprite`, so they share `sprite.c`.
+- `map.c` / `message.c` at `Func_0201BA2C`: the text renderer's functions are only called
+  from the message code; `Func_0201B8C8` calls `Func_0201B7D4` (whose `gSounds_02024278`
+  ends the map block) and both are cursor messages from `Mode1State2`.
+- `message.c` / `item_menu.c` at `DrawSlotCursor`: the item menu's first table is
+  `gShopItemsInit`; `MsgReset` ... `MsgClose` are message functions.
+- `item_menu.c` / `effect.c` at `Func_0201EBAC`: `Func_0201EBAC`/`Func_0201EBD4` are called
+  by the effects (and `MainMode1`), `UpdateHudPanels` (`gHudPanelTiles`) by the item menu.
+- `effect.c` runs to the sound driver: `BuildWaveScrollTable` ... `DrawStatusIcon` have no
+  `.rodata`, so nothing separates them from the objects before them.
+
+What the range does, in address order (names in symbols.txt):
 
 - `02018884-020190A8`: easing/step helpers (`EaseToward*`, `StepToward*`, `CountDown*`),
   `DrawSprite`/`DrawSpriteAt` (sprites are `struct SpriteFrame` lists of OAM parts;

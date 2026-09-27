@@ -98,9 +98,11 @@ In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but `VBl
 `src/mode1.c` (all but `Mode1State0` and `Mode1SendSwitch`; `Mode1RecvMarkers` is C in
 GZLJ01 only), `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c` (all but
 `MultiSioRecvDataCheck`), `src/heap.c` (`HeapInit`, `HeapCompact`), `src/libc/rand.c`, and
-most of `src/game.c`, the game code from `02018884` to the sound driver (122 of its 141
-functions; a few are C in GZLJ01 only). main.c, mode1.c, gba_com.c, multi_sio.c and mode0.c
-own their `.rodata`; game.c's is still asm, since its object boundaries aren't known.
+most of the game code from `02018884` to the sound driver (124 of its 141 functions; a few
+are C in GZLJ01 only), in five objects: `src/sprite.c`, `src/map.c`, `src/message.c`,
+`src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where they do). These
+and main.c, mode0.c, mode1.c, gba_com.c and multi_sio.c define their `.rodata` in C; the
+sound driver's tables are still asm.
 Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
 doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
 and old_agbcc at least matches its leaf-function prologue.

@@ -566,7 +566,7 @@ void UpdateItemEffect(void);
 extern const u8 gSprite_0202CA08[];
 extern const u8 gSprite_0202CA40[];
 
-// ---- game.c part A (GZLJ01 02018884-0201A224) ----
+// ---- GZLJ01 02018884-0201A224: sprite.c, start of map.c ----
 
 s16 EaseTowardMinMax(s16 *pos, s16 target, s16 div, s16 maxStep, s16 minStep);
 void EaseTowardMax(s16 *pos, s16 target, s16 div, s16 maxStep);
@@ -638,6 +638,35 @@ struct SpriteFrame
 // sin(i * 2pi / 256) in 8.8 fixed point; 320 entries, so cos(i) = (gSinTable + 64)[i].
 extern const s16 gSinTable[];
 
+// Sprites that only the .rodata tables point at (gSpriteTable, gMapIconSprites, gTingleAnims).
+extern const u8 gSprite_0202BD88[];
+extern const u8 gSprite_0202BD98[];
+extern const u8 gSprite_0202BDA8[];
+extern const u8 gSprite_0202BDD8[];
+extern const u8 gSprite_0202BDE8[];
+extern const u8 gSprite_0202BE00[];
+extern const u8 gSprite_0202BE30[];
+extern const u8 gSprite_0202BE38[];
+extern const u8 gSprite_0202C128[];
+extern const u8 gSprite_0202C140[];
+extern const u8 gSprite_0202C148[];
+extern const u8 gSprite_0202C188[];
+extern const u8 gSprite_0202C190[];
+extern const u8 gSprite_0202C1A0[];
+extern const u8 gSprite_0202C1A8[];
+extern const u8 gSprite_0202C1B0[];
+extern const u8 gSprite_0202C1E0[];
+extern const u8 gSprite_0202C1E8[];
+extern const u8 gSprite_0202C1F0[];
+extern const u8 gSprite_0202C1F8[];
+extern const u8 gSprite_0202C208[];
+extern const u8 gSprite_0202C3E8[];
+extern const u8 gSprite_0202C4C0[];
+extern const u8 gSprite_0202C788[];
+extern const u8 gSprite_0202C7C8[];
+extern const u8 gSprite_0202C850[];
+extern const u8 gSprite_0202CAE0[];
+
 // Sprites (struct SpriteFrame[]) and tables in .rodata used by DrawMapMarkers.
 extern const struct SpriteFrame gSprite_0202BD80[];
 extern const struct SpriteFrame gSprite_0202BE28[];
@@ -653,7 +682,7 @@ extern const struct SpriteFrame gSprite_0202CAD8[];
 extern const s16 gMarkerDirOfsX[8];
 extern const s16 gMarkerDirOfsY[8];
 
-// ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
+// ---- GZLJ01 0201A224-0201AFCC: map.c ----
 
 // The map image the GC sends in slot 2, in the message buffer (gGbaComMessageBuf). Its two
 // data pointers arrive as offsets from the header; LoadMapImage turns them into addresses.
@@ -696,7 +725,7 @@ void Func_0201B2C0(void);
 void HighlightMapRooms(void);
 u16 ArcTan2(s32 x, s32 y);
 
-// ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
+// ---- GZLJ01 0201AFCC-0201C660: end of map.c, start of message.c ----
 void Func_0201BA2C(s8 row);
 void Func_0201BA9C(s8 row);
 void TextClearCanvas(void);
@@ -747,7 +776,7 @@ extern const u16 gThreeChoiceSounds[];  // [id index * 3 + choice]
 void UpdateTargetCompass(void);
 void Func_0201E584(void);
 
-// ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
+// ---- GZLJ01 0201C660-0201DEAC: message.c, start of item_menu.c ----
 // Text: glyphs are drawn at gGameState.textX/textY (pixels) in a window 0x60 wide and 0x50
 // high; unk157 is the glyph width (6 or 8) and unk15A doubles the size.
 bool32 Func_0201C60C(void);  // wraps the cursor to the next line; FALSE when the window is full
@@ -787,18 +816,37 @@ extern const u8 gGlyphRunLength[];
 extern const u8 gGlyphTable_0202438E[];  // DrawChar: glyphs for codes 0xE0-0xE5 and 0xEB-
 extern const u8 gDayNameChars[7 * 2];    // two glyphs per weekday (flags.dayOfWeek), JP only
 extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: MsgCmd00 ... MsgCmd12
+void MsgCmd00(void);
+void MsgCmd01(void);
+void DrawWeekday(void);
+void DrawHour(void);
+void DrawMinute(void);
+void MsgCmd05(void);
+void MsgCmd06(void);
+void MsgCmd07(void);
+void MsgCmd08(void);
+void MsgCmd09(void);
+void MsgCmd0A(void);
+void MsgCmd0B(void);
+void MsgCmd0C(void);
+void MsgCmd0D(void);
+void MsgCmd0E(void);
+void MsgCmd0F(void);
+void MsgCmd10(void);
+void MsgCmd11(void);
+void MsgCmd12(void);
 extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
 extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
 
 void Mode1StartFadeOut(void);
 void Func_0201BEA0(s8 pos);
 // Tingle's animations (gGameState.unk226), each a list of sprites (gGameState.unk227 picks one).
-extern const u8 *const *const gTingleAnims[21];
+extern const u8 *const *const gTingleAnims[15];
 extern const u8 gSprite_0202C400[];
 extern const u8 gSprite_0202C650[];
 extern const u8 gSprite_0202C740[];
 
-// ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
+// ---- GZLJ01 0201DEAC-0201F308: item_menu.c, start of effect.c ----
 
 extern const struct ItemSlot gShopItemsInit[12];
 
@@ -834,7 +882,7 @@ void Func_0201FCA0(void);
 void Func_0201F878(void);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 
-// ---- game.c part F (GZLJ01 0201F308-02020E28) ----
+// ---- GZLJ01 0201F308-02020E28: effect.c ----
 
 extern void (*const gMode2StateFuncs[])(void);
 // Per object type: its function, called every frame while the object is active.
@@ -867,6 +915,13 @@ extern const u8 gMode2UsString[];
 #endif
 // Per item effect (GameState.effect[0], slot 7), run every frame by UpdateItemEffect.
 extern void (*const gItemEffectFuncs[18])(void);
+void Func_0201F068(void);
+void Effect5(void);
+void Effect7(void);
+void Effect8(void);
+void Effect11(void);
+void Effect12(void);
+void Effect14(void);
 void SelectWindowWipe(u8 open);
 #define GBACOM_BUF_SHOP     ((u8 *)(PROG_BASE - 0x570))
 #define GBACOM_BUF_ITEM_BUY ((u8 *)(PROG_BASE - 0x560))
