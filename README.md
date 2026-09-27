@@ -105,6 +105,7 @@ tools/disasm.py            recursive-descent ARM/Thumb disassembler (capstone) -
 tools/build.py             build + verify
 tools/lz77.py              byte-matching GBA LZ77 codec
 tools/port_symbols.py      copy GZLJ01's names to another version by matching functions
+tools/progress.py          share of .text built from C, per version
 docs/                      layout.md (sections, modules), protocol.md (GC<->GBA link)
 ```
 
