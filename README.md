@@ -119,4 +119,4 @@ tail block, `client_ud.bin`, `msg_LZ.bin` and the packer's copy are answered in 
 
 - What the smaller tables at the start of the sound bank are (sequences? instruments?).
 - What `client_ud.bin`'s extra input handling in `sub_02024AB8` controls.
-- GBA-side link status values 1 and 5 (see protocol.md).
+- What slots 3, 11 and 14 were for; no GC code sends them (see protocol.md).

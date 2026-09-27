@@ -86,7 +86,8 @@ status packet so the GC's `mDoGaC_SendEndCheck` sees 0.
 `GbaComRequestData` (status 1, unused) queues a bare status packet. The GC stores 1 and
 treats the slot as sendable (`mDoGaC_SendStatusCheck` accepts 0 or 1). Status 5 is only
 ever set by a GC status word, and nothing in `m_Do_gba_com.cpp` produces it (GC status 5
-turns into 6 after it is sent), so its meaning is open.
+turns into 6 after it is sent). The only GBA reader, `GbaComStatusIs5`, has no callers, so
+status 5 is dead on both sides.
 
 ## Slots
 
@@ -98,7 +99,7 @@ See the enum in `include/gba_com.h`. The GBA receive buffer per slot is `gGbaCom
 | 0 message | GC->GBA | `uploadConnect`: `msg_LZ.bin` | `0200A000` (0xA000) |
 | 1 control | GC->GBA | `dMap_c`, `modeDelete` | `02014130` |
 | 2 map image | GC->GBA | `dMap_c` room map | `0200A000` (shared with 0) |
-| 3 | ? | | `02014000` (0x100) |
+| 3 | GC->GBA? | never sent | `02014000` (0x100) |
 | 4 GbaFlg | GBA->GC | `daAgb_c::FlagsRecv` | `02014100` |
 | 5 mail | GC->GBA | `daAgbsw0_c` | `02014110` |
 | 6 item | GBA->GC | `daAgb_c::GbaItemUse` | `02014140` |
@@ -106,11 +107,18 @@ See the enum in `include/gba_com.h`. The GBA receive buffer per slot is `gGbaCom
 | 8 switch | GBA->GC | `daAgb_c::SwitchOn` | `02014120` |
 | 9 flags | GC->GBA | `daAgb_c::FlagsSend` (12 bytes) | `02014160` |
 | 10 name | GC->GBA | player name (8 bytes) | `02014170` |
-| 11 | ? | | `02014180` |
+| 11 | GC->GBA? | never sent | `02014180` |
 | 12 shop | GBA->GC | `daAgb_c::Shopping` | `02014290` |
 | 13 item buy | GC->GBA | reply to 12 | `020142A0` |
-| 14 | ? | | `02014190` (0x100) |
+| 14 | GC->GBA? | never sent | `02014190` (0x100) |
 | 15 SE | GC->GBA | `daAgbsw0_c` bomb SE | `020142B0` |
+
+Slots 3, 11 and 14 have GBA handlers, but no `mDoGac_SendDataSet`/`mDoGaC_SendEntry` in the
+TWW decomp uses them, so they look like leftovers of cut features. On the GBA, 3 (`Mode0State3`,
+`MainMode1`, `Mode1State4`, `sub_020160C8`) and 11 (`MainMode1`) are only waited for and reset:
+the data is never copied, so they would act as signals. 14 is copied (`GbaComRecvDataGet`,
+0x100 bytes) in `Mode0State3` right after the name (slot 10), so it would have been a
+boot-time payload.
 
 In GZLE01 each buffer sits at the same offset from `prog_base`: `0x02010800` for slots 0/2
 and `0x0201A800 + (JP address - 0x02014000)` for the rest.
