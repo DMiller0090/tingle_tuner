@@ -80,6 +80,9 @@ struct Unk164
 // 0x122 u8 unk122
 // 0x123 u8 unk123
 // 0x124 u8 unk124
+// 0x126 u8 unk126
+// 0x128 u8 unk128
+// 0x12A u8 unk12A
 // 0x12B u8 unk12B
 // 0x12E u8 unk12E
 // 0x12F u8 unk12F
@@ -117,6 +120,8 @@ struct Unk164
 // 0x1E8 u16 unk1E8
 // 0x1EA s16 unk1EA
 // 0x1EE u8 unk1EE
+// 0x1F4 u8 unk1F4
+// 0x1F5 u8 unk1F5
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
@@ -224,7 +229,12 @@ struct GameState
     /*0x122*/ u8 unk122;
     /*0x123*/ u8 unk123;
     /*0x124*/ u8 unk124;
-    /*0x125*/ u8 filler125[0x12B - 0x125];
+    /*0x125*/ u8 filler125[0x126 - 0x125];
+    /*0x126*/ u8 unk126;
+    /*0x127*/ u8 filler127[0x128 - 0x127];
+    /*0x128*/ u8 unk128;
+    /*0x129*/ u8 filler129[0x12A - 0x129];
+    /*0x12A*/ u8 unk12A;
     /*0x12B*/ u8 unk12B;
     /*0x12C*/ u8 filler12C[0x12E - 0x12C];
     /*0x12E*/ u8 unk12E;
@@ -289,7 +299,10 @@ struct GameState
     /*0x1EA*/ s16 unk1EA;
     /*0x1EC*/ u8 filler1EC[0x1EE - 0x1EC];
     /*0x1EE*/ u8 unk1EE;
-    /*0x1EF*/ u8 filler1EF[0x1F8 - 0x1EF];
+    /*0x1EF*/ u8 filler1EF[0x1F4 - 0x1EF];
+    /*0x1F4*/ u8 unk1F4;
+    /*0x1F5*/ u8 unk1F5;
+    /*0x1F6*/ u8 filler1F6[0x1F8 - 0x1F6];
     /*0x1F8*/ s16 unk1F8;
     /*0x1FA*/ u8 unk1FA;                      // MainLoop tests 0x1FA-0x1FB as one u16
     /*0x1FB*/ u8 unk1FB;
@@ -514,5 +527,12 @@ void Func_0201EF98(s16 x, s16 y);
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
 void Func_020190A8(const void *sprite, s16 x, s16 y, u8 a3, u8 a4);
 extern const u8 gSprite_0202CC50[];
+extern const u8 gSprite_0202C420[];
+extern const u8 gSprite_0202C428[];
+extern const u8 gSprite_0202C430[];
+extern const u8 gSprite_0202C440[];
+extern const u8 gSprite_0202C448[];
+extern const u8 gSprite_0202C498[];
+extern const u8 gSprite_0202C4A8[];
 
 #endif // GUARD_GAME_H

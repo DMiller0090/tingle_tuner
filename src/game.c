@@ -1223,4 +1223,74 @@ void Func_02020BEC(void)
     gGameState.unk1EE = 0;
 }
 
-INCLUDE_ASM(Func_02020C10);
+// The status icon at (232, 128) and the blinking frame around it; gGameState.unk1F4 picks the
+// icon.
+void Func_02020C10(void)
+{
+    u8 blink = (gMain.frameCount >> 3) % 2;
+    s32 m = FindMarker(1);
+    u8 type;
+
+    if (gGameState.unk1FB | gGameState.unk1FA | gGameState.unk224 | gGameState.unk1CC)
+        return;
+    if (gGameState.unk121 != 0 || gGameState.markers[m].unk6 == 4)
+    {
+        gGameState.unk1F4 = 0;
+    }
+    else if (gGameState.flags.unk8_7)
+    {
+        if (gGameState.flags.isFree)
+            gGameState.unk1F4 = 1;
+        else
+            gGameState.unk1F4 = 0;
+    }
+    else if (gGameState.flags.isFree)
+    {
+        if (gGameState.unk1F5)
+        {
+            Func_02021284(3, 3, 0);
+            gGameState.unk1F4 = 2;
+        }
+        else
+        {
+            gGameState.unk1F4 = 1;
+        }
+    }
+    else if (gGameState.flags.followTarget)
+    {
+        Func_02021284(4, 4, 0);
+        gGameState.unk1F4 = 1;
+    }
+    else if (gGameState.unk1F5)
+    {
+        Func_02021284(3, 3, 0);
+        gGameState.unk1F4 = 2;
+    }
+    else
+    {
+        gGameState.unk1F4 = 0;
+    }
+
+    if (gGameState.unk1F4 == 1)
+    {
+        type = gGameState.markers[FindMarker(1)].unk6;
+        if (type)
+            gGameState.unk1F4 = type + 2;
+    }
+
+    if (gGameState.unk1F4 == 0)
+        return;
+    if (gGameState.unk1F4 == 1)
+        DrawSprite(gSprite_0202C420, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
+    else if (gGameState.unk1F4 == 2)
+        DrawSprite(gSprite_0202C428, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
+    else if (gGameState.unk1F4 == 3)
+        DrawSpriteAt(gSprite_0202C440, 0, 0xE8, 0x80, 0, 0, 0);
+    else if (gGameState.unk1F4 == 4)
+        DrawSpriteAt(gSprite_0202C448, gGameState.unk126, 0xE8, 0x80, 0, 0, 0);
+    else if (gGameState.unk1F4 == 5)
+        DrawSpriteAt(gSprite_0202C4A8, gGameState.unk12A, 0xE8, 0x80, 0, 0, 0);
+    else if (gGameState.unk1F4 == 6)
+        DrawSpriteAt(gSprite_0202C498, gGameState.unk128, 0xE8, 0x80, 0, 0, 0);
+    DrawSprite(gSprite_0202C430, 0, 0xE0, blink + 0x80, 0, 0, 0, 0, 0, 0, 0);
+}
