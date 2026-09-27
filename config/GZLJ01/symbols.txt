@@ -121,7 +121,8 @@ CopyMapColumn = 0x0201920C; // thumb
 CopyMapRow = 0x020192D8; // thumb
 // stream map columns/rows into BG3 as gGameState.scrollX/Y move, then set BG3's scroll to them - 8
 ScrollMap = 0x02019350; // thumb
-Func_02019510 = 0x02019510; // thumb
+// animate and draw the map markers (gGameState.markers) and the gGameState.unk054 sprite
+DrawMapMarkers = 0x02019510; // thumb
 // on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gSlot14Data spots
 HighlightMapRooms = 0x02019CAC; // thumb
 // move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
@@ -326,6 +327,11 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+// x/y offsets (s16[8]) by marker direction (MapMarker.unk4 >> 5), for marker type 9.
+// port_symbols maps these and gSprite_0202BE28 wrong (the US DrawMapMarkers has one pool
+// entry fewer); the US addresses were set by hand, so don't --write over them.
+gMarkerDirOfsX = 0x020241D4; // data
+gMarkerDirOfsY = 0x020241E4; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data
@@ -334,10 +340,21 @@ gMode1SeaMap = 0x020270B8; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+gSprite_0202BD80 = 0x0202BD80; // data
+gSprite_0202BE28 = 0x0202BE28; // data
+gSprite_0202C130 = 0x0202C130; // data
+gSprite_0202C200 = 0x0202C200; // data
+gSprite_0202C420 = 0x0202C420; // data
 gSprite_0202C438 = 0x0202C438; // data
+gSprite_0202C440 = 0x0202C440; // data
+gSprite_0202C448 = 0x0202C448; // data
+gSprite_0202C498 = 0x0202C498; // data
+gSprite_0202C4A8 = 0x0202C4A8; // data
+gSprite_0202C4B8 = 0x0202C4B8; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
+gSprite_0202CAD8 = 0x0202CAD8; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

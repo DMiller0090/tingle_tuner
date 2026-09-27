@@ -44,6 +44,7 @@ struct GameData;
 // 0x054 u16 unk054
 // 0x056 u16 unk056
 // 0x058 u8 unk058
+// 0x059 u8 unk059
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0E5 u8 unk0E5
@@ -54,9 +55,12 @@ struct GameData;
 // 0x102 u8 unk102
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
 // 0x106 u8 unk106
-// 0x108 u8 unk108
+// 0x108 u8 unk108  // DrawMapMarkers's blink timers: count up, flip the next byte
+// 0x109 u8 unk109
 // 0x10A u8 unk10A
+// 0x10B u8 unk10B
 // 0x10C u8 unk10C
+// 0x10D u8 unk10D
 // 0x10E u8 unk10E
 // 0x10F u8 unk10F
 // 0x110 u8 unk110
@@ -77,6 +81,12 @@ struct GameData;
 // 0x122 u8 unk122
 // 0x123 u8 unk123
 // 0x124 u8 unk124
+// 0x125 u8 unk125  // animation timers (frame durations) for DrawMapMarkers
+// 0x126 u8 unk126
+// 0x127 u8 unk127
+// 0x128 u8 unk128
+// 0x129 u8 unk129
+// 0x12A u8 unk12A
 // 0x12B u8 unk12B
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x134 u8 scrolling  // the view is still catching up with the followed marker
@@ -102,6 +112,7 @@ struct GameData;
 // 0x1E4 u8 unk1E4
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
 // 0x1EE u8 unk1EE
+// 0x1F5 u8 unk1F5  // a type 2 marker has its highlight (MapMarker.unk5_6) set
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
@@ -125,6 +136,7 @@ struct GameData;
 // 0x226 u8 unk226
 // 0x227 u8 unk227
 // 0x228 u8 unk228
+// 0x22B u8 unk22B  // DrawMapMarkers runs the animation timers
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
 // 0x230 u8 life  // flags.life as last seen
@@ -170,7 +182,8 @@ struct GameState
     /*0x054*/ u16 unk054;
     /*0x056*/ u16 unk056;
     /*0x058*/ u8 unk058;
-    /*0x059*/ u8 filler059[0x064 - 0x059];
+    /*0x059*/ u8 unk059;
+    /*0x05A*/ u8 filler05A[0x064 - 0x05A];
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 unk0E5;
@@ -186,12 +199,12 @@ struct GameState
     /*0x105*/ u8 filler105[0x106 - 0x105];
     /*0x106*/ u8 unk106;
     /*0x107*/ u8 filler107[0x108 - 0x107];
-    /*0x108*/ u8 unk108;
-    /*0x109*/ u8 filler109[0x10A - 0x109];
+    /*0x108*/ u8 unk108;                      // DrawMapMarkers's blink timers: count up, flip the next byte
+    /*0x109*/ u8 unk109;
     /*0x10A*/ u8 unk10A;
-    /*0x10B*/ u8 filler10B[0x10C - 0x10B];
+    /*0x10B*/ u8 unk10B;
     /*0x10C*/ u8 unk10C;
-    /*0x10D*/ u8 filler10D[0x10E - 0x10D];
+    /*0x10D*/ u8 unk10D;
     /*0x10E*/ u8 unk10E;
     /*0x10F*/ u8 unk10F;
     /*0x110*/ u8 unk110;
@@ -214,7 +227,12 @@ struct GameState
     /*0x122*/ u8 unk122;
     /*0x123*/ u8 unk123;
     /*0x124*/ u8 unk124;
-    /*0x125*/ u8 filler125[0x12B - 0x125];
+    /*0x125*/ u8 unk125;                      // animation timers (frame durations) for DrawMapMarkers
+    /*0x126*/ u8 unk126;
+    /*0x127*/ u8 unk127;
+    /*0x128*/ u8 unk128;
+    /*0x129*/ u8 unk129;
+    /*0x12A*/ u8 unk12A;
     /*0x12B*/ u8 unk12B;
     /*0x12C*/ u8 filler12C[0x133 - 0x12C];
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
@@ -264,7 +282,9 @@ struct GameState
               u8 unk1E5_5:3;
     /*0x1E6*/ u8 filler1E6[0x1EE - 0x1E6];
     /*0x1EE*/ u8 unk1EE;
-    /*0x1EF*/ u8 filler1EF[0x1F8 - 0x1EF];
+    /*0x1EF*/ u8 filler1EF[0x1F5 - 0x1EF];
+    /*0x1F5*/ u8 unk1F5;                      // a type 2 marker has its highlight (MapMarker.unk5_6) set
+    /*0x1F6*/ u8 filler1F6[0x1F8 - 0x1F6];
     /*0x1F8*/ s16 unk1F8;
     /*0x1FA*/ u8 unk1FA;                      // MainLoop tests 0x1FA-0x1FB as one u16
     /*0x1FB*/ u8 unk1FB;
@@ -292,7 +312,9 @@ struct GameState
     /*0x226*/ u8 unk226;
     /*0x227*/ u8 unk227;
     /*0x228*/ u8 unk228;
-    /*0x229*/ u8 filler229[0x22D - 0x229];
+    /*0x229*/ u8 filler229[0x22B - 0x229];
+    /*0x22B*/ u8 unk22B;                      // DrawMapMarkers runs the animation timers
+    /*0x22C*/ u8 filler22C[0x22D - 0x22C];
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
     /*0x22F*/ u8 filler22F[0x230 - 0x22F];
@@ -440,6 +462,10 @@ void ScrollMap(struct GameState *state);
 void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority);
 void FollowMarkerFixedMap(void);
 void FollowMarkerStreamedMap(void);
+void DrawMapMarkers(void);
+void Func_02020598(void);
+void Mode1SendSwitch(u8 soundArg);
+
 
 // A hardware OAM entry, as DrawSprite writes it into gOamBuffer.
 struct OamData
@@ -486,11 +512,27 @@ struct SpritePart
 struct SpriteFrame
 {
     /*0x0*/ const struct SpritePart *parts;
-    /*0x4*/ u32 unk4;
+    /*0x4*/ u8 duration;  // frames
+    /*0x5*/ u8 unk5[3];
 };
 
 // sin(i * 2pi / 256) in 8.8 fixed point; 320 entries, so cos(i) = (gSinTable + 64)[i].
 extern const s16 gSinTable[];
+
+// Sprites (struct SpriteFrame[]) and tables in .rodata used by DrawMapMarkers.
+extern const struct SpriteFrame gSprite_0202BD80[];
+extern const struct SpriteFrame gSprite_0202BE28[];
+extern const struct SpriteFrame gSprite_0202C130[];
+extern const struct SpriteFrame gSprite_0202C200[];
+extern const struct SpriteFrame gSprite_0202C420[];
+extern const struct SpriteFrame gSprite_0202C440[];
+extern const struct SpriteFrame gSprite_0202C448[];
+extern const struct SpriteFrame gSprite_0202C498[];
+extern const struct SpriteFrame gSprite_0202C4A8[];
+extern const struct SpriteFrame gSprite_0202C4B8[];
+extern const struct SpriteFrame gSprite_0202CAD8[];
+extern const s16 gMarkerDirOfsX[8];
+extern const s16 gMarkerDirOfsY[8];
 
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
 

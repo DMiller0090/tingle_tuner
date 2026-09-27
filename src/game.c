@@ -416,7 +416,357 @@ end:
     gMain.bgOfs[3][1] = state->scrollY - 8;
 }
 
-INCLUDE_ASM(Func_02019510);
+// Draw the map markers: step the markers' animation timers (while gGameState.unk22B is set),
+// then draw every marker of a known type (1-21) that is on screen with its type's sprite
+// (gSpriteTable[type], or a special one), rotated by MapMarker.unk4, plus a highlight ring when
+// unk5_6 is set; last the extra sprite at gGameState.unk054/056. Type 1 (Tingle?) is drawn at
+// half size over a second sprite chosen by unk6; type 3 (Link?) is hidden in some states.
+// Near-miss (GZLJ01): the allocation differs from the marker loop on. The original keeps pal in
+// sl (a register reloaded with 0 every iteration) and spills dx; this C either folds pal to the
+// constant 0 or, as below, keeps it as an int (with a u8 conversion). Also the second
+// `marker->type == 3` test is kept in the original but dropped here. The US builds differ:
+// no pal variable (0 inline, 12 for type 1's unk6 == 3 sprite) and frame 0 for the last sprite.
+/*
+#define SPRITE_FRAMES(p) ((const struct SpriteFrame *)(p))
+
+void DrawMapMarkers(void)
+{
+    struct MapMarker *marker = gGameState.markers;
+    u8 mosaic = gMain.mosaic != 0;
+    s32 i;
+    const struct SpriteFrame *frames;
+    s32 pal = 0;
+
+    Func_02020598();
+    if (gGameState.unk22B)
+    {
+        if (gGameState.unk108 > 19)
+        {
+            gGameState.unk108 = 0;
+            gGameState.unk109 ^= 1;
+        }
+        else
+        {
+            gGameState.unk108++;
+        }
+        if (gGameState.unk125 == 0)
+        {
+            if (++gGameState.unk126 > 8)
+                gGameState.unk126 = 0;
+            gGameState.unk125 = gSprite_0202C448[gGameState.unk126].duration;
+        }
+        else
+        {
+            gGameState.unk125--;
+        }
+        if (gGameState.unk129 == 0)
+        {
+            gGameState.unk12A ^= 1;
+            gGameState.unk129 = gSprite_0202C498[gGameState.unk12A].duration;
+        }
+        else
+        {
+            gGameState.unk129--;
+        }
+        if (gGameState.unk127 == 0)
+        {
+            gGameState.unk128 ^= 1;
+            gGameState.unk127 = gSprite_0202C498[gGameState.unk128].duration;
+        }
+        else
+        {
+            gGameState.unk127--;
+        }
+        if (gGameState.unk10A > 9)
+        {
+            gGameState.unk10A = 0;
+            gGameState.unk10B ^= 1;
+        }
+        else
+        {
+            gGameState.unk10A++;
+        }
+        if (gGameState.unk121 != 0)
+        {
+            if (gGameState.flags.unk5_5)
+            {
+                if (gGameState.unk123 == 0)
+                {
+                    gGameState.unk124++;
+                    if (gGameState.unk121 == 1)
+                    {
+                        if (gGameState.unk124 > 6)
+                            gGameState.unk124 = 0;
+                        frames = &SPRITE_FRAMES(gSprite_0202CA08)[gGameState.unk124];
+                        gGameState.unk123 = frames->duration;
+                    }
+                    else if (gGameState.unk124 > 18)
+                    {
+                        gGameState.unk121 = 0;
+                        Mode1SendSwitch(3);
+                    }
+                    else
+                    {
+                        frames = &SPRITE_FRAMES(gSprite_0202CA40)[gGameState.unk124];
+                        gGameState.unk123 = frames->duration;
+                    }
+                }
+                else
+                {
+                    gGameState.unk123--;
+                }
+            }
+            else if (gGameState.unk121 == 1)
+            {
+                gGameState.unk121 = 0;
+            }
+        }
+        else if (gGameState.unk1E5_1 && gGameState.flags.busy == 0)
+        {
+            if (gGameState.unk10C > 29)
+            {
+                gGameState.unk10C = 0;
+                gGameState.unk10D ^= 1;
+            }
+            else
+            {
+                gGameState.unk10C++;
+            }
+        }
+        if (gGameState.unk10F != 0)
+        {
+            gGameState.unk10F--;
+        }
+        else
+        {
+            gGameState.unk110 ^= 1;
+            frames = &SPRITE_FRAMES(gSpriteTable[9])[gGameState.unk110];
+            gGameState.unk10F = frames->duration;
+        }
+        if (gGameState.unk113 != 0)
+        {
+            gGameState.unk113--;
+        }
+        else
+        {
+            if (++gGameState.unk114 > 5)
+                gGameState.unk114 = 0;
+            frames = &SPRITE_FRAMES(gSpriteTable[13])[gGameState.unk114];
+            gGameState.unk113 = frames->duration;
+        }
+        if (gGameState.unk115 != 0)
+        {
+            gGameState.unk115--;
+        }
+        else
+        {
+            gGameState.unk116 ^= 1;
+            frames = &SPRITE_FRAMES(gSpriteTable[16])[gGameState.unk116];
+            gGameState.unk115 = frames->duration;
+        }
+        if (gGameState.unk117 != 0)
+        {
+            gGameState.unk117--;
+        }
+        else
+        {
+            gGameState.unk118 ^= 1;
+            frames = &SPRITE_FRAMES(gSpriteTable[19])[gGameState.unk118];
+            gGameState.unk117 = frames->duration;
+        }
+    }
+
+    gGameState.unk1F5 = 0;
+    for (i = 0; i < gGameState.markerCount; i++, marker++)
+    {
+        u8 frame;
+        u16 scale;
+        s16 dx;
+        s16 dy;
+        u8 pal2;
+
+        if (marker->type == 0 || marker->type > 21)
+            continue;
+        scale = 0;
+        if (!gGameState.unk1E5_1 && marker->type == 3 && gGameState.unk121 == 0 && marker->type == 3)
+        {
+            if (!gGameState.unk1E5_2)
+                continue;
+            if (gGameState.effect[0] != 14)
+                continue;
+        }
+        dx = marker->x - gMain.bgOfs[3][0];
+        dy = marker->y - gMain.bgOfs[3][1];
+        if ((u16)dx > 0x80)
+            continue;
+        if (dx <= 0 || dx > 0x87)
+            continue;
+        if (dy <= 0)
+            continue;
+        if (dy > 0x87)
+            continue;
+        frames = SPRITE_FRAMES(gSpriteTable[marker->type]);
+        pal = 0;
+        if (marker->type == 1)
+        {
+            if (marker->unk6 == 0)
+                DrawSpriteAt(gSprite_0202C420, 0, dx, dy, mosaic, pal, 1);
+            else if (marker->unk6 == 1)
+                DrawSpriteAt(gSprite_0202C440, 0, dx, dy, mosaic, pal, 1);
+            else if (marker->unk6 == 2)
+                DrawSpriteAt(gSprite_0202C448, gGameState.unk126, dx, dy, mosaic, pal, 1);
+            else if (marker->unk6 == 3)
+                DrawSpriteAt(gSprite_0202C4A8, gGameState.unk12A, dx, dy, mosaic, pal, 1);
+            else if (marker->unk6 == 4)
+                DrawSpriteAt(gSprite_0202C498, gGameState.unk128, dx, dy, mosaic, pal, 1);
+            scale = 0x80;
+            frame = gGameState.unk109;
+        }
+        else if (marker->type == 3)
+        {
+            if (gGameState.unk121 != 0)
+            {
+                frames = gSprite_0202CA40;
+                if (gGameState.unk121 == 1)
+                    frames = gSprite_0202CA08;
+                frame = gGameState.unk124;
+            }
+            else if (gGameState.unk11A != 0)
+            {
+                frames = gSprite_0202CAD8;
+                frame = 0;
+            }
+            else if (gGameState.flags.busy == 0 && (gGameState.unk1FA != 0 || gGameState.unk104 != 0))
+            {
+                frame = gGameState.unk10D;
+            }
+            else
+            {
+                frames = gSprite_0202C130;
+                frame = 1;
+            }
+        }
+        else if (marker->type == 2)
+        {
+            if (marker->unk7 == 0x21)
+            {
+                frames = gSprite_0202BD80;
+                frame = 0;
+            }
+            else
+            {
+                frame = gGameState.unk10B;
+            }
+        }
+        else if (marker->type == 6)
+        {
+            if (marker->unk7 == 0x31)
+                frames = gSprite_0202BD80;
+            frame = 0;
+        }
+        else if (marker->type == 9)
+        {
+            if (gGameState.unk110 != 0)
+            {
+                dx += gMarkerDirOfsX[marker->unk4 >> 5];
+                dy += gMarkerDirOfsY[marker->unk4 >> 5];
+            }
+            frame = 0;
+        }
+        else if (marker->type == 13)
+        {
+            if (gGameState.unk11D == 0)
+            {
+                frames = SPRITE_FRAMES(gSpriteTable[7]);
+                frame = 0;
+            }
+            else
+            {
+                frame = gGameState.unk114;
+            }
+        }
+        else if (marker->type == 16)
+        {
+            if ((gGameState.unk026 >> marker->unk6) & 1)
+            {
+                frame = gGameState.unk116;
+            }
+            else if (gGameState.unk11B == 16 && gGameState.unk119 == i)
+            {
+                frames = SPRITE_FRAMES(gSpriteTable[7]);
+                frame = 0;
+            }
+            else
+            {
+                frames = gSprite_0202C130;
+                frame = 1;
+            }
+        }
+        else if (marker->type == 5)
+        {
+            if (marker->unk6 != 0xFF && !(gGameState.unk010 & (1 << marker->unk6)))
+                frames = SPRITE_FRAMES(gSpriteTable[7]);
+            frame = 0;
+        }
+        else if (marker->type == 12)
+        {
+            if (gGameState.unk11C == 0)
+                frames = SPRITE_FRAMES(gSpriteTable[7]);
+            frame = 0;
+        }
+        else if (marker->type == 19)
+        {
+            if (marker->unk6 == 0)
+            {
+                frames = gSprite_0202C4B8;
+                frame = 0;
+            }
+            else if (marker->unk6 == 1)
+            {
+                frames = gSprite_0202C440;
+                frame = 0;
+            }
+            else if (marker->unk6 == 2)
+            {
+                frames = gSprite_0202C448;
+                frame = gGameState.unk126;
+            }
+            else if (marker->unk6 == 3)
+            {
+                frames = gSprite_0202C4A8;
+                frame = gGameState.unk12A;
+            }
+            else
+            {
+                frame = gGameState.unk118;
+            }
+        }
+        else
+        {
+            frame = 0;
+        }
+        if (marker->unk5_6)
+        {
+            gGameState.unk1F5 = marker->type == 2 ? 1 : 0;
+            pal2 = 2;
+            if (marker->unk5_6 == 1)
+                pal2 = 3;
+            DrawSprite(gSprite_0202BE28, 0, dx, dy - 8, marker->unk4 + 0x80, mosaic, 0, 0, 0, pal, pal2 + 1);
+        }
+        DrawSprite(frames, frame, dx, dy, marker->unk4 + 0x80, mosaic, scale, 0, 0, pal, 0);
+    }
+
+    if (gMain.unk457 == 0 && gGameState.unk224 == 0 && gGameState.unk058 != 0)
+    {
+        s16 x = gGameState.unk054 - gMain.bgOfs[3][0];
+        s16 y = gGameState.unk056 - gMain.bgOfs[3][1];
+
+        if ((u16)(x + 0x40) <= 0xFF && (u16)(y + 0x40) <= 0xFF)
+            DrawSpriteAt(gSprite_0202C200, gGameState.unk059, x, y, mosaic, 0, 1);
+    }
+}
+*/
+INCLUDE_ASM(DrawMapMarkers);
 
 // Highlight the rooms on the four BG map blocks at 0x0600C000 (one room each, gGameState.unk0F0):
 // clear the palette bits of the block showing marker 1's room, then set palette bit 1 (|= 0x2000)
