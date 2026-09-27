@@ -60,6 +60,7 @@ SendItemUse = 0x0201E354; // thumb
 DrawItemIcon = 0x0201DC10; // thumb
 DrawItemCount = 0x0201DC5C; // thumb
 // sound request wrapper used by the game code (range-checks the id)
+// shows message id (0-0x437) with Tingle's voice (sound 0x13); callers' "sound IDs" are message IDs
 GamePlaySound = 0x0201D978; // thumb
 ObjReset = 0x02020570; // thumb
 // table[line] = BG0HOFS + sin(phase + 4 * line) * amplitude / 256 for the 160 lines
@@ -75,13 +76,14 @@ DrawSpriteAt = 0x02018F0C; // thumb
 Func_0201A69C = 0x0201A69C; // thumb
 Func_0201E190 = 0x0201E190; // thumb
 Func_02020BEC = 0x02020BEC; // thumb
-Func_0201D8AC = 0x0201D8AC; // thumb
+MsgReset = 0x0201D8AC; // thumb
 ObjResetActive = 0x02020644; // thumb
 Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb
 Func_0201CFE8 = 0x0201CFE8; // thumb
 Func_0201B7D4 = 0x0201B7D4; // thumb
-Func_0201DA50 = 0x0201DA50; // thumb
+// closes the message (sound 0x17 if one was open)
+MsgClose = 0x0201DA50; // thumb
 Func_0201E384 = 0x0201E384; // thumb
 Func_0201B0F4 = 0x0201B0F4; // thumb
 Func_0201B8C8 = 0x0201B8C8; // thumb
@@ -90,7 +92,8 @@ Func_02020C10 = 0x02020C10; // thumb
 Func_0201B3A4 = 0x0201B3A4; // thumb
 Func_0201C484 = 0x0201C484; // thumb
 Func_0201C568 = 0x0201C568; // thumb
-Func_0201DD20 = 0x0201DD20; // thumb
+// puts an item in a menu slot (5 per row) and draws its icon and count
+SetSlotItem = 0x0201DD20; // thumb
 Func_0201E5E0 = 0x0201E5E0; // thumb
 Func_0201EBAC = 0x0201EBAC; // thumb
 Func_0201EBD4 = 0x0201EBD4; // thumb
@@ -139,34 +142,40 @@ Func_0201C0E8 = 0x0201C0E8; // thumb
 Func_0201C164 = 0x0201C164; // thumb
 Func_0201C204 = 0x0201C204; // thumb
 Func_0201C60C = 0x0201C60C; // thumb
-Func_0201C660 = 0x0201C660; // thumb
-Func_0201C704 = 0x0201C704; // thumb
-Func_0201C86C = 0x0201C86C; // thumb
-Func_0201C8D8 = 0x0201C8D8; // thumb
-Func_0201C948 = 0x0201C948; // thumb
-Func_0201C988 = 0x0201C988; // thumb
-Func_0201C9E4 = 0x0201C9E4; // thumb
-Func_0201CA24 = 0x0201CA24; // thumb
-Func_0201CA48 = 0x0201CA48; // thumb
-Func_0201CA6C = 0x0201CA6C; // thumb
-Func_0201CA70 = 0x0201CA70; // thumb
-Func_0201CA74 = 0x0201CA74; // thumb
-Func_0201CA78 = 0x0201CA78; // thumb
-Func_0201CA7C = 0x0201CA7C; // thumb
-Func_0201CA80 = 0x0201CA80; // thumb
-Func_0201CA84 = 0x0201CA84; // thumb
-Func_0201CA98 = 0x0201CA98; // thumb
-Func_0201CAAC = 0x0201CAAC; // thumb
-Func_0201CAC0 = 0x0201CAC0; // thumb
-Func_0201CAD4 = 0x0201CAD4; // thumb
-Func_0201CAE8 = 0x0201CAE8; // thumb
-Func_0201CB10 = 0x0201CB10; // thumb
-Func_0201D8D8 = 0x0201D8D8; // thumb
-Func_0201DA24 = 0x0201DA24; // thumb
-Func_0201DA78 = 0x0201DA78; // thumb
-Func_0201DB50 = 0x0201DB50; // thumb
-Func_0201DCEC = 0x0201DCEC; // thumb
-Func_0201DDA0 = 0x0201DDA0; // thumb
+// draws a run of consecutive glyphs (gGlyphRunStart/Length[id]) at the text cursor
+DrawGlyphRun = 0x0201C660; // thumb
+// draws one glyph at the text cursor (gGameState.textX/Y) and advances it; FALSE when the window is full
+DrawChar = 0x0201C704; // thumb
+// MsgCmd00-12: handlers of message code 0xF3 (gMsgCmdFuncs); 02-04 draw the weekday, hour, minute
+MsgCmd00 = 0x0201C86C; // thumb
+MsgCmd01 = 0x0201C8D8; // thumb
+DrawWeekday = 0x0201C948; // thumb
+DrawHour = 0x0201C988; // thumb
+DrawMinute = 0x0201C9E4; // thumb
+MsgCmd05 = 0x0201CA24; // thumb
+MsgCmd06 = 0x0201CA48; // thumb
+MsgCmd07 = 0x0201CA6C; // thumb
+MsgCmd08 = 0x0201CA70; // thumb
+MsgCmd09 = 0x0201CA74; // thumb
+MsgCmd0A = 0x0201CA78; // thumb
+MsgCmd0B = 0x0201CA7C; // thumb
+MsgCmd0C = 0x0201CA80; // thumb
+MsgCmd0D = 0x0201CA84; // thumb
+MsgCmd0E = 0x0201CA98; // thumb
+MsgCmd0F = 0x0201CAAC; // thumb
+MsgCmd10 = 0x0201CAC0; // thumb
+MsgCmd11 = 0x0201CAD4; // thumb
+MsgCmd12 = 0x0201CAE8; // thumb
+// message interpreter: one character or control-code run per call (0 go on, 1, 2 wait, 3 end)
+MsgStep = 0x0201CB10; // thumb
+// starts message id: gGameState.msgPtr from the offset table at EWRAM 0x02000000
+MsgStart = 0x0201D8D8; // thumb
+MsgStartSilent = 0x0201DA24; // thumb
+DrawSlotCursor = 0x0201DA78; // thumb
+DrawItemSprite = 0x0201DB50; // thumb
+SetSelectedItem = 0x0201DCEC; // thumb
+// dungeon chest counter animation (gGameState.unk1E0 states 2-3)
+ChestCounterMain = 0x0201DDA0; // thumb
 Func_0201E2FC = 0x0201E2FC; // thumb
 Func_0201E584 = 0x0201E584; // thumb
 Func_0201EC10 = 0x0201EC10; // thumb
@@ -314,7 +323,8 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
-gTable_02024354 = 0x02024354; // data
+// message code 0xF5 argument -> Tingle animation (gGameState.unk226)
+gMsgTingleAnims = 0x02024354; // data
 gGlyphRunStart = 0x02024376; // data
 gGlyphRunLength = 0x02024386; // data
 gGlyphTable_0202438E = 0x0202438E; // data

@@ -20,7 +20,7 @@ struct MapMarker
 struct ItemSlot
 {
     /*0x0*/ u16 tile;   // BG map entry of the icon's top-left tile (2x2 tiles)
-    /*0x2*/ u16 objTile;  // OBJ tile of the icon as a sprite (Func_0201DB50)
+    /*0x2*/ u16 objTile;  // OBJ tile of the icon as a sprite (DrawItemSprite)
     /*0x4*/ u8 filler4[2];
     /*0x6*/ u8 count;
     /*0x7*/ u8 objPalette;
@@ -86,7 +86,7 @@ struct ItemSlot
 // 0x13D u8 unk13D
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
-// 0x142 s16 unk142  // message id (Func_0201D8D8)
+// 0x142 s16 unk142  // message id (MsgStart)
 // 0x144 u8* msgPtr  // message text (in the EWRAM message block at 0x02000000)
 // 0x148 u8 textX  // text cursor, pixels
 // 0x149 u8 textY
@@ -110,7 +110,7 @@ struct ItemSlot
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
-// 0x1CF u8 slotItems[13]  // item shown in each menu slot (Func_0201DD20)
+// 0x1CF u8 slotItems[13]  // item shown in each menu slot (SetSlotItem)
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
 // 0x1E1 u8 unk1E1  // chest bits that changed
@@ -244,7 +244,7 @@ struct GameState
     /*0x13D*/ u8 unk13D;
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
-    /*0x142*/ s16 unk142;                     // message id (Func_0201D8D8)
+    /*0x142*/ s16 unk142;                     // message id (MsgStart)
     /*0x144*/ u8* msgPtr;                     // message text (in the EWRAM message block at 0x02000000)
     /*0x148*/ u8 textX;                       // text cursor, pixels
     /*0x149*/ u8 textY;
@@ -271,7 +271,7 @@ struct GameState
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
     /*0x1CD*/ u8 filler1CD[0x1CF - 0x1CD];
-    /*0x1CF*/ u8 slotItems[13];               // item shown in each menu slot (Func_0201DD20)
+    /*0x1CF*/ u8 slotItems[13];               // item shown in each menu slot (SetSlotItem)
     /*0x1DC*/ u8 filler1DC[0x1DE - 0x1DC];
     /*0x1DE*/ u8 unk1DE;
     /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
@@ -362,6 +362,7 @@ extern const u8 *const gSpriteTable[];
 
 void Mode1VBlank(void);
 void Func_0201A570(void);
+// Shows message id (0-0x437) with Tingle's voice; arg goes to gGameState.unk226 (his animation).
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
 bool32 GamePlaySound(s16 id, u8 arg);
 void Func_0201A6D4(void);
@@ -375,7 +376,7 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a
 void Func_0201A69C(void);
 void Func_0201E190(void);
 void Func_02020BEC(void);
-bool32 Func_0201D8AC(void);
+bool32 MsgReset(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).
@@ -416,7 +417,7 @@ void ObjResetActive(void);  // ObjReset on every active entry
 void Func_0201A224(void);
 void Func_0201CFE8(void);
 void Func_0201B7D4(void);
-void Func_0201DA50(void);
+void MsgClose(void);
 void Func_0201E384(u8 arg);
 void Func_0201B0F4(void);
 void Func_0201B8C8(void);
@@ -426,7 +427,7 @@ void Func_02020C10(void);
 u8 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
-void Func_0201DD20(u8 a, u8 b);
+void SetSlotItem(u8 a, u8 b);
 void Func_0201E5E0(void);
 void Func_0201EBAC(void);
 void Func_0201EBD4(void);
@@ -447,34 +448,32 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
-bool32 Func_0201C60C(void);
+// Text: glyphs are drawn at gGameState.textX/textY (pixels) in a window 0x60 wide and 0x50
+// high; unk157 is the glyph width (6 or 8) and unk15A doubles the size.
+bool32 Func_0201C60C(void);  // wraps the cursor to the next line; FALSE when the window is full
 void Func_0201BCC0(u8 x, u8 y, u8 a2, u16 ch);
 void Func_0201BDE4(u8 x, u8 y, u8 a2, u16 ch);
 void Func_0201C0E8(u8 arg);
+s32 Func_0201C204(void);
+void Func_0201E2FC(void);
 bool32 SendItemUse(u8 a, u8 b);
-bool32 Func_0201C704(u8 ch);
+void DrawGlyphRun(u8 id);
+bool32 DrawChar(u8 ch);
 #ifdef VERSION_GZLJ01
 #define GLYPH_DIGIT_0 0x76
-#define DRAW_CHAR Func_0201C704
+#define DRAW_CHAR DrawChar
 #else
 #define GLYPH_DIGIT_0 0x35
-bool32 UsFunc_02023390(u8 ch);
-#define DRAW_CHAR UsFunc_02023390  // the US callers go through this wrapper
+bool32 UsDrawChar(u8 ch);
+#define DRAW_CHAR UsDrawChar  // the US callers go through this wrapper
 #endif
-void Func_0201D8D8(s16 id);
+s32 MsgStep(void);
+void MsgStart(s16 id);
 void DrawItemIcon(u8 item, u16 *map);
 void DrawItemCount(u8 item, u16 *map);
-void Func_0201DCEC(u8 item);
-void Func_0201C660(u8 id);
-s32 Func_0201C204(void);
-s32 Func_0201CB10(void);
-extern const u8 gSprite_0202BDF0[];  // "more text" arrow (Func_0201CB10)
-extern const u8 gSprite_0202C130[];
-extern const u16 gTable_02024354[];  // message code 0xF5: value for gGameState.unk226
-extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: Func_0201C86C ... Func_0201CAE8
-void Func_0201E2FC(void);
-extern const u8 gSprite_0202BDB8[];  // menu slot cursor (Func_0201DA78)
-// One OAM entry (the hardware attribute layout), as Func_0201DB50 fills gOamBuffer.
+void SetSelectedItem(u8 item);
+
+// One OAM entry (the hardware attribute layout), as DrawItemSprite fills gOamBuffer.
 struct OamData
 {
     /*0x0*/ u32 y:8;
@@ -494,19 +493,27 @@ struct OamData
     /*0x6*/ u16 affineParam;
 };
 
+// gGameState.items ... slotItems (0x160-0x1DB) seen as one block: SetSlotItem addresses
+// slotItems through a pointer to it (base + 0x6F), which is how the original loads it.
 struct ItemMenu
 {
-    struct ItemSlot items[13];
-    u16 unk68;
-    u16 unk6A;
-    u8 unk6C;
-    u8 filler6D[2];
-    u8 slotItems[13];
+    /*0x00*/ struct ItemSlot items[13];
+    /*0x68*/ u16 unk68;  // gGameState.unk1C8
+    /*0x6A*/ u16 unk6A;  // gGameState.unk1CA
+    /*0x6C*/ u8 unk6C;   // gGameState.unk1CC
+    /*0x6D*/ u8 filler6D[2];
+    /*0x6F*/ u8 slotItems[13];
 };
-extern const u16 gGlyphRunStart[];  // Func_0201C660: first glyph of each run
+
+extern const u16 gMsgTingleAnims[];  // message code 0xF5: argument -> gGameState.unk226
+extern const u16 gGlyphRunStart[];   // DrawGlyphRun: first glyph of each run
 extern const u8 gGlyphRunLength[];
-extern const u8 gGlyphTable_0202438E[];
-extern const u8 gDayNameChars[7 * 2];  // glyphs of each weekday's name (flags.dayOfWeek)
+extern const u8 gGlyphTable_0202438E[];  // DrawChar: glyphs for codes 0xE0-0xE5 and 0xEB-
+extern const u8 gDayNameChars[7 * 2];    // two glyphs per weekday (flags.dayOfWeek), JP only
+extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: MsgCmd00 ... MsgCmd12
+extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
+extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
+extern const u8 gSprite_0202C130[];
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
 

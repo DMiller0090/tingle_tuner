@@ -114,7 +114,7 @@ INCLUDE_ASM(Func_0201C568);
 INCLUDE_ASM(Func_0201C60C);
 
 // Draw a run of consecutive glyphs (a word stored as one piece in the font).
-void Func_0201C660(u8 id)
+void DrawGlyphRun(u8 id)
 {
     u16 ch = gGlyphRunStart[id];
     s32 n = gGlyphRunLength[id];
@@ -145,7 +145,7 @@ void Func_0201C660(u8 id)
 }
 
 #ifdef VERSION_GZLJ01
-bool32 Func_0201C704(u8 ch)
+bool32 DrawChar(u8 ch)
 {
     if (!Func_0201C60C())
         return FALSE;
@@ -191,11 +191,11 @@ bool32 Func_0201C704(u8 ch)
     return TRUE;
 }
 #else
-INCLUDE_ASM(Func_0201C704);
+INCLUDE_ASM(DrawChar);
 #endif
 
 #ifndef VERSION_GZLJ01
-bool32 UsFunc_02023390(u8 ch)
+bool32 UsDrawChar(u8 ch)
 {
     if (!Func_0201C60C())
         return FALSE;
@@ -208,11 +208,11 @@ bool32 UsFunc_02023390(u8 ch)
     {
         gGameState.unk159 = 0;
     }
-    return Func_0201C704(ch);
+    return DrawChar(ch);
 }
 #endif
 
-void Func_0201C86C(void)
+void MsgCmd00(void)
 {
     u16 *map = (u16 *)0x0600704E;
 
@@ -228,7 +228,7 @@ void Func_0201C86C(void)
         DrawItemCount(5, map + 0x40);
 }
 
-void Func_0201C8D8(void)
+void MsgCmd01(void)
 {
     u16 *map = (u16 *)0x0600718E;
 
@@ -247,17 +247,17 @@ void Func_0201C8D8(void)
 
 #ifndef VERSION_GZLJ01
 // The US builds don't draw the weekday name.
-void Func_0201C948(void)
+void DrawWeekday(void)
 {
 }
 #else
-void Func_0201C948(void)
+void DrawWeekday(void)
 {
     s32 i;
 
     for (i = 0; i < 2; i++)
     {
-        if (Func_0201C704(gDayNameChars[gGameState.flags.dayOfWeek * 2 + i]))
+        if (DrawChar(gDayNameChars[gGameState.flags.dayOfWeek * 2 + i]))
         {
             if (gGameState.flags.dayOfWeek == 2 || gGameState.flags.dayOfWeek == 6)
                 i++;
@@ -270,7 +270,7 @@ void Func_0201C948(void)
 }
 #endif
 
-void Func_0201C988(void)
+void DrawHour(void)
 {
 #ifdef VERSION_GZLJ01
     // A leading zero is left blank.
@@ -292,74 +292,74 @@ void Func_0201C988(void)
 #endif
 }
 
-void Func_0201C9E4(void)
+void DrawMinute(void)
 {
     if (DRAW_CHAR(gGameState.flags.unk7_0 / 10 + GLYPH_DIGIT_0))
         DRAW_CHAR(gGameState.flags.unk7_0 % 10 + GLYPH_DIGIT_0);
 }
 
-void Func_0201CA24(void)
+void MsgCmd05(void)
 {
     gGameState.unk138_3 = 1;
-    Func_0201DD20(6, 7);
+    SetSlotItem(6, 7);
 }
 
-void Func_0201CA48(void)
+void MsgCmd06(void)
 {
     gGameState.unk138_3 = 0;
-    Func_0201DD20(6, 0);
+    SetSlotItem(6, 0);
 }
 
-void Func_0201CA6C(void)
+void MsgCmd07(void)
 {
 }
 
-void Func_0201CA70(void)
+void MsgCmd08(void)
 {
 }
 
-void Func_0201CA74(void)
+void MsgCmd09(void)
 {
 }
 
-void Func_0201CA78(void)
+void MsgCmd0A(void)
 {
 }
 
-void Func_0201CA7C(void)
+void MsgCmd0B(void)
 {
 }
 
-void Func_0201CA80(void)
+void MsgCmd0C(void)
 {
 }
 
-void Func_0201CA84(void)
+void MsgCmd0D(void)
 {
     gGameState.unk158 = 1;
 }
 
-void Func_0201CA98(void)
+void MsgCmd0E(void)
 {
     gGameState.unk158 = 0;
 }
 
-void Func_0201CAAC(void)
+void MsgCmd0F(void)
 {
     gGameState.unk15A = 1;
 }
 
-void Func_0201CAC0(void)
+void MsgCmd10(void)
 {
     gGameState.unk157 = 6;
 }
 
-void Func_0201CAD4(void)
+void MsgCmd11(void)
 {
     gGameState.unk157 = 8;
 }
 
-void Func_0201CAE8(void)
+void MsgCmd12(void)
 {
     SendItemUse(0x15, 0);
     gGameState.unk1E5_1 = 0;
@@ -368,7 +368,7 @@ void Func_0201CAE8(void)
 // Message interpreter, one step per call: draws the next character of gGameState.msgPtr or
 // runs the control codes (0xF2-0xFF) before it. Returns 0 to go on, 2 while it waits (page
 // full, or for A), 3 at the end (0xFF), 1 after code 0xF6.
-s32 Func_0201CB10(void)
+s32 MsgStep(void)
 {
     u8 ch = *gGameState.msgPtr;
     u32 mosaic = (gMain.bgcnt[0] >> 6) & 1;
@@ -529,7 +529,7 @@ s32 Func_0201CB10(void)
             }
             else if (ch == 0xF5)
             {
-                gGameState.unk226 = gTable_02024354[*++gGameState.msgPtr];
+                gGameState.unk226 = gMsgTingleAnims[*++gGameState.msgPtr];
                 Func_0201C568();
             }
             else if (ch == 0xF3)  // call a handler
@@ -539,7 +539,7 @@ s32 Func_0201CB10(void)
             else if (ch == 0xF2)  // a glyph run
             {
                 n = *++gGameState.msgPtr;
-                Func_0201C660(n);
+                DrawGlyphRun(n);
             }
             else if (ch == 0xFC)
             {
@@ -563,7 +563,7 @@ end:
 
 INCLUDE_ASM(Func_0201CFE8);
 
-bool32 Func_0201D8AC(void)
+bool32 MsgReset(void)
 {
     gGameState.unk13C = 0;
     gGameState.unk13D = 0;
@@ -571,7 +571,7 @@ bool32 Func_0201D8AC(void)
     return TRUE;
 }
 
-void Func_0201D8D8(s16 id)
+void MsgStart(s16 id)
 {
     if (gGameState.unk142 != id)
     {
@@ -627,22 +627,22 @@ bool32 GamePlaySound_(u16 id, u8 arg)
         gGameState.unk226 = arg;
         gGameState.unk22B = 1;
         Func_0201C568();
-        Func_0201D8D8(id);
+        MsgStart(id);
     }
     return TRUE;
 }
 
-bool32 Func_0201DA24(s16 id)
+bool32 MsgStartSilent(s16 id)
 {
     if ((u16)id <= 0x437)
     {
         gGameState.unk13C = 1;
-        Func_0201D8D8(id);
+        MsgStart(id);
     }
     return TRUE;
 }
 
-void Func_0201DA50(void)
+void MsgClose(void)
 {
     if (gGameState.unk13C)
         SoundPlay(0x17 - SOUND_ID_SHIFT, 0);
@@ -654,7 +654,7 @@ INCLUDE_ASM(DrawString);
 #endif
 
 // Draw the blinking cursor on menu slot (rows 0-1: the item grid, row 2: the bottom row).
-void Func_0201DA78(u8 slot)
+void DrawSlotCursor(u8 slot)
 {
     // (row compares signed, so it is an int; the x sums only match in s16.)
     u8 col = slot % 5;
@@ -671,7 +671,7 @@ void Func_0201DA78(u8 slot)
 }
 
 // Add an item's icon as a 16x16 sprite to gOamBuffer.
-void Func_0201DB50(u8 item, u8 x, u8 y, u8 mosaic)
+void DrawItemSprite(u8 item, u8 x, u8 y, u8 mosaic)
 {
     struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
 
@@ -741,7 +741,7 @@ void DrawItemCount(u8 item, u16 *map)
     }
 }
 
-void Func_0201DCEC(u8 item)
+void SetSelectedItem(u8 item)
 {
     u16 *map = (u16 *)0x06006464;
 
@@ -752,7 +752,7 @@ void Func_0201DCEC(u8 item)
 }
 
 // Put item in menu slot (5 per row, 3 tiles apart; count below the icon).
-void Func_0201DD20(u8 slot, u8 item)
+void SetSlotItem(u8 slot, u8 item)
 {
     struct ItemMenu *menu = (struct ItemMenu *)gGameState.items;
     u8 col = slot % 5;
@@ -767,7 +767,7 @@ void Func_0201DD20(u8 slot, u8 item)
 
 // The dungeon chest counter (MainMode1 starts it at state 1): state 2 blinks the new chest
 // bits until unk1FA is clear, state 3 waits 300 frames or a key.
-void Func_0201DDA0(void)
+void ChestCounterMain(void)
 {
     if (gGameState.unk1E0 == 3)
     {
