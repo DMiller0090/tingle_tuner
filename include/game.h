@@ -16,6 +16,15 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
+// One item (gGameState.items, indexed by item number; 0 is none).
+struct ItemSlot
+{
+    /*0x0*/ u16 tile;   // BG map entry of the icon's top-left tile (2x2 tiles)
+    /*0x2*/ u8 filler2[4];
+    /*0x6*/ u8 count;
+    /*0x7*/ u8 unk7;
+};
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
@@ -72,19 +81,33 @@ struct MapMarker
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
-// 0x13C u8 unk13C
+// 0x13C u8 unk13C  // a sound is playing (GamePlaySound)
+// 0x13D u8 unk13D
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
-// 0x142 s16 unk142
+// 0x142 s16 unk142  // message id (Func_0201D8D8)
+// 0x144 u8* msgPtr  // message text (in the EWRAM message block at 0x02000000)
+// 0x148 u8 textX  // text cursor, pixels
+// 0x149 u8 textY
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
+// 0x14C u8 unk14C
+// 0x14D u8 unk14D
+// 0x14E u8 unk14E
+// 0x14F u8 unk14F
+// 0x150 u8 unk150
+// 0x151 u8 unk151
 // 0x156 u8 unk156
 // 0x157 u8 unk157
+// 0x158 u8 unk158
+// 0x159 u8 unk159
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
+// 0x160 struct ItemSlot items[13] size=0x68
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
+// 0x1CF u8 slotItems[13]  // item shown in each menu slot (Func_0201DD20)
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
 // 0x1E1 u8 unk1E1  // chest bits that changed
@@ -115,6 +138,7 @@ struct MapMarker
 // 0x226 u8 unk226
 // 0x227 u8 unk227
 // 0x228 u8 unk228
+// 0x22B u8 unk22B
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
 // 0x230 u8 life  // flags.life as last seen
@@ -212,26 +236,37 @@ struct GameState
               u8 unk138_5:1;
               u8 unk138_6:2;
     /*0x139*/ u8 filler139[0x13C - 0x139];
-    /*0x13C*/ u8 unk13C;
-    /*0x13D*/ u8 filler13D[0x13E - 0x13D];
+    /*0x13C*/ u8 unk13C;                      // a sound is playing (GamePlaySound)
+    /*0x13D*/ u8 unk13D;
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
-    /*0x142*/ s16 unk142;
-    /*0x144*/ u8 filler144[0x14A - 0x144];
+    /*0x142*/ s16 unk142;                     // message id (Func_0201D8D8)
+    /*0x144*/ u8* msgPtr;                     // message text (in the EWRAM message block at 0x02000000)
+    /*0x148*/ u8 textX;                       // text cursor, pixels
+    /*0x149*/ u8 textY;
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
-    /*0x14C*/ u8 filler14C[0x156 - 0x14C];
+    /*0x14C*/ u8 unk14C;
+    /*0x14D*/ u8 unk14D;
+    /*0x14E*/ u8 unk14E;
+    /*0x14F*/ u8 unk14F;
+    /*0x150*/ u8 unk150;
+    /*0x151*/ u8 unk151;
+    /*0x152*/ u8 filler152[0x156 - 0x152];
     /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
-    /*0x158*/ u8 filler158[0x15A - 0x158];
+    /*0x158*/ u8 unk158;
+    /*0x159*/ u8 unk159;
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
-    /*0x160*/ u8 filler160[0x1C8 - 0x160];
+    /*0x160*/ struct ItemSlot items[13];
     /*0x1C8*/ u16 unk1C8;
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
-    /*0x1CD*/ u8 filler1CD[0x1DE - 0x1CD];
+    /*0x1CD*/ u8 filler1CD[0x1CF - 0x1CD];
+    /*0x1CF*/ u8 slotItems[13];               // item shown in each menu slot (Func_0201DD20)
+    /*0x1DC*/ u8 filler1DC[0x1DE - 0x1DC];
     /*0x1DE*/ u8 unk1DE;
     /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
     /*0x1E0*/ u8 unk1E0;
@@ -275,7 +310,9 @@ struct GameState
     /*0x226*/ u8 unk226;
     /*0x227*/ u8 unk227;
     /*0x228*/ u8 unk228;
-    /*0x229*/ u8 filler229[0x22D - 0x229];
+    /*0x229*/ u8 filler229[0x22B - 0x229];
+    /*0x22B*/ u8 unk22B;
+    /*0x22C*/ u8 filler22C[0x22D - 0x22C];
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
     /*0x22F*/ u8 filler22F[0x230 - 0x22F];
@@ -319,7 +356,7 @@ extern const u8 *const gSpriteTable[];
 void Mode1VBlank(void);
 void Func_0201A570(void);
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
-void GamePlaySound(s16 id, u8 arg);
+bool32 GamePlaySound(s16 id, u8 arg);
 void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
@@ -403,6 +440,34 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
+bool32 Func_0201C60C(void);
+void Func_0201BCC0(u8 x, u8 y, u8 a2, u16 ch);
+void Func_0201BDE4(u8 x, u8 y, u8 a2, u16 ch);
+void Func_0201C0E8(u8 arg);
+bool32 SendItemUse(u8 a, u8 b);
+bool32 Func_0201C704(u8 ch);
+#ifdef VERSION_GZLJ01
+#define GLYPH_DIGIT_0 0x76
+#define DRAW_CHAR Func_0201C704
+#else
+#define GLYPH_DIGIT_0 0x35
+bool32 UsFunc_02023390(u8 ch);
+#define DRAW_CHAR UsFunc_02023390  // the US callers go through this wrapper
+#endif
+void Func_0201D8D8(s16 id);
+void DrawItemIcon(u8 item, u16 *map);
+void DrawItemCount(u8 item, u16 *map);
+void Func_0201DCEC(u8 item);
+struct ItemMenu
+{
+    struct ItemSlot items[13];
+    u16 unk68;
+    u16 unk6A;
+    u8 unk6C;
+    u8 filler6D[2];
+    u8 slotItems[13];
+};
+extern const u8 gDayNameChars[7 * 2];  // glyphs of each weekday's name (flags.dayOfWeek)
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
 
