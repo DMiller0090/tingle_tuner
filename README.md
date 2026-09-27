@@ -74,13 +74,17 @@ from the extracted binary on every build.
 3. Write the C in `src/`, add `src/file.c 0xSTART 0xEND` to each version's `splits.txt` (END =
    the next function's start, so the literal pool is included).
 4. `python tools/build.py all`. On a mismatch it reports the first differing address and function.
+   `python tools/asmdiff.py <ver> <function>` shows that function side by side (original vs
+   built). It finds the built copy by symbol, so a size change earlier in the file doesn't
+   misalign it. Branch and literal-pool offsets differ whenever sizes do, so look past those.
 
-`src/main.c` (`AgbMain`) is the worked example. Also in C: `src/gba_com.c` (the whole
-object) and `src/libc/rand.c` (newlib `srand`/`rand`).
+Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
+`build/<ver>/asm/funcs/`, written for every function in a C range). A second line
+`src/file.c .rodata 0xSTART 0xEND` in `splits.txt` places the file's `.rodata` in the shared
+`.rodata` block (see `main.c`).
 
-Limits of the current build: an object's `.rodata` is linked right after its `.text`, so
-tables that live in the program's shared `.rodata` block (e.g. `gGbaComBuffers`) stay in asm
-and are `extern` in C. A split must be one contiguous range per C file. Newlib's `bzero`
+In C so far: `src/main.c` (all but `VBlankIntr`/`MainLoop`, plus its `.rodata`),
+`src/gba_com.c`, `src/joy_com.c` (all but `JoyComIntr`) and `src/libc/rand.c`. Newlib's `bzero`
 doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
 and old_agbcc at least matches its leaf-function prologue.
 

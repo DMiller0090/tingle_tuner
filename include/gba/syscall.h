@@ -15,6 +15,11 @@ void CpuFastSet(const void *src, void *dest, u32 control);
 #define CpuCopy16(src, dest, size) CpuSet(src, dest, CPU_SET_16BIT | (((size) / 2) & 0x1FFFFF))
 #define CpuCopy32(src, dest, size) CpuSet(src, dest, CPU_SET_32BIT | (((size) / 4) & 0x1FFFFF))
 
+#define CpuFastCopy(src, dest, size) CpuFastSet(src, dest, ((size) / 4) & 0x1FFFFF)
+
+// SWI 0x26 HardReset, only if no cartridge is inserted and RCNT is in JOY bus mode
+void JoyHardReset(void);
+
 #define CpuFill16(value, dest, size)                                                          \
 {                                                                                             \
     vu16 _tmp = (vu16)(value);                                                                \

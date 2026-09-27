@@ -26,13 +26,24 @@ typedef u32 bool32;
 #define REG_DISPSTAT (*(vu16 *)0x04000004)
 #define REG_KEYINPUT (*(vu16 *)0x04000130)
 #define REG_RCNT     (*(vu16 *)0x04000134)
+#define REG_JOYCNT   (*(vu16 *)0x04000140)
+#define REG_JOY_RECV (*(vu32 *)0x04000150)
+#define REG_JOY_TRANS (*(vu32 *)0x04000154)
+#define REG_JOYSTAT  (*(vu16 *)0x04000158)
 #define REG_IE       (*(vu16 *)0x04000200)
+#define REG_IF       (*(vu16 *)0x04000202)
 #define REG_WAITCNT  (*(vu16 *)0x04000204)
 #define REG_IME      (*(vu16 *)0x04000208)
 #define INTR_VECTOR  (*(void **)0x03007FFC)
 
 #define KEYS_MASK            0x03FF
 #define INTR_FLAG_VBLANK     0x0001
+#define INTR_FLAG_SERIAL     0x0080
+#define RCNT_JOY_BUS         0xC000
+#define JOYCNT_ACK_ALL       0x0007  // reset / receive / send complete (write 1 to clear)
+#define JOYCNT_INTR          0x0040
+#define JOYSTAT_GP_FLAG0     0x0010  // general-purpose flags the GC sees in its status byte
+#define JOYSTAT_GP_FLAG1     0x0020
 #define DISPSTAT_VBLANK_INTR 0x0008
 
 // Keep a not-yet-decompiled function as asm inside a C file: it is taken from
