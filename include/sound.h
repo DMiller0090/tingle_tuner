@@ -3,8 +3,8 @@
 
 #include "global.h"
 
-// Sound IDs (SoundPlay). The US sound table has one entry fewer somewhere below 8, so the
-// IDs from there on are one lower.
+// Sound IDs (SoundPlay). The US sound table has one entry fewer somewhere below 7, so the
+// IDs from there on are one lower (7 and up, at least).
 #ifdef VERSION_GZLJ01
 #define SOUND_ID_SHIFT 0
 #else
@@ -23,6 +23,7 @@ void SoundVSync(void);
 void SoundVSyncProc(void);
 void SoundDmaStop(void);
 void SoundPlay(u16 id, void *params);
-void Func_02021284(s32 a0, u16 a1, s32 a2);
+// Reads params[1]'s low half (as an s16) when id is 9.
+void Func_02021284(u32 a, u16 id, u32 *params);
 
 #endif // GUARD_SOUND_H

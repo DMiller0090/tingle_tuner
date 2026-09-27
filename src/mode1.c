@@ -16,6 +16,9 @@ void Mode1State2(void);
 void Mode1State3(void);
 void Mode1State4(void);
 void Mode1State5(void);
+void Mode1SendSwitch(u8 soundArg);
+void Mode1RecvMarkers(void);
+void Mode1Func_02016350(void);
 
 // Not referenced by any code.
 const u8 gMode1Unused_02023E38[12] = {0x7D, 0x7A, 0x01, 0x00, 0xB2, 0xB3, 0x00, 0x2B, 0x00, 0x00, 0x00, 0xFF};
@@ -356,7 +359,220 @@ void Mode1SendSwitch(u8 soundArg)
 }
 */
 INCLUDE_ASM(Mode1SendSwitch);
-INCLUDE_ASM(Mode1State2);
+// The main state: sounds for the GC's flags, the timed marker/switch action (slot 3 marker
+// type 7 sends a switch), the BG1 slide, then the START/A/B/R keys.
+void Mode1State2(void)
+{
+    u32 keys;
+
+    if (gGameState.flags.unk3_2 && gGameState.unk1CC == 0 && gGameState.unk1EE == 0
+     && gGameState.unk224 == 0)
+        GamePlaySound(0x51, 0xF);
+    if (gGameState.flags.unk5_2 && !gGameState.flags.busy && gGameState.unk1CC == 0
+     && gGameState.unk1EE == 0)
+    {
+        if (gGameState.flags.isFree)
+            Func_02021284(7, 7, 0);
+        else if (!gGameState.flags.followTarget)
+        {
+            // An 8-byte parameter block; only the low half of word 1 is set (the rest is
+            // left as it was on the stack). Written as a bitfield store (struct with
+            // u32 x:16), agbcc loads the mask later and permutes the registers.
+            u32 params[2];
+            u32 mask = 0xFFFF0000;
+            u16 v;
+
+            params[0] = 0;
+            v = (gGameState.flags.unk5_2 - 1) ^ 3;
+            params[1] = (params[1] & mask) | v;
+            Func_02021284(9, 9, params);
+        }
+    }
+    if (gGameState.flags.isFree != gGameState.isFree)
+    {
+        if (gGameState.flags.isFree)
+            SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
+        else
+            SoundPlay(7 - SOUND_ID_SHIFT, 0);
+    }
+    Func_020209E0();
+    if (gGameState.unk1EE != 0)
+        return;
+    gMain.bgOfs[0][0] = 0;
+    if (gGameState.unk1FA)
+    {
+        if (gGameState.unk14B == 3 && gGameState.flags.unk3_1)
+        {
+            if (gGameState.flags.unk3_2)
+                gGameState.unk13E = 0x12B;
+            else
+                gGameState.unk13E++;
+        }
+        if (gGameState.unk14B == 3)
+        {
+            if (gGameState.unk156 != 0)
+            {
+                gGameState.unk156--;
+                Func_02021284(6, 6, 0);
+                if (gGameState.unk156 == 0)
+                    gGameState.unk13E = 300;
+            }
+            else if (!gGameState.flags.unk3_2 && gGameState.unk12B != 1)
+            {
+                if ((gGameState.unk224 == 0 && (gMain.newKeys & 0x30F) && gGameState.unk142 != 0x50)
+                 || gGameState.unk13E > 0x12B)
+                {
+                    gGameState.unk13E = 0;
+                    if ((u16)(gGameState.unk142 - 0x15) <= 2)
+                    {
+                        if (gGameState.markers[gGameState.unk119].type == 7)
+                            Mode1SendSwitch(3);
+                        else
+                            Func_0201B7D4();
+                        SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
+                        gMain.newKeys &= 0xF0;
+                    }
+                    else if ((u16)(gGameState.unk142 - 0xE6) <= 4)
+                    {
+                        GamePlaySound(gGameState.unk1E3 + 0xEA, 1);
+                        gMain.newKeys &= 0xF0;
+                    }
+                    else if (gGameState.unk1F8 != -1)
+                    {
+                        GamePlaySound(gGameState.unk1F8, 1);
+                        gGameState.unk1F8 = 0xFFFF;
+                        gMain.newKeys &= 0xF0;
+                    }
+                    else
+                    {
+                        if (gGameState.unk11A == 2)
+                        {
+                            u8 t = gGameState.unk11B;
+
+                            if (t == 5)
+                                gGameState.unk010 |= 1 << gGameState.markers[gGameState.unk119].unk6;
+                            else if (t == 13)
+                                gGameState.unk11D |= 1;
+                            else if (t == 12)
+                                gGameState.unk11C |= 1;
+                            else if (t == 16)
+                                gGameState.unk026 |= 1 << gGameState.markers[gGameState.unk119].unk6;
+                            gGameState.unk11A = 1;
+                        }
+                        Func_0201DA50();
+                    }
+                }
+            }
+        }
+    }
+    Func_0201CFE8();
+    if (gGameState.unk138_0)
+    {
+        Func_0201A224();
+    }
+    else
+    {
+        u16 target = (gGameState.unk1CC | gGameState.unk224) ? -4 : 0x7C;
+
+        if (StepToward((s16 *)&gMain.bgOfs[1][0], target, 16))
+        {
+            gGameState.unk1E5_4 = 0;
+            if ((gMain.newKeys & 8) && !gGameState.flags.unkA_3 && gGameState.unk224 == 0)
+            {
+                if (gGameState.unk1FA == 0)
+                {
+                    if (gGameState.unk1E5_1 && gGameState.unk1E0 == 0
+                     && !(gGameState.unk1CC && gGameState.unk1E5_0))
+                    {
+                        gGameState.unk1CC ^= 1;
+                        gGameState.unk223 = 0;
+                        if (gGameState.unk1CC == 0)
+                        {
+                            SoundPlay(0x2A - SOUND_ID_SHIFT, 0);
+                            gGameState.unk1E5_4 = 1;
+                            gGameState.unk13C = 0;
+                            gGameState.unk104 = 1;
+                        }
+                        else
+                        {
+                            gMain.bgOfs[1][1] = -4;
+                            SoundPlay(0x2B - SOUND_ID_SHIFT, gMain.unk40C);
+                            if (gGameState.unk21C != 0)
+                                gGameState.unk21C = 0;
+                            gGameState.unk1FA = 0;
+                            gGameState.unk226 = 1;
+                            gGameState.unk227 = 0;
+                            gGameState.unk228 = 0;
+                        }
+                    }
+                }
+                else if (gGameState.unk10E)
+                {
+                    Func_0201A224();
+                }
+            }
+            else if (gGameState.unk1CC == 0)
+            {
+                if (gGameState.unk10E)
+                    Func_0201A224();
+                // (Through a u32 local: tested directly, agbcc copies the 2 before the and.)
+                keys = gMain.newKeys;
+                if ((keys & 2) && gGameState.unk1E5_1 && gGameState.unk104
+                 && gGameState.unk220 == 0 && gGameState.unk121 == 0)
+                    Func_0201E384(gGameState.unk1DE);
+                if (!gMain.unk457)
+                    Func_0201B0F4();
+                if (gGameState.unk224 == 0)
+                {
+                    if (gMain.newKeys & 1)
+                    {
+                        if (!gGameState.flags.busy && gGameState.unk1E5_1 && gGameState.unk104)
+                        {
+                            if (gGameState.unk1FA == 0)
+                            {
+                                if (gGameState.unk0FC == 0)
+                                    Func_0201B8C8();
+                                else if (gGameState.unk0FC == 1)
+                                    Func_0201E384(0x10);
+                            }
+                        }
+                        else if (gGameState.unk1FA == 0)
+                        {
+                            SoundPlay(SE_KEY_BLOCKED, 0);
+                        }
+                    }
+                    if (gGameState.unk11E)
+                    {
+                        u8 i = FindMarker(3);
+
+                        gGameState.unk058 = 3;
+                        gGameState.unk054 = gGameState.markers[i].x;
+                        gGameState.unk056 = gGameState.markers[i].y;
+                        SoundPlay(0xB - SOUND_ID_SHIFT, 0);
+                        gGameState.unk11E = 0;
+                    }
+                }
+                if ((gMain.newKeys & 0x100) && !gGameState.flags.busy && gGameState.unk1E5_1
+                 && gGameState.unk104 && gMain.linked)
+                {
+                    gGameState.unk222 ^= 1;
+                    if (gGameState.unk222)
+                        gGameState.unk019 = 0;
+                }
+            }
+            else
+            {
+                Func_0201DEAC();
+                Func_0201A540();
+            }
+        }
+        else
+        {
+            gGameState.unk1E5_4 = 1;
+        }
+    }
+    Func_02020C10();
+}
 // Fade out: step the mosaic and brightness up every other frame while BG1 slides to
 // its target, then go to state 4.
 void Mode1State3(void)

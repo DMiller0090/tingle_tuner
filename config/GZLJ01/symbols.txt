@@ -80,6 +80,13 @@ ObjResetActive = 0x02020644; // thumb
 Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb
 Func_0201CFE8 = 0x0201CFE8; // thumb
+Func_0201B7D4 = 0x0201B7D4; // thumb
+Func_0201DA50 = 0x0201DA50; // thumb
+Func_0201E384 = 0x0201E384; // thumb
+Func_0201B0F4 = 0x0201B0F4; // thumb
+Func_0201B8C8 = 0x0201B8C8; // thumb
+Func_0201DEAC = 0x0201DEAC; // thumb
+Func_02020C10 = 0x02020C10; // thumb
 
 // ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
 GbaComInit = 0x02017190; // thumb
@@ -131,6 +138,7 @@ SoundDmaStop = 0x020215D0; // thumb
 SoundDriverInit = 0x020213C0; // thumb
 // play sound `id` (index into gSoundBankHeader+0x1C) unless a higher-priority one is playing
 SoundPlay = 0x02021070; // thumb
+// (a, id, params): Mode1State2 calls it with a == id (6, 7, 9)
 Func_02021284 = 0x02021284; // thumb
 // ARM, copied to IWRAM by SoundDriverInit and called through pointers
 PcmClipS16ToS8 = 0x020237CC; // arm

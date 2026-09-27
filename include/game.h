@@ -21,6 +21,7 @@ struct MapMarker
 // genstruct GameState 0x240
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
 // 0x010 u32 unk010
+// 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
@@ -32,6 +33,9 @@ struct MapMarker
 // 0x03F u8 switchType  // the GC switches on type - 1
 // 0x040 u8 switchNo2
 // 0x042 u8 unk042
+// 0x054 u16 unk054
+// 0x056 u16 unk056
+// 0x058 u8 unk058
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0FC u8 unk0FC
@@ -51,23 +55,33 @@ struct MapMarker
 // 0x116 u8 unk116
 // 0x117 u8 unk117
 // 0x118 u8 unk118
+// 0x119 u8 unk119  // index into markers
 // 0x11A u8 unk11A
 // 0x11B u8 unk11B
 // 0x11C u8 unk11C
 // 0x11D u8 unk11D
+// 0x11E u8 unk11E
 // 0x120 u8 unk120
 // 0x121 u8 unk121
 // 0x12B u8 unk12B
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
+// 0x13C u8 unk13C
+// 0x13E u16 unk13E
 // 0x140 s16 unk140
+// 0x142 s16 unk142
 // 0x14A u8 unk14A
+// 0x14B u8 unk14B
+// 0x156 u8 unk156
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x1CC u8 unk1CC
 // 0x1E0 u8 unk1E0
-// 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:5
+// 0x1DE u8 unk1DE
+// 0x1E3 u8 unk1E3
+// 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
+// 0x1EE u8 unk1EE
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
@@ -85,8 +99,12 @@ struct MapMarker
 // 0x220 u8 unk220
 // 0x221 u8 fadeTimer  // frames to the next mosaic/brightness step
 // 0x222 u8 unk222
+// 0x223 u8 unk223
 // 0x224 u8 unk224
 // 0x225 u8 shake  // bit 1 shakes the BGs by a line in VBlankIntr
+// 0x226 u8 unk226
+// 0x227 u8 unk227
+// 0x228 u8 unk228
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
 // 0x233 u8 dungeonChests  // flags.dungeonChests
@@ -101,7 +119,9 @@ struct GameState
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
     /*0x00C*/ u8 filler00C[0x010 - 0x00C];
     /*0x010*/ u32 unk010;
-    /*0x014*/ u8 filler014[0x026 - 0x014];
+    /*0x014*/ u8 filler014[0x019 - 0x014];
+    /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
+    /*0x01A*/ u8 filler01A[0x026 - 0x01A];
     /*0x026*/ u16 unk026;
     /*0x028*/ u8 filler028[0x030 - 0x028];
     /*0x030*/ u16 unk030;
@@ -116,7 +136,11 @@ struct GameState
     /*0x040*/ u8 switchNo2;
     /*0x041*/ u8 filler041[0x042 - 0x041];
     /*0x042*/ u8 unk042;
-    /*0x043*/ u8 filler043[0x064 - 0x043];
+    /*0x043*/ u8 filler043[0x054 - 0x043];
+    /*0x054*/ u16 unk054;
+    /*0x056*/ u16 unk056;
+    /*0x058*/ u8 unk058;
+    /*0x059*/ u8 filler059[0x064 - 0x059];
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 filler0E5[0x0FC - 0x0E5];
@@ -145,12 +169,13 @@ struct GameState
     /*0x116*/ u8 unk116;
     /*0x117*/ u8 unk117;
     /*0x118*/ u8 unk118;
-    /*0x119*/ u8 filler119[0x11A - 0x119];
+    /*0x119*/ u8 unk119;                      // index into markers
     /*0x11A*/ u8 unk11A;
     /*0x11B*/ u8 unk11B;
     /*0x11C*/ u8 unk11C;
     /*0x11D*/ u8 unk11D;
-    /*0x11E*/ u8 filler11E[0x120 - 0x11E];
+    /*0x11E*/ u8 unk11E;
+    /*0x11F*/ u8 filler11F[0x120 - 0x11F];
     /*0x120*/ u8 unk120;
     /*0x121*/ u8 unk121;
     /*0x122*/ u8 filler122[0x12B - 0x122];
@@ -166,24 +191,38 @@ struct GameState
               u8 unk138_4:1;
               u8 unk138_5:1;
               u8 unk138_6:2;
-    /*0x139*/ u8 filler139[0x140 - 0x139];
+    /*0x139*/ u8 filler139[0x13C - 0x139];
+    /*0x13C*/ u8 unk13C;
+    /*0x13D*/ u8 filler13D[0x13E - 0x13D];
+    /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
-    /*0x142*/ u8 filler142[0x14A - 0x142];
+    /*0x142*/ s16 unk142;
+    /*0x144*/ u8 filler144[0x14A - 0x144];
     /*0x14A*/ u8 unk14A;
-    /*0x14B*/ u8 filler14B[0x157 - 0x14B];
+    /*0x14B*/ u8 unk14B;
+    /*0x14C*/ u8 filler14C[0x156 - 0x14C];
+    /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 filler158[0x15A - 0x158];
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x1CC - 0x15B];
     /*0x1CC*/ u8 unk1CC;
-    /*0x1CD*/ u8 filler1CD[0x1E0 - 0x1CD];
+    /*0x1CD*/ u8 filler1CD[0x1DE - 0x1CD];
+    /*0x1DE*/ u8 unk1DE;
+    /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
     /*0x1E0*/ u8 unk1E0;
-    /*0x1E1*/ u8 filler1E1[0x1E5 - 0x1E1];
+    /*0x1E1*/ u8 filler1E1[0x1E3 - 0x1E1];
+    /*0x1E3*/ u8 unk1E3;
+    /*0x1E4*/ u8 filler1E4[0x1E5 - 0x1E4];
     /*0x1E5*/ u8 unk1E5_0:1;
               u8 unk1E5_1:1;
               u8 unk1E5_2:1;
-              u8 unk1E5_3:5;
-    /*0x1E6*/ u8 filler1E6[0x1F8 - 0x1E6];
+              u8 unk1E5_3:1;
+              u8 unk1E5_4:1;
+              u8 unk1E5_5:3;
+    /*0x1E6*/ u8 filler1E6[0x1EE - 0x1E6];
+    /*0x1EE*/ u8 unk1EE;
+    /*0x1EF*/ u8 filler1EF[0x1F8 - 0x1EF];
     /*0x1F8*/ s16 unk1F8;
     /*0x1FA*/ u8 unk1FA;                      // MainLoop tests 0x1FA-0x1FB as one u16
     /*0x1FB*/ u8 unk1FB;
@@ -205,10 +244,13 @@ struct GameState
     /*0x220*/ u8 unk220;
     /*0x221*/ u8 fadeTimer;                   // frames to the next mosaic/brightness step
     /*0x222*/ u8 unk222;
-    /*0x223*/ u8 filler223[0x224 - 0x223];
+    /*0x223*/ u8 unk223;
     /*0x224*/ u8 unk224;
     /*0x225*/ u8 shake;                       // bit 1 shakes the BGs by a line in VBlankIntr
-    /*0x226*/ u8 filler226[0x22D - 0x226];
+    /*0x226*/ u8 unk226;
+    /*0x227*/ u8 unk227;
+    /*0x228*/ u8 unk228;
+    /*0x229*/ u8 filler229[0x22D - 0x229];
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
     /*0x22F*/ u8 filler22F[0x233 - 0x22F];
@@ -299,5 +341,13 @@ void ObjReset(struct Obj *obj);
 void ObjResetActive(void);  // ObjReset on every active entry
 void Func_0201A224(void);
 void Func_0201CFE8(void);
+void Func_0201B7D4(void);
+void Func_0201DA50(void);
+void Func_0201E384(u8 arg);
+void Func_0201B0F4(void);
+void Func_0201B8C8(void);
+u8 FindMarker(u8 type);
+void Func_0201DEAC(void);
+void Func_02020C10(void);
 
 #endif // GUARD_GAME_H

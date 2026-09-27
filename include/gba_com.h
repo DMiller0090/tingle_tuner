@@ -56,7 +56,9 @@ struct GbaComFlags
             u8 unk3_2:1;        // field_0x3_5
             u8 dungeonChests:5; // field_0x3_0..4: isStageTbox(0xF) for WT, ET, TOTG, FW, DRC
     /*0x4*/ u8 timer;           // field_0x4: (field_0x65c + 29) / 30
-    /*0x5*/ u8 unk5;
+    /*0x5*/ u8 unk5_0:2;
+            u8 unk5_2:3;        // Mode1State2 passes (unk5_2 - 1) ^ 3 to Func_02021284
+            u8 unk5_5:3;
     /*0x6*/ u8 unk6;
     /*0x7*/ u8 unk7_0:6;
             u8 unk7_6:1;        // copied to GameState.unk138 bit 4 (Mode0State3)
