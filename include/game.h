@@ -121,12 +121,13 @@ struct ItemSlot
 // 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x134 u8 unk134
+// 0x135 u8 unk135
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C  // a sound is playing (GamePlaySound)
 // 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while unk13C is set, else 0
 // 0x13E u16 unk13E
-// 0x140 s16 unk140
+// 0x140 u16 unk140  // id passed to SoundPlayLoop (Func_0201C484)
 // 0x142 s16 unk142  // message id (MsgStart)
 // 0x144 const u8* msgPtr  // message text (in the EWRAM message block at 0x02000000); US Mode2State0 sets it too
 // 0x148 u8 textX  // text cursor, pixels
@@ -309,7 +310,7 @@ struct GameState
     /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
     /*0x134*/ u8 unk134;
-    /*0x135*/ u8 filler135[0x136 - 0x135];
+    /*0x135*/ u8 unk135;
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
     /*0x138*/ u8 unk138_0:2;                  // sent as GbaFlg.unk2
@@ -322,7 +323,7 @@ struct GameState
     /*0x13C*/ u8 unk13C;                      // a sound is playing (GamePlaySound)
     /*0x13D*/ s8 msgBoxPos;                   // message box slide, steps toward 10 while unk13C is set, else 0
     /*0x13E*/ u16 unk13E;
-    /*0x140*/ s16 unk140;
+    /*0x140*/ u16 unk140;                     // id passed to SoundPlayLoop (Func_0201C484)
     /*0x142*/ s16 unk142;                     // message id (MsgStart)
     /*0x144*/ const u8* msgPtr;               // message text (in the EWRAM message block at 0x02000000); US Mode2State0 sets it too
     /*0x148*/ u8 textX;                       // text cursor, pixels
@@ -462,8 +463,9 @@ bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void UpdateSelectWindow(void);
-// Callers see s16 x and y (DrawTimerCount sign-extends them).
-void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, s16 a7, s16 a8,
+// Callers see s16 x and y (DrawTimerCount sign-extends them) and a wider a5 (DrawQuestMarkers
+// passes its 0/1 mosaic flag without the copy agbcc makes for a u8 argument).
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u32 a5, u16 a6, s16 a7, s16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
@@ -512,7 +514,7 @@ struct SeaChartEntry
 {
     /*0x0*/ u8 x;       // pixels within its square?
     /*0x1*/ u8 y;
-    /*0x2*/ u8 unk2;
+    /*0x2*/ u8 big;     // Func_0201B3A4: within 32 pixels (on an 8-pixel grid) rather than 8
     /*0x3*/ u8 square;  // sea chart square (row * 7 + column); its name sound is 0x14E + square
 };
 
@@ -536,7 +538,7 @@ void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
 void ItemMenuUpdate(void);
 void DrawStatusIcon(void);
-u8 Func_0201B3A4(void);
+s32 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
 void SetSlotItem(u8 a, u8 b);
@@ -605,15 +607,67 @@ void Func_02019510(struct GameState *state, u8 frameCount);
 u16 ArcTan2(s32 x, s32 y);
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
+void Func_0201BA2C(s8 row);
+void Func_0201BA9C(s8 row);
+void TextClearCanvas(void);
+void Func_0201C0E8(u8 playSound);
+void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst);
+void TextScaleGlyph(s32 count, const u8 *src);
+void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch);
+void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch);
+void DrawChoiceCursor(void);
+// EWRAM below the program, after the link buffers: a 16x8 glyph scaled up by TextScaleGlyph.
+#define TEXT_GLYPH_BUF ((u16 *)(PROG_BASE - 0x540))
+// A 4bpp pixel pair doubled horizontally: 0xAB -> 0xAABB.
+#define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))
+extern const u32 gTextColorMasks[];
+extern const u16 gSoundIds_0202430E[];
+extern const u8 gSprite_0202C130[];
+extern const s16 gSounds_02024278[];
+void Mode1SendSwitch(u8 soundArg);
+void DrawQuestMarkers(void);
+// One OAM entry as bitfields (gOamBuffer holds 128 of them).
+struct OamData16
+{
+    /*0x0*/ u16 y:8;
+            u16 affine:1;
+            u16 doubleSize:1;
+            u16 objMode:2;
+            u16 mosaic:1;
+            u16 bpp:1;
+            u16 shape:2;
+    /*0x2*/ u16 x:9;
+            u16 matrixNum:3;
+            u16 hFlip:1;
+            u16 vFlip:1;
+            u16 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 affineParam;
+};
+extern const u8 gPearlMarkerPos[6];
+extern const u8 gTriangleIslandPos[6];
+extern const u8 gTempleMarkerPos[4];
+extern const u8 gSprite_0202C200[];
+extern const u16 gTable_02024274[2];
+s32 ChoiceMenuUpdate(void);  // the definition returns u8
+// Per question (unk142): the ids, then the sound per choice (0xFFFF: none).
+extern const u16 gTwoChoiceIds[];
+extern const u16 gTwoChoiceSounds[];  // [id index * 2 + choice]
+extern const u16 gThreeChoiceIds[];
+extern const u16 gThreeChoiceSounds[];  // [id index * 3 + choice]
+void UpdateTargetCompass(void);
+void InitMarkerIcon(void);
+void InitTargetIcon(void);
+void InitCursorIcon(void);
+void UpdateMapIcons(void);
+void Func_0201E584(void);
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 // Text: glyphs are drawn at gGameState.textX/textY (pixels) in a window 0x60 wide and 0x50
 // high; unk157 is the glyph width (6 or 8) and unk15A doubles the size.
 bool32 Func_0201C60C(void);  // wraps the cursor to the next line; FALSE when the window is full
-void Func_0201BCC0(u8 x, u8 y, u8 a2, u16 ch);
-void Func_0201BDE4(u8 x, u8 y, u8 a2, u16 ch);
-void Func_0201C0E8(u8 arg);
-s32 Func_0201C204(void);
 void DrawChestRow(void);
 bool32 SendItemUse(u8 a, u8 b);
 void DrawGlyphRun(u8 id);
@@ -672,12 +726,9 @@ extern const u8 gDayNameChars[7 * 2];    // two glyphs per weekday (flags.dayOfW
 extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: MsgCmd00 ... MsgCmd12
 extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
 extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
-extern const u8 gSprite_0202C130[];
 
 void Mode1StartFadeOut(void);
 void Func_02018988(s8 *pos, u8 target, s8 speed);  // steps *pos toward target
-void Func_0201BA2C(s8 pos);
-void Func_0201BA9C(s8 pos);
 void Func_0201BEA0(s8 pos);
 // Tingle's animations (gGameState.unk226), each a list of sprites (gGameState.unk227 picks one).
 extern const u8 *const *const gTingleAnims[21];
@@ -704,7 +755,6 @@ extern const struct SpriteAnimFrame gSprite_0202C940[];
 extern const struct SpriteAnimFrame gSprite_0202C950[];
 extern const u8 gSprite_0202CC60[];
 
-void Func_0201E584(void);
 void Func_0201EC10(void);
 void Func_0201ECC4(void);
 void Func_0201ED08(void);
@@ -751,7 +801,6 @@ extern const u8 gSprite_0202C150[];
 void ObjBurstInit(struct Obj *obj);
 void ObjBurstFly(struct Obj *obj);
 void ObjBurst(struct Obj *obj);
-void Func_0201BAD8(void);
 #ifndef VERSION_GZLJ01
 extern const u8 gMode2UsString[];
 #endif

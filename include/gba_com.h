@@ -68,7 +68,10 @@ struct GbaComFlags
             u8 unk7_7:1;        // copied to GameState.unk138 bit 5
     /*0x8*/ u8 life:7;          // field_0x8_1: dComIfGs_getLife()
             u8 unk8_7:1;        // field_0x8_0
-    /*0x9*/ u8 unk9;
+    /*0x9*/ u8 pearlToFind:3;   // field_0x9_7..5: bits Nayru, Din, Farore; the one to find next
+                                //   (none before Korl or after all three)
+            u8 pearlsToPlace:3; // field_0x9_4..2: Din's, Farore's, Nayru's pearl not placed yet
+            u8 bossesToBeat:2;  // field_0x9_1..0: WT, ET boss not beaten yet
     /*0xA*/ u8 unkA_0:1;        // field_0xa_7
             u8 busy:2;          // bit 0: field_0xa_6 dMenu_flag(), bit 1: field_0xa_5
             //                     dComIfGp_event_runCheck() (the GBA reads them as one field)

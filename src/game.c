@@ -648,45 +648,945 @@ void UpdateMapIcons(void)
     }
 }
 
-INCLUDE_ASM(Func_0201AFCC);
+// Mark the current quest goals on the sea chart: the pearl to find next, else the Triangle
+// Islands still missing their pearl, else the temples whose boss is still alive.
+void DrawQuestMarkers(void)
+{
+    u32 mosaic = gMain.mosaic != 0;
+    s32 i;
 
-INCLUDE_ASM(Func_0201B0F4);
+    if (gGameState.flags.pearlToFind)
+    {
+        for (i = 0; i < 3; i++)
+            if ((gGameState.flags.pearlToFind >> i) & 1)
+                DrawSprite(gSprite_0202C200, 0, gPearlMarkerPos[i * 2] + 12,
+                           gPearlMarkerPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
+    }
+    else if (gGameState.flags.pearlsToPlace)
+    {
+        for (i = 0; i < 3; i++)
+            if ((gGameState.flags.pearlsToPlace >> i) & 1)
+                DrawSprite(gSprite_0202C200, 0, gTriangleIslandPos[i * 2] + 12,
+                           gTriangleIslandPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
+    }
+    else if (gGameState.flags.bossesToBeat)
+    {
+        for (i = 0; i < 2; i++)
+            if ((gGameState.flags.bossesToBeat >> i) & 1)
+                DrawSprite(gSprite_0202C200, 0, gTempleMarkerPos[i * 2] + 12,
+                           gTempleMarkerPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
+    }
+}
 
-INCLUDE_ASM(Func_0201B2C0);
+// B closes and L toggles the sea chart overlay (unk224) while unk1E5_1 allows it; while it
+// is open, A (once) calls InitCursorIcon and the quest markers are drawn.
+void Func_0201B0F4(void)
+{
+    u16 tile;
+    u16 *map;
 
+    if (gGameState.unk1E5_1 && (gMain.newKeys & 0x202))
+    {
+        gGameState.unk105 = 0;
+        gGameState.icons[1].type = 0;
+        if (gMain.newKeys & 2)
+        {
+            if (gGameState.unk224)
+            {
+                gGameState.unk224 = 0;
+                gGameState.unk13C = 0;
+                SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+            }
+        }
+        else
+        {
+            gGameState.unk224 ^= 1;
+#ifndef VERSION_GZLJ01
+            if (gGameState.unk224 == 0)
+                MsgClose();
+#endif
+            SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        }
+        if (gGameState.unk224)
+        {
+            gMain.bgOfs[1][1] = 0x7C;
+            gGameState.unk0FC = 2;
+            gGameState.unk0FD = 1;
+            InitMarkerIcon();
+            if (gGameState.icons[2].type)
+                InitTargetIcon();
+            map = (u16 *)0x060075D2;
+            tile = gTable_02024274[gGameState.flags.unkA_4];
+            if (!(gGameState.unk0F4[3] & 2))
+                tile |= 0x6000;
+            if (gGameState.flags.unkA_4)
+            {
+                map[0] = tile;
+                map[1] = tile | 0x400;
+                map[0x20] = tile | 0x800;
+                map[0x21] = tile | 0xC00;
+            }
+            else
+            {
+                map[0] = tile;
+                map[1] = tile;
+                map[0x20] = tile;
+                map[0x21] = tile;
+            }
+        }
+        else
+        {
+            gGameState.unk0FC = 0;
+            gGameState.unk0FD = 0;
+        }
+        Func_0201E584();
+    }
+    else if (gGameState.unk224)
+    {
+        gMain.bgOfs[2][0] = -4;
+        gMain.bgOfs[2][1] = 4;
+        UpdateMapIcons();
+        if (gGameState.unk105 == 0 && (gMain.newKeys & 1))
+        {
+            InitCursorIcon();
+            gGameState.unk105 = 1;
+            SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        }
+        DrawQuestMarkers();
+    }
+    UpdateTargetCompass();
+}
+
+// Darken the sea chart's 7x7 squares (2x2 tiles each, from map row 17 column 1 of the BG
+// map at 0x06007000) whose bit in gGameState.unk0F4 is clear: palette 6 instead of 0.
+void Func_0201B2C0(void)
+{
+    s32 i;
+    u32 off;
+    u16 *p;
+
+    for (i = 0; i < 49; i++)
+    {
+        off = (((i / 7) * 2 + 17) * 32 + ((i % 7) * 2 + 1)) * 2;
+        p = (u16 *)(0x06007000 + off);
+        if ((gGameState.unk0F4[i >> 3] >> (i & 7)) & 1)
+        {
+            p[0] &= 0xFFF;
+            p[1] &= 0xFFF;
+            p = (u16 *)(0x06007040 + off);
+            *p &= 0xFFF;
+            p = (u16 *)(0x06007042 + off);
+            *p &= 0xFFF;
+        }
+        else
+        {
+            p[0] = (p[0] & 0xFFF) | 0x6000;
+            p[1] = (p[1] & 0xFFF) | 0x6000;
+            p = (u16 *)(0x06007040 + off);
+            *p = (*p & 0xFFF) | 0x6000;
+            p = (u16 *)(0x06007042 + off);
+            *p = (*p & 0xFFF) | 0x6000;
+        }
+    }
+}
+
+// What the player's marker (type 3) is on: returns the index of a marker within 8 pixels
+// (and sets unk11B to its type), else looks the position up in the slot 14 table of sea
+// chart squares (setting unk135 to the square's id + 1). unk11A: something is selected.
+// Near-miss, written with gSlot14Data as struct SeaChartEntry[49]: same code shape, but
+// the registers differ throughout (the original keeps gGameState in r3 inside the marker loop).
+/*
+s32 Func_0201B3A4(void)
+{
+    u8 player;
+    s32 i;
+    u8 type;
+    u8 square;
+    u16 ex;
+    u16 ey;
+    s32 r;
+
+    if (gGameState.unk121 != 0)
+    {
+        gGameState.unk11B = 0;
+        gGameState.unk11A = 0;
+        return 0;
+    }
+    gGameState.unk135 = 0;
+    player = FindMarker(3);
+    i = FindMarker(0x14);
+    if (i != 0xFF && gGameState.unk136 == 0)
+    {
+        if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16 || (u16)(gGameState.markers[i].y - gGameState.markers[player].y + 8) > 16)
+            gGameState.unk136 = 1;
+    }
+    if ((u8)(gGameState.switchType - 1) <= 1 || gGameState.switchType == 4
+     || (gGameState.switchType == 13 && gGameState.flags.isFree))
+    {
+        if (gGameState.unk11A == 0)
+        {
+            SoundPlay(1, 0);
+            gGameState.unk11A = 1;
+        }
+        return 0;
+    }
+    if (gGameState.switchType == 0xFF)
+    {
+        gGameState.unk11A = 1;
+        return 0;
+    }
+    if (player == 0xFF)
+        goto none;
+    for (i = 0; i < gGameState.markerCount; i++)
+    {
+        type = gGameState.markers[i].type;
+        if (type == 1 || type == 3 || type == 4 || type == 0x11 || type == 0x12)
+            continue;
+        if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16)
+            continue;
+        if ((u16)(gGameState.markers[i].y - gGameState.markers[player].y + 8) > 16)
+            continue;
+        gGameState.unk11B = type;
+        if (gGameState.markers[i].unk7 != 0)
+        {
+            if (gGameState.markers[i].type == 2 || gGameState.markers[i].type == 6 || gGameState.markers[i].type == 14 || gGameState.markers[i].type == 15)
+            {
+                gGameState.unk11A = 1;
+                return i;
+            }
+            if (gGameState.markers[i].type == 5)
+            {
+                if (gGameState.markers[i].unk6 == 0xFF)
+                    continue;
+                if (gGameState.unk010 & (1 << gGameState.markers[i].unk6))
+                    continue;
+                if (gGameState.unk11A == 0)
+                {
+                    SoundPlay(1, 0);
+                    gGameState.unk11A = 1;
+                }
+                return i;
+            }
+            if (gGameState.markers[i].type == 12)
+            {
+                if (gGameState.unk11C)
+                    continue;
+                if (gGameState.unk11A == 0)
+                {
+                    SoundPlay(1, 0);
+                    gGameState.unk11A = 1;
+                }
+                return i;
+            }
+            if (gGameState.unk11A == 0)
+            {
+                if (gGameState.flags.isFree)
+                    SoundPlay(1, 0);
+                gGameState.unk11A = 1;
+            }
+            return i;
+        }
+        if (gGameState.markers[i].type == 7)
+        {
+            if (gGameState.switchType == 4 || gGameState.switchType == 10)
+            {
+                if (gGameState.unk11A == 0)
+                {
+                    SoundPlay(1, 0);
+                    gGameState.unk11A = 1;
+                }
+                return i;
+            }
+            gGameState.unk11A = 0;
+            return 0;
+        }
+        if ((u8)(gGameState.markers[i].type - 8) <= 3 || gGameState.markers[i].type == 0x15)
+        {
+            if (gGameState.switchType == 3 || gGameState.switchType == 15)
+                gGameState.unk11A = 1;
+            else
+                gGameState.unk11A = 0;
+            return 0;
+        }
+        if (gGameState.markers[i].type == 0x13)
+        {
+            if ((u8)(gGameState.markers[i].unk6 - 1) <= 2)
+            {
+                gGameState.unk11A = 1;
+                return i;
+            }
+            return 0;
+        }
+        if (gGameState.markers[i].type == 0x14)
+        {
+            if (gGameState.unk136)
+            {
+                gGameState.unk11A = 1;
+                return i;
+            }
+            gGameState.unk11B = 0;
+            return 0;
+        }
+        if (gGameState.unk11A == 0)
+        {
+            if (gGameState.flags.isFree)
+                SoundPlay(1, 0);
+            gGameState.unk11A = 1;
+        }
+        return 0;
+    }
+    if (gMain.unk457 == 0)
+    {
+        square = (gGameState.markers[player].x >> 8) + (gGameState.markers[player].y >> 8) * 7;
+        for (i = 0; i < 49; i++)
+        {
+            if (gSlot14Data[i].square != square)
+                continue;
+            if (square == 25 && !gGameState.flags.unkA_4)
+                return 0;
+            if (gSlot14Data[i].big)
+            {
+                ex = (gSlot14Data[i].x - 16) & 0xF8;
+                ey = (gSlot14Data[i].y - 16) & 0xF8;
+                r = 32;
+            }
+            else
+            {
+                ex = gSlot14Data[i].x - 8;
+                ey = gSlot14Data[i].y - 8;
+                r = 8;
+            }
+            if ((u8)(gGameState.markers[player].x - ex) > r)
+                continue;
+            if ((u8)(gGameState.markers[player].y - ey) > r)
+                continue;
+            gGameState.unk135 = gSlot14Data[i].square + 1;
+            gGameState.unk11A = 1;
+            return 0;
+        }
+    }
+none:
+    gGameState.unk11B = 0;
+    gGameState.unk11A = 0;
+    return 0;
+}
+*/
 INCLUDE_ASM(Func_0201B3A4);
 
+// Play the sound for what the cursor is on: unk135 if set, else the selected marker's.
+// Near-miss: the original computes the (s16) ids in the shifted domain, ((v << 16) +
+// (c << 16)) >> 16, which agbcc only emits for an explicit shift pair (the ID macro below);
+// written that way the code shape matches but the registers of the entry block differ
+// (the original keeps gGameState in r4 and loads it first).
+/*
+#define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
+
+void Func_0201B7D4(void)
+{
+    u8 idx = gGameState.unk119;
+
+    if (gGameState.unk135 != 0)
+    {
+        if (gGameState.unk135 == 0x21 && gGameState.flags.unk5_6)
+            GamePlaySound(0x13E, 1);
+        else
+            GamePlaySound(gGameState.unk135 + 0x14D, 1);
+    }
+    else if (gGameState.markers[idx].type == 0x13)
+        GamePlaySound(gSounds_02024278[gGameState.markers[idx].unk6 - 1], 1);
+    else if (gGameState.markers[idx].type == 0x14)
+        GamePlaySound(0x5D, 1);
+    else if (gGameState.markers[idx].unk7 <= 0x23)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x63), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x27)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x7C), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x2C)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x82), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x38)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x87), 1);
+    else if (gGameState.markers[idx].unk7 <= 0x40)
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x8F), 1);
+    else
+        GamePlaySound(ID(gGameState.markers[idx].unk7, 0x6F), 1);
+}
+*/
 INCLUDE_ASM(Func_0201B7D4);
 
+// Act on the current selection (unk119: a marker, or unk135): 0: send the switch record,
+// 1: a random reaction sound, 2: play the selection's sound via Func_0201B7D4.
+// Near-miss: same code shape, but the original keeps result in r1 (reusing its 1 as the
+// mask in the type 16 test) where agbcc puts it in r4, and orders the dispatch compares
+// as == 2, == 0.
+/*
+void Func_0201B8C8(void)
+{
+    u8 result = 0;
+
+    if (gGameState.unk119 != 0)
+    {
+        if (gGameState.markers[gGameState.unk119].type == 12)
+        {
+            result = 1;
+            if (gGameState.unk11C)
+                result = 2;
+        }
+        else if (gGameState.markers[gGameState.unk119].type == 13)
+        {
+            result = 1;
+            if (gGameState.unk11D)
+                result = 2;
+        }
+        else if (gGameState.markers[gGameState.unk119].type == 5)
+        {
+            if (gGameState.unk010 & (1 << gGameState.markers[gGameState.unk119].unk6))
+                return;
+            result = 1;
+        }
+        else if (gGameState.markers[gGameState.unk119].type == 16)
+        {
+            result = 1;
+            if ((gGameState.unk026 >> gGameState.markers[gGameState.unk119].unk6) & 1)
+                result = 2;
+        }
+        else
+        {
+            result = 2;
+            if (gGameState.markers[gGameState.unk119].type == 7)
+                result = 1;
+        }
+    }
+    else if (gGameState.unk135)
+    {
+        result = 2;
+    }
+    switch (result)
+    {
+    case 2:
+        Func_0201B7D4();
+        SoundPlay(2, 0);
+        break;
+    case 0:
+        if (gGameState.switchType == 15)
+        {
+            gGameState.unk1F8 = gGameState.switchSound;
+            gGameState.switchSound = 0x302;
+        }
+        if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
+        {
+            Mode1SendSwitch(3);
+            SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
+        }
+        break;
+    default:
+        if ((gMain.random & 0xFF) > 0xCB)
+            GamePlaySound(0x17, 1);
+        else if ((gMain.random & 0xFF) > 0x65)
+            GamePlaySound(0x16, 1);
+        else
+            GamePlaySound(0x15, 1);
+        gGameState.unk156 = gMain.random % 60 + 30;
+        if (gGameState.markers[gGameState.unk119].type != 7)
+            gGameState.unk11A = 2;
+        break;
+    }
+}
+*/
 INCLUDE_ASM(Func_0201B8C8);
 
-INCLUDE_ASM(Func_0201BA2C);
+void Func_0201BA2C(s8 row)
+{
+    u16 *map = (u16 *)0x06006120 + row * 32;
+    u16 tile = row * 12 + 0xF370;
+    s32 i;
 
-INCLUDE_ASM(Func_0201BA9C);
+    map[0] = map[0x20] = 0x9023;
+    map++;
+    for (i = 0; i < 12; i++)
+    {
+        map[0x20] = tile + 12;
+        *map = tile++;
+        map++;
+    }
+    map[0] = map[0x20] = 0xD024;
+}
 
-INCLUDE_ASM(Func_0201BAD8);
+void Func_0201BA9C(s8 row)
+{
+    u16 *src = (u16 *)0x06007800;
+    s32 off = row * 32;
 
-INCLUDE_ASM(Func_0201BAF8);
+    src += off;
+    CpuSet(src, (u16 *)0x060061A0 + off, 14);
+    src += 0x20;
+    CpuSet(src, (u16 *)0x060061E0 + off, 14);
+}
 
-INCLUDE_ASM(Func_0201BC0C);
+void TextClearCanvas(void)
+{
+    u32 *p = (u32 *)0x0600F100;
+    u32 fill = 0x11111111;
+    s32 i;
 
-INCLUDE_ASM(Func_0201BCC0);
+    for (i = 0x3C0; i != 0; i--)
+        *p++ = fill;
+}
 
-INCLUDE_ASM(Func_0201BDE4);
+// Blit a glyph's 4bpp rows (src, one word per 8-pixel row) into the text canvas at dst,
+// x pixels into the tile: n rows into this tile row, the rest (rows - n) into the next one
+// (0x180 bytes on, 12 tiles per row). Pixels that spill past the tile go to the next tile.
+// Near-miss: same code shape, but the original keeps src in its stack slot and mask2 in r9
+// (and dst's incremented copy in r0 across the inner loop); agbcc gives src a register here.
+/*
+void TextBlitGlyph(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
+{
+    s32 shift, n, m, i;
+    u32 mask, mask2, w, *prev;
 
+    x &= 7;
+    shift = 8 - x;
+    shift &= 7;
+    y &= 7;
+    n = 8 - y;
+    m = rows - n;
+    mask = gTextColorMasks[color];
+    if (gGameState.unk157 == 8)
+        mask2 = -1;
+    else
+        mask2 = 0x11FFFFFF;
+    for (; n > 0; n--)
+    {
+        prev = dst;
+        w = *src++ & mask & mask2;
+        if (shift)
+        {
+            *dst++ |= w << ((8 - shift) * 4);
+            for (i = shift; i > 0; i--)
+                w = (w >> 4) | 0x10000000;
+            prev[8] = w;
+        }
+        else
+        {
+            *dst++ = w;
+        }
+    }
+    dst += 0x58;
+    for (; m > 0; m--)
+    {
+        prev = dst;
+        w = *src++ & mask;
+        if (shift)
+        {
+            *dst++ |= w << ((8 - shift) * 4);
+            for (i = shift; i > 0; i--)
+                w = (w >> 4) | 0x10000000;
+            prev[8] = w;
+        }
+        else
+        {
+            *dst++ = w;
+        }
+    }
+}
+*/
+INCLUDE_ASM(TextBlitGlyph);
+
+// Scale a glyph (4 bytes = 8 pixels a row, count bytes) up 2x into TEXT_GLYPH_BUF: the left
+// half of each row goes to the first 8x8 4bpp tile, the right half to the second. The US
+// glyphs are 6 pixels wide: each tile gets three (doubled) and a column of colour 1.
+void TextScaleGlyph(s32 count, const u8 *src)
+{
+    s32 i;
+    u16 *dst;
+    u8 b;
+#ifndef VERSION_GZLJ01
+    u32 b1;
+    u32 b2;
+#endif
+
+    for (i = 0; i < count; i += 4)
+    {
+        dst = (u16 *)((u8 *)TEXT_GLYPH_BUF + (i & 0x10) * 4 + (i & 0xC) * 2);
+#ifdef VERSION_GZLJ01
+        b = *src;
+        dst[2] = dst[0] = EXPAND_NIBBLES(b);
+        src++;
+        b = *src;
+        dst[3] = dst[1] = EXPAND_NIBBLES(b);
+        src++;
+        b = *src;
+        dst[0x12] = dst[0x10] = EXPAND_NIBBLES(b);
+        src++;
+        b = *src;
+        dst[0x13] = dst[0x11] = EXPAND_NIBBLES(b);
+        src++;
+#else
+        b = *src;
+        dst[2] = dst[0] = EXPAND_NIBBLES(b);
+        src++;
+        b1 = *src;
+        dst[3] = dst[1] = ((b1 & 0x0F) + ((b1 & 0x0F) << 4)) + 0x1100;
+        src++;
+        b2 = *src;
+        b = (b1 >> 4) | (b2 << 4);
+        dst[0x12] = dst[0x10] = EXPAND_NIBBLES(b);
+        dst[0x13] = dst[0x11] = (((b2 >> 4) & 0x0F) + (((b2 >> 4) & 0x0F) << 4)) + 0x1100;
+        src += 2;
+#endif
+    }
+}
+
+// Draw an 8x8 glyph (from 0x0600A000) at pixel (x, y) of the text canvas; with unk15A set,
+// scaled 2x into four tiles. TextDrawSmallGlyph is the same for the 4-row glyphs at 0x0600A010.
+#ifdef VERSION_GZLJ01
+void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
+{
+    u32 *glyph = (u32 *)0x0600A000 + ch * 8;
+    u32 *dst;
+    u32 row;
+    u32 col;
+    u8 y2;
+
+    if (gGameState.unk15A)
+    {
+        TextScaleGlyph(32, (u8 *)glyph);
+        y += 4;
+        row = (y >> 3) * 0x180 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+        TextBlitGlyph(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+        y2 = y + 8;
+        TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
+        TextBlitGlyph(x + gGameState.unk157, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x68);
+    }
+    else
+    {
+        row = (y >> 3) * 0x180 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, glyph, dst);
+    }
+}
+#else
+// US near-miss: the right halves go where x + unk157 falls (as in TextDrawSmallGlyph), and the
+// link-lost screen (mode 2) has a 30-tile-wide canvas. Same code shape, but the original
+// spills gGameState's address to the stack and allocates the other registers differently.
+/*
+void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
+{
+    u32 *glyph = (u32 *)0x0600A000 + ch * 8;
+    u32 *dst;
+    u32 row;
+    u32 col;
+    u8 y2;
+    u32 col2;
+    s32 x2;
+
+    if (gGameState.unk15A)
+    {
+        TextScaleGlyph(32, (u8 *)glyph);
+        y += 4;
+        row = (y >> 3) * 0x180 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+        y2 = y + 8;
+        TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
+        x2 = x + gGameState.unk157;
+        col2 = (x2 >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col2);
+        TextBlitGlyph(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
+        TextBlitGlyph(x + gGameState.unk157, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x60);
+    }
+    else
+    {
+        if (gMain.mode != 2)
+            row = (y >> 3) * 0x180 + (y & 7) * 4;
+        else
+            row = (y >> 3) * 0x3C0 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, glyph, dst);
+    }
+}
+*/
+INCLUDE_ASM(TextDrawGlyph);
+#endif
+
+void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
+{
+    u32 *glyph = (u32 *)0x0600A010 + ch * 8;
+    u32 *dst;
+    u32 row;
+    u32 col;
+#ifndef VERSION_GZLJ01
+    u32 col2;
+    s32 x2;
+#endif
+
+    y -= 4;
+    row = (y >> 3) * 0x180 + (y & 7) * 4;
+    col = (x >> 3) * 32 + 0x0600F100;
+    dst = (u32 *)(row + col);
+    if (gGameState.unk15A)
+    {
+        TextScaleGlyph(16, (u8 *)glyph);
+        TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+#ifdef VERSION_GZLJ01
+        TextBlitGlyph(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+#else
+        // The right half goes where x + unk157 falls, not simply the next tile.
+        x2 = x + gGameState.unk157;
+        col2 = (x2 >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col2);
+        TextBlitGlyph(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
+#endif
+    }
+    else
+    {
+        TextBlitGlyph(x, y, color, 4, glyph, dst);
+    }
+}
+
+// Add the text box frame's sprites to gOamBuffer: the corners (tiles 0x24, 0x26) and 12
+// edge pieces (0x25), each once at y = row * 8 + 48 (a line higher while the screen shakes)
+// and once flipped at y = 40, all in palette 8.
+// Near-miss: identical but for one instruction, the edge loop's x (0x88) is set up after the
+// hoisted constants 0x25 and ~0xC instead of before them.
+/*
+#define TEXT_BOX_PIECE(p, Y, X, TILE, VFLIP)     p->y = Y;                                    p->mosaic = 0;                               p->x = X;                                    VFLIP                                        p->size = 0;                                 p->tileNum = TILE;                           p->priority = 0;                             p->paletteNum = 8;                           p++;                                         gMain.unk450++;
+
+void Func_0201BEA0(s8 row)
+{
+    struct OamData16 *p = (struct OamData16 *)&gOamBuffer[gMain.unk450];
+    s32 y;
+    s32 shake;
+    s32 t;
+    s32 i;
+
+    t = row * 8;
+    shake = (gGameState.shake >> 1) & 1;
+    y = t + 48;
+    TEXT_BOX_PIECE(p, y - shake, 0x80, 0x24, )
+    TEXT_BOX_PIECE(p, 40, 0x80, 0x24, p->vFlip = 1;)
+    TEXT_BOX_PIECE(p, y - shake, 0xE8, 0x26, )
+    TEXT_BOX_PIECE(p, 40, 0xE8, 0x26, p->vFlip = 1;)
+    for (i = 0; i < 12; i++)
+    {
+        TEXT_BOX_PIECE(p, y - shake, i * 8 + 0x88, 0x25, )
+        TEXT_BOX_PIECE(p, 40, i * 8 + 0x88, 0x25, p->vFlip = 1;)
+    }
+}
+*/
 INCLUDE_ASM(Func_0201BEA0);
 
-INCLUDE_ASM(Func_0201C0E8);
+void Func_0201C0E8(u8 playSound)
+{
+    u32 params[2];
+    u32 mask;
+    s32 r;
 
-INCLUDE_ASM(Func_0201C164);
+    TextClearCanvas();
+    gGameState.textX = 0;
+    gGameState.textY = 8;
+    if (playSound)
+    {
+        mask = 0xFFFF0000;
+        params[0] = 0;
+        r = gMain.random % 3;
+        if (r == 0)
+            params[1] = params[1] & mask;
+        else if (r == 1)
+            params[1] = (params[1] & mask) | 1;
+        else
+            params[1] = (params[1] & mask) | 2;
+        SoundPlay(0x13 - SOUND_ID_SHIFT, params);
+    }
+}
 
-INCLUDE_ASM(Func_0201C204);
+void DrawChoiceCursor(void)
+{
+    u32 mosaic;
+    const u8 *sprite;
+    u8 y;
+    u8 timer;
 
-INCLUDE_ASM(Func_0201C484);
+    mosaic = (gMain.bgcnt[0] >> 6) & 1;
+    timer = --gGameState.unk152;
+    sprite = gSprite_0202C130;
+    if (timer == 0)
+    {
+        gGameState.unk153 ^= 1;
+        gGameState.unk152 = (sprite + gGameState.unk153 * 8)[4];
+    }
+    y = gGameState.unk150 + gGameState.unk14F * 12;
+    y += 0x34;
+    DrawSprite(sprite, gGameState.unk153, 0x8C, y, 0, mosaic, 0, 0, 0, 0, 0);
+}
 
-INCLUDE_ASM(Func_0201C568);
+// The choice menu after a question (unk14F: cursor; two choices when unk151 is 1, else
+// three). Up/Down move the cursor, A picks: the sound for (unk142, choice) from the tables
+// is played, or 0xFFFF closes the menu. Returns 1 while waiting, 0 after a pick, 3 for 0xFFFF.
+// The result is a u8 here; callers see s32 (the prototype in game.h; MsgStep returns it as is).
+u8 ChoiceMenuUpdate_(void) asm("ChoiceMenuUpdate");
+u8 ChoiceMenuUpdate_(void)
+{
+    s32 i;
 
-INCLUDE_ASM(Func_0201C60C);
+    if (gGameState.unk151 == 1)
+    {
+        if (gMain.newKeys & 0xC0)
+        {
+            gGameState.unk14F ^= 1;
+            SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
+            gGameState.unk153 = 0;
+            gGameState.unk152 = gSprite_0202C130[4];
+        }
+    }
+    else if (gMain.newKeys & 0xC0)
+    {
+        SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
+        if (gMain.newKeys & 0x80)
+        {
+            if (++gGameState.unk14F > 2)
+                gGameState.unk14F = 0;
+        }
+        else
+        {
+            if (--gGameState.unk14F > 2)
+                gGameState.unk14F = 2;
+        }
+        gGameState.unk153 = 0;
+        gGameState.unk152 = gSprite_0202C130[4];
+    }
+    DrawChoiceCursor();
+    if (gMain.newKeys & 1)
+    {
+        i = 0;
+        if (gGameState.unk151 == 1)
+        {
+            while (gTwoChoiceIds[i] != gGameState.unk142)
+                i++;
+            if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0xFFFF)
+            {
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+                gGameState.unk13E = 300;
+                return 3;
+            }
+            if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0x1A7)
+                gGameState.unk11E = 1;
+            GamePlaySound(gTwoChoiceSounds[i * 2 + gGameState.unk14F], gGameState.unk226);
+        }
+        else
+        {
+            while (gThreeChoiceIds[i] != gGameState.unk142)
+                i++;
+            if (gThreeChoiceSounds[i * 3 + gGameState.unk14F] == 0xFFFF)
+            {
+                gGameState.unk151 = 0;
+                gGameState.unk150 = 0;
+                gGameState.unk14F = 0xFF;
+                gGameState.unk14E = 0;
+                return 3;
+            }
+            GamePlaySound(gThreeChoiceSounds[i * 3 + gGameState.unk14F], gGameState.unk226);
+        }
+        gGameState.unk151 = 0;
+        gGameState.unk150 = 0;
+        gGameState.unk14F = 0xFF;
+        gGameState.unk14E = 0;
+        gMain.newKeys ^= 1;
+        SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        return 0;
+    }
+    return 1;
+}
+
+void Func_0201C484(u8 id)
+{
+    u32 params[2];
+    u32 mask;
+
+    if ((u8)(id - 12) <= 3)
+    {
+        id = gMain.random % 3 + 12;
+        mask = 0xFFFF0000;
+        params[0] = 0;
+        if (id == 12)
+            params[1] = params[1] & mask;
+        else if (id == 13)
+            params[1] = (params[1] & mask) | 1;
+        else
+            params[1] = (params[1] & mask) | 2;
+        SoundPlay(gSoundIds_0202430E[id], params);
+    }
+    else if ((u8)(id - 0x20) <= 2)
+    {
+        gGameState.unk140 = gSoundIds_0202430E[id];
+        SoundPlayLoop(gGameState.unk140, gGameState.unk140, 0);
+        if (gGameState.msgPtr[1] == 0xF9)
+        {
+            gGameState.msgPtr++;
+            gGameState.unk14D = *++gGameState.msgPtr;
+        }
+    }
+    else if (id != 0x16)
+    {
+        SoundPlay(gSoundIds_0202430E[id], 0);
+    }
+}
+
+void Func_0201C568(void)
+{
+    u8 i;
+    const u8 *const *const *entry;
+
+    gGameState.unk22A = 0;
+    if (gGameState.unk226 == 2)
+    {
+        gGameState.unk206 = 0x300;
+    }
+    else if (gGameState.unk226 == 3)
+    {
+        gGameState.unk206 = 0x100;
+    }
+    else if (gGameState.unk226 == 11)
+    {
+        gGameState.unk206 = 0;
+        gGameState.unk22C = 0;
+        gGameState.unk208 = 0x100;
+    }
+    else
+    {
+        gGameState.unk206 = 0;
+    }
+    gGameState.unk228 = 0;
+    gGameState.unk227 = 0;
+    i = gGameState.unk226;
+    entry = gTingleAnims + i;
+    gGameState.unk202 = (**entry)[4];
+}
+
+bool32 Func_0201C60C(void)
+{
+    u8 step;
+
+    if (gGameState.textX < 0x60)
+        return TRUE;
+    gGameState.textX = 0;
+    if (gGameState.unk15A)
+        step = 24;
+    else
+        step = 12;
+    gGameState.textY += step;
+    step -= 12;
+    if (gGameState.textY < 0x50 - step)
+        return TRUE;
+    return FALSE;
+}
 
 // Draw a run of consecutive glyphs (a word stored as one piece in the font).
 void DrawGlyphRun(u8 id)
@@ -707,7 +1607,7 @@ void DrawGlyphRun(u8 id)
     {
         if (!Func_0201C60C())
             return;
-        Func_0201BCC0(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
+        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
         ch++;
         if (gGameState.unk15A)
             gGameState.textX += gGameState.unk157 * 2;
@@ -730,7 +1630,7 @@ bool32 DrawChar(u8 ch)
         gGameState.unk159 = 0;
     if (ch > 0xE5)
     {
-        Func_0201BDE4(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC4);
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC4);
         if (ch <= 0xEA)
             ch += 0x33;
         else
@@ -738,7 +1638,7 @@ bool32 DrawChar(u8 ch)
     }
     else if (ch > 0xBC)
     {
-        Func_0201BDE4(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC2);
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC2);
         if (ch <= 0xC1)
             ch += 0x48;
         else if (ch <= 0xC6)
@@ -756,7 +1656,7 @@ bool32 DrawChar(u8 ch)
         else
             ch = gGlyphTable_0202438E[ch - 0xE0];
     }
-    Func_0201BCC0(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
+    TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
     if (gGameState.unk15A)
         gGameState.textX += gGameState.unk157 * 2;
     else
@@ -989,7 +1889,7 @@ s32 MsgStep(void)
             return 0;
         }
         if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && gGameState.unk151 != 0)
-            return Func_0201C204();
+            return ChoiceMenuUpdate();
         while (ch > 0xF1)
         {
             if (ch == 0xFF)  // end
@@ -2072,13 +2972,13 @@ bool32 SendItemUse(u8 item, u8 arg)
 //                 {
 //                     GamePlaySound(0xC, 1);
 //                 }
-//                 else if (gGameState.unk058 == 0)
+//                 else if (gGameState.icons[2].type == 0)
 //                 {
 //                     u8 i = FindMarker(3);
 //
-//                     gGameState.unk058 = 3;
-//                     gGameState.unk054 = gGameState.markers[i].x;
-//                     gGameState.unk056 = gGameState.markers[i].y;
+//                     gGameState.icons[2].type = 3;
+//                     gGameState.icons[2].x = gGameState.markers[i].x;
+//                     gGameState.icons[2].y = gGameState.markers[i].y;
 //                     SoundPlay(0xB - SOUND_ID_SHIFT, 0);
 //                 }
 //                 else
@@ -3254,7 +4154,7 @@ void Mode2State0(void)
     LZ77UnCompVram(gMode1BgTiles, (void *)0x06008000);
     LZ77UnCompVram(gMode2BgMap, (void *)0x06006000);
 #ifndef VERSION_GZLJ01
-    Func_0201BAD8();
+    TextClearCanvas();
     gGameState.msgPtr = MSG_DATA + *(u16 *)(MSG_DATA + *(u16 *)MSG_DATA + 0x3E);
     gGameState.unk14A = 6;
     gGameState.unk14B = 0;
