@@ -33,6 +33,7 @@ struct MapMarker
 // 0x03F u8 switchType  // the GC switches on type - 1
 // 0x040 u8 switchNo2
 // 0x042 u8 unk042
+// 0x050 u8 unk050
 // 0x054 u16 unk054
 // 0x056 u16 unk056
 // 0x058 u8 unk058
@@ -44,6 +45,7 @@ struct MapMarker
 // 0x0FD u8 unk0FD
 // 0x102 u8 unk102
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
+// 0x105 u8 unk105
 // 0x106 u8 unk106
 // 0x108 u8 unk108
 // 0x10A u8 unk10A
@@ -164,7 +166,9 @@ struct GameState
     /*0x040*/ u8 switchNo2;
     /*0x041*/ u8 filler041[0x042 - 0x041];
     /*0x042*/ u8 unk042;
-    /*0x043*/ u8 filler043[0x054 - 0x043];
+    /*0x043*/ u8 filler043[0x050 - 0x043];
+    /*0x050*/ u8 unk050;
+    /*0x051*/ u8 filler051[0x054 - 0x051];
     /*0x054*/ u16 unk054;
     /*0x056*/ u16 unk056;
     /*0x058*/ u8 unk058;
@@ -180,7 +184,7 @@ struct GameState
     /*0x102*/ u8 unk102;
     /*0x103*/ u8 filler103[0x104 - 0x103];
     /*0x104*/ u8 unk104;                      // cleared while a menu or event runs on the GC
-    /*0x105*/ u8 filler105[0x106 - 0x105];
+    /*0x105*/ u8 unk105;
     /*0x106*/ u8 unk106;
     /*0x107*/ u8 filler107[0x108 - 0x107];
     /*0x108*/ u8 unk108;
@@ -457,6 +461,13 @@ extern const u8 gPearlMarkerPos[6];
 extern const u8 gTriangleIslandPos[6];
 extern const u8 gTempleMarkerPos[4];
 extern const u8 gSprite_0202C200[];
+extern const u16 gTable_02024274[2];
+void Func_0201A944(void);
+void Func_0201ACD0(void);
+void Func_0201AD24(void);
+void Func_0201AD4C(void);
+void Func_0201AF48(void);
+void Func_0201E584(void);
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 

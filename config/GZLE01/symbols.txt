@@ -269,6 +269,7 @@ gSpriteTable = 0x0202ADE4; // data
 gPearlMarkerPos = 0x0202AECC; // data
 gTriangleIslandPos = 0x0202AED2; // data
 gTempleMarkerPos = 0x0202AED8; // data
+gTable_02024274 = 0x0202AEDC; // data
 gSounds_02024278 = 0x0202AEE0; // data
 gTextColorMasks = 0x0202AF04; // data
 gSoundIds_0202430E = 0x0202AF76; // data

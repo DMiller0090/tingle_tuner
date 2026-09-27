@@ -322,6 +322,7 @@ gPearlMarkerPos = 0x02024264; // data
 gTriangleIslandPos = 0x0202426A; // data
 gTempleMarkerPos = 0x02024270; // data
 // sound per marker unk6 for type 0x13 markers (Func_0201B7D4)
+gTable_02024274 = 0x02024274; // data
 gSounds_02024278 = 0x02024278; // data
 // u32 per text colour, ANDed with the glyph's 4bpp rows
 gTextColorMasks = 0x0202429C; // data

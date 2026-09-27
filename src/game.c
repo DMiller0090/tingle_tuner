@@ -104,7 +104,84 @@ void DrawQuestMarkers(void)
     }
 }
 
-INCLUDE_ASM(Func_0201B0F4);
+// B closes and L toggles the sea chart overlay (unk224) while unk1E5_1 allows it; while it
+// is open, A (once) calls Func_0201AD4C and the quest markers are drawn.
+void Func_0201B0F4(void)
+{
+    u16 tile;
+    u16 *map;
+
+    if (gGameState.unk1E5_1 && (gMain.newKeys & 0x202))
+    {
+        gGameState.unk105 = 0;
+        gGameState.unk050 = 0;
+        if (gMain.newKeys & 2)
+        {
+            if (gGameState.unk224)
+            {
+                gGameState.unk224 = 0;
+                gGameState.unk13C = 0;
+                SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+            }
+        }
+        else
+        {
+            gGameState.unk224 ^= 1;
+#ifndef VERSION_GZLJ01
+            if (gGameState.unk224 == 0)
+                Func_0201DA50();
+#endif
+            SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        }
+        if (gGameState.unk224)
+        {
+            gMain.bgOfs[1][1] = 0x7C;
+            gGameState.unk0FC = 2;
+            gGameState.unk0FD = 1;
+            Func_0201ACD0();
+            if (gGameState.unk058)
+                Func_0201AD24();
+            map = (u16 *)0x060075D2;
+            tile = gTable_02024274[gGameState.flags.unkA_4];
+            if (!(gGameState.unk0F4[3] & 2))
+                tile |= 0x6000;
+            if (gGameState.flags.unkA_4)
+            {
+                map[0] = tile;
+                map[1] = tile | 0x400;
+                map[0x20] = tile | 0x800;
+                map[0x21] = tile | 0xC00;
+            }
+            else
+            {
+                map[0] = tile;
+                map[1] = tile;
+                map[0x20] = tile;
+                map[0x21] = tile;
+            }
+        }
+        else
+        {
+            gGameState.unk0FC = 0;
+            gGameState.unk0FD = 0;
+        }
+        Func_0201E584();
+    }
+    else if (gGameState.unk224)
+    {
+        gMain.bgOfs[2][0] = -4;
+        gMain.bgOfs[2][1] = 4;
+        Func_0201AF48();
+        if (gGameState.unk105 == 0 && (gMain.newKeys & 1))
+        {
+            Func_0201AD4C();
+            gGameState.unk105 = 1;
+            SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        }
+        DrawQuestMarkers();
+    }
+    Func_0201A944();
+}
 
 // Darken the sea chart's 7x7 squares (2x2 tiles each, from map row 17 column 1 of the BG
 // map at 0x06007000) whose bit in gGameState.unk0F4 is clear: palette 6 instead of 0.
