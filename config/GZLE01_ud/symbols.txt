@@ -565,3 +565,11 @@ gUsMsgIds_0202B014 = 0x0202B248; // data
 gUsMsgIds_0202B020 = 0x0202B254; // data
 gUsMsgIds_0202B034 = 0x0202B268; // data
 gUsMsgIds_0202B04C = 0x0202B280; // data
+// pinned: the sound bank is outside the program, where port_symbols keeps the JP address
+gSoundBankSeBankMaps = 0x02034E00; // data
+gSoundBankSeSets = 0x02034E10; // data
+gSoundBankInstBanks = 0x02035434; // data
+gSoundBankBankToSampleSet = 0x020356FC; // data
+gSoundBankSongBankMaps = 0x02035704; // data
+gSoundBankSampleSets = 0x0203570C; // data
+gSoundBankEnd = 0x0203FEB4; // data

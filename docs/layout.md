@@ -70,11 +70,11 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 | `0201BA2C` | `02022228` | `message.c` | text renderer, choice menu, messages (`MsgStep`, `ShowMessage`, US `DrawString`); `.rodata` `0202429C–02024460` |
 | `0201DA78` | `02024684` | `item_menu.c` | item menu, `UseItem`, HUD panels; `.rodata` `02024460–020244D0` |
 | `0201EBAC` | `020257B8` | `effect.c` | item effects, `MainMode2`, objects, wave scroll, Select window, status icon; `.rodata` `020244D0–02024568` |
-| `02020E28` | `02027A84` | sound | custom driver, not m4a: API (`SoundInit` ... `SoundPlayLoop`), core from `SoundDriverInit` (`020213C0`), command wrappers `0202328C–02023510`; `.rodata` `gSoundBankHeader` ... `gVibratoTable` (`0202CD20–0202D28C`). See [Sound driver](#sound-driver) |
+| `02020E28` | `02027A84` | sound | custom driver, not m4a: API (`SoundInit` ... `SoundPlayLoop`), core from `SoundDriverInit` (`020213C0`), command wrappers `0202328C–02023510`; `.rodata` `gSoundBankHeader` ... `gVibratoTable` (`0202CD20–0202D28C`, in C in `src/sound.c`). See [Sound driver](#sound-driver) |
 | `020237CC` | `0202A428` | ARM mixer | `PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix` (run from IWRAM) |
 | `02023A84` | `0202A6E0` | libagbsyscall | `ArcTan2 CpuFastSet CpuSet Div LZ77UnCompVram LZ77UnCompWram Sqrt`, then `JoyHardReset` |
 | `02023AC0` | `0202A71C` | libgcc | `_call_via_*`, `__divsi3 __div0 __modsi3 __udivsi3 __umodsi3` |
-| `02023D9C` | `0202A9F8` | newlib | `bzero`, `srand`, `rand` |
+| `02023D9C` | `0202A9F8` | newlib | `bzero`, `srand`, `rand`; the last 4 bytes of `.rodata` (`0202D28C`, `"C"`) are `impure.o`'s locale string, which `impure_data` + 0x34 (`_current_locale`) points at |
 
 ### Game code `02018884–02020E28`: what the `.rodata` says
 

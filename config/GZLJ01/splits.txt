@@ -23,3 +23,4 @@ src/item_menu.c .rodata 0x02024460 0x020244D0
 src/effect.c 0x0201EBAC 0x02020E28
 src/effect.c .rodata 0x020244D0 0x02024568
 src/sound.c 0x02020E28 0x020237CC
+src/sound.c .rodata 0x0202CD20 0x0202D28C

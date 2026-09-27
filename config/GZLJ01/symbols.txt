@@ -617,6 +617,14 @@ gSprite_0202CC50 = 0x0202CC50; // data
 gSprite_0202CC60 = 0x0202CC60; // data
 // seven pointers into the sound bank, see docs/layout.md; the sound driver's .rodata follows
 gSoundBankHeader = 0x0202CD20; // data
+// the sound bank (the packer's raw tail, copied to tail_dest), see docs/layout.md "Raw tail block"
+gSoundBankSeBankMaps = 0x0202F000; // data
+gSoundBankSeSets = 0x0202F010; // data
+gSoundBankInstBanks = 0x0202F674; // data
+gSoundBankBankToSampleSet = 0x0202F93C; // data
+gSoundBankSongBankMaps = 0x0202F944; // data
+gSoundBankSampleSets = 0x0202F94C; // data
+gSoundBankEnd = 0x0203F844; // data
 // u32 per SoundPlay id: bits 0-15 SE index, 16-23 player, 24 pan/volume from params x,
 // 25 low priority, 26 high priority, 27 add params+4 to the index, 28 don't restart, 29 volume from y
 gSoundTable = 0x0202CD3C; // data

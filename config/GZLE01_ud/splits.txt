@@ -23,3 +23,4 @@ src/item_menu.c .rodata 0x0202B350 0x0202B3C0
 src/effect.c 0x020259EC 0x02027CB8
 src/effect.c .rodata 0x0202B3C0 0x0202B458
 src/sound.c 0x02027CB8 0x0202A65C
+src/sound.c .rodata 0x020335F0 0x02033B58

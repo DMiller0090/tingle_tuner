@@ -28,9 +28,6 @@ struct SoundLoopSlot
     /*0x4*/ u8 refreshed;
 };
 
-extern const u8 gSoundBankHeader[];
-extern const u32 gSoundTable[];
-extern const u32 gSoundLoopTable[];
 
 extern s16 gSoundPlayerSoundId[SOUND_API_PLAYERS];  // -1: none
 extern u8 gSoundStarted[SOUND_API_PLAYERS];         // started this frame
@@ -41,10 +38,15 @@ extern s16 gSoundLoop9TempoOfs;
 extern u8 gSoundLoop9Param;
 extern struct SoundLoopSlot gSoundLoopSlots[2];
 
-void SoundDriverInit(const void *bankHeader);
+void SoundDriverInit(const struct SoundBankHeader *header);
 void SoundApiInit(void);
 void SoundApiUpdate(void);
 u32 PlayerGetState(u32 player);
+struct SoundCmd *SoundCmdPop(void);
+void SoundCmdPlayer(struct SoundCmd *cmd);
+void SoundCmdTracks(struct SoundCmd *cmd);
+void SoundCmdPlayers(struct SoundCmd *cmd);
+void SoundCmdGlobal(struct SoundCmd *cmd);
 void SoundCmdFlush(void);
 void SoundCmdStartSe(u16 player, u16 set, u16 index);
 void SoundCmdFadeOut(u16 player, u16 frames);
@@ -92,6 +94,205 @@ extern struct SoundCmd *gSoundCmdRead;
 extern struct SoundCmd *gSoundCmdWrite;
 extern struct SoundCmd *gSoundCmdLimit;  // end of what SoundCmdFlush published
 extern struct SoundCmd *gSoundCmdEnd;
+
+// The sound bank's tables (offsets from each table's start), see docs/layout.md.
+struct SoundBankHeader
+{
+    const void *sampleSets;
+    const void *instBanks;
+    const void *songs;  // empty: the bank has no songs
+    const void *seSets;
+    const u16 *bankToSampleSet;
+    const void *songBankMaps;
+    const void *seBankMaps;
+};
+
+// One step of a volume envelope: ramp linearly to level over frames (0xFFFF: hold).
+struct EnvelopeStep
+{
+    u16 frames;
+    s16 level;
+};
+
+extern const u8 gSoundBankSeBankMaps[];
+extern const u8 gSoundBankSeSets[];
+extern const u8 gSoundBankInstBanks[];
+extern const u16 gSoundBankBankToSampleSet[];
+extern const u8 gSoundBankSongBankMaps[];
+extern const u8 gSoundBankSampleSets[];
+extern const u8 gSoundBankEnd[];
+
+const struct SoundBankHeader gSoundBankHeader =
+{
+    gSoundBankSampleSets,
+    gSoundBankInstBanks,
+    gSoundBankEnd,
+    gSoundBankSeSets,
+    gSoundBankBankToSampleSet,
+    gSoundBankSongBankMaps,
+    gSoundBankSeBankMaps
+};
+
+// The US bank drops SE sequence 7 (voice clip 6), so the SE indices from 8 on are one lower.
+#define SOUND_SE(se) ((se) < 8 ? (se) : (se) - SOUND_ID_SHIFT)
+#define SOUND(se, player, flags) (SOUND_SE(se) | ((player) << 16) | (flags))
+
+const u32 gSoundTable[] =
+{
+    SOUND(0x02, 4, 0),
+    SOUND(0x03, 4, 0),
+    SOUND(0x04, 4, 0),
+    SOUND(0x05, 4, 0),
+    SOUND(0x08, 4, 0),
+    SOUND(0x06, 4, 0),
+#ifdef VERSION_GZLJ01
+    SOUND(0x07, 4, 0),  // voice clip 6, not in the US sound bank
+#endif
+    SOUND(0x14, 0, 0),
+    SOUND(0x17, 0, 0),
+    SOUND(0x18, 0, 0),
+    SOUND(0x1A, 0, 0),
+    SOUND(0x19, 0, 0),
+    SOUND(0x1B, 0, 0),
+    SOUND(0x1C, 0, 0),
+    SOUND(0x1D, 0, 0),
+    SOUND(0x1E, 0, 0),
+    SOUND(0x1F, 0, 0),
+    SOUND(0x15, 0, SOUND_HIGH_PRIORITY),
+    SOUND(0x16, 0, SOUND_HIGH_PRIORITY),
+    SOUND(0x22, 0, SOUND_LOW_PRIORITY | SOUND_ADD_ARG),
+    SOUND(0x2A, 0, 0),
+    SOUND(0x2B, 0, 0),
+    SOUND(0x20, 0, 0),
+    SOUND(0x21, 0, 0),
+    SOUND(0x0A, 0, 0),
+    SOUND(0x0D, 0, 0),
+    SOUND(0x34, 0, 0),
+    SOUND(0x35, 0, 0),
+    SOUND(0x36, 0, 0),
+    SOUND(0x37, 0, 0),
+    SOUND(0x38, 0, 0),
+    SOUND(0x30, 0, 0),
+    SOUND(0x29, 1, 0),
+    SOUND(0x28, 1, 0),
+    SOUND(0x27, 1, 0),
+    SOUND(0x2F, 1, 0),
+    SOUND(0x11, 1, 0),
+    SOUND(0x0E, 1, 0),
+    SOUND(0x09, 2, 0),
+    SOUND(0x2E, 2, 0),
+    SOUND(0x0B, 2, SOUND_LOW_PRIORITY),
+    SOUND(0x33, 2, 0),
+    SOUND(0x32, 3, 0),
+    SOUND(0x31, 3, 0)
+};
+
+const u32 gSoundLoopTable[11] =
+{
+    SOUND(0x0C, 0, 0),
+    SOUND(0x0F, 0, 0),
+    SOUND(0x10, 0, 0),
+    SOUND(0x12, 0, 0),
+    SOUND(0x13, 0, 0),
+    SOUND(0x25, 0, 0),
+    SOUND(0x26, 0, 0),
+    SOUND(0x2C, 0, 0),
+    SOUND(0x2D, 0, 0),
+    SOUND(0x00, 0, 0),
+    SOUND(0x00, 0, 0)
+};
+
+const u8 gInstTypeToVoicePool[5] =
+{
+    0, 1, 2, 3, 4
+};
+
+const struct EnvelopeStep gDefaultEnvelope[3] =
+{
+    {1, 0x7FFF},
+    {0x7FFF, 0x7FFF},
+    {0xFFFF, 0}
+};
+
+const u8 gCgbWaveVolumes[5] =
+{
+    0x0, 0x60, 0x40, 0x80, 0x20
+};
+
+void (*const gSoundCmdHandlers[4])(struct SoundCmd *cmd) =
+{
+    SoundCmdPlayer,
+    SoundCmdTracks,
+    SoundCmdPlayers,
+    SoundCmdGlobal
+};
+
+const u16 gCgbFreqTable[120] =
+{
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x2C, 0x9D, 0x107, 0x16B, 0x1C9, 0x223, 0x277, 0x2C7, 0x312, 0x358, 0x39B, 0x3DA,
+    0x416, 0x44E, 0x483, 0x4B5, 0x4E5, 0x511, 0x53B, 0x563, 0x589, 0x5AC, 0x5CE, 0x5ED,
+    0x60B, 0x627, 0x642, 0x65B, 0x672, 0x689, 0x69E, 0x6B2, 0x6C4, 0x6D6, 0x6E7, 0x6F7,
+    0x706, 0x714, 0x721, 0x72D, 0x739, 0x744, 0x74F, 0x759, 0x762, 0x76B, 0x773, 0x77B,
+    0x783, 0x78A, 0x790, 0x797, 0x79D, 0x7A2, 0x7A7, 0x7AC, 0x7B1, 0x7B6, 0x7BA, 0x7BE,
+    0x7C1, 0x7C5, 0x7C8, 0x7CB, 0x7CE, 0x7D1, 0x7D4, 0x7D6, 0x7D9, 0x7DB, 0x7DD, 0x7DF,
+    0x7E1, 0x7E2, 0x7E4, 0x7E6, 0x7E7, 0x7E9, 0x7EA, 0x7EB, 0x7EC, 0x7ED, 0x7EE, 0x7EF,
+    0x7F0, 0x7F1, 0x7F2, 0x7F3, 0x7F4, 0x7F4, 0x7F5, 0x7F6, 0x7F6, 0x7F7, 0x7F7, 0x7F8
+};
+
+const u8 gNoiseFreqTable[120] =
+{
+    0xD4, 0xC7, 0xC6, 0xC5, 0xC4, 0xB7, 0xB6, 0xB5, 0xB4, 0xA7, 0xA6, 0xA5,
+    0xA4, 0x97, 0x96, 0x95, 0x94, 0x87, 0x86, 0x85, 0x84, 0x77, 0x76, 0x75,
+    0x74, 0x67, 0x66, 0x65, 0x64, 0x57, 0x56, 0x55, 0x54, 0x47, 0x46, 0x45,
+    0x44, 0x37, 0x36, 0x35, 0x34, 0x27, 0x26, 0x25, 0x24, 0x17, 0x16, 0x15,
+    0x14, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+};
+
+const u32 gPcmPitchTable[120] =
+{
+    0x800, 0x879, 0x8FA, 0x983, 0xA14, 0xAAD, 0xB50, 0xBFC,
+    0xCB2, 0xD74, 0xE41, 0xF1A, 0x1000, 0x10F3, 0x11F5, 0x1306,
+    0x1428, 0x155B, 0x16A0, 0x17F9, 0x1965, 0x1AE8, 0x1C82, 0x1E34,
+    0x2000, 0x21E7, 0x23EB, 0x260D, 0x2851, 0x2AB7, 0x2D41, 0x2FF2,
+    0x32CB, 0x35D1, 0x3904, 0x3C68, 0x4000, 0x43CE, 0x47D6, 0x4C1B,
+    0x50A2, 0x556E, 0x5A82, 0x5FE4, 0x6597, 0x6BA2, 0x7208, 0x78D0,
+    0x8000, 0x879C, 0x8FAC, 0x9837, 0xA145, 0xAADC, 0xB504, 0xBFC8,
+    0xCB2F, 0xD744, 0xE411, 0xF1A1, 0x10000, 0x10F38, 0x11F59, 0x1306F,
+    0x1428A, 0x155B8, 0x16A09, 0x17F91, 0x1965F, 0x1AE89, 0x1C823, 0x1E343,
+    0x20000, 0x21E71, 0x23EB3, 0x260DF, 0x28514, 0x2AB70, 0x2D413, 0x2FF22,
+    0x32CBF, 0x35D13, 0x39047, 0x3C686, 0x40000, 0x43CE3, 0x47D66, 0x4C1BF,
+    0x50A28, 0x556E0, 0x5A827, 0x5FE44, 0x6597F, 0x6BA27, 0x7208F, 0x78D0D,
+    0x80000, 0x879C7, 0x8FACD, 0x9837F, 0xA1451, 0xAADC0, 0xB504F, 0xBFC88,
+    0xCB2FF, 0xD744F, 0xE411F, 0xF1A1B, 0x100000, 0x10F38F, 0x11F59A, 0x1306FE,
+    0x1428A2, 0x155B81, 0x16A09E, 0x17F910, 0x1965FE, 0x1AE89F, 0x1C823E, 0x1E3437
+};
+
+const s8 gVibratoTable[256] =
+{
+    0, 3, 6, 9, 12, 15, 18, 21, 24, 28, 31, 34, 37, 40, 43, 46,
+    48, 51, 54, 57, 60, 63, 65, 68, 71, 73, 76, 78, 81, 83, 85, 88,
+    90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 109, 111, 112, 114, 115, 117,
+    118, 119, 120, 121, 122, 123, 124, 124, 125, 126, 126, 127, 127, 127, 127, 127,
+    127, 127, 127, 127, 127, 127, 126, 126, 125, 124, 124, 123, 122, 121, 120, 119,
+    118, 117, 115, 114, 112, 111, 109, 108, 106, 104, 102, 100, 98, 96, 94, 92,
+    90, 88, 85, 83, 81, 78, 76, 73, 71, 68, 65, 63, 60, 57, 54, 51,
+    48, 46, 43, 40, 37, 34, 31, 28, 24, 21, 18, 15, 12, 9, 6, 3,
+    0, -3, -6, -9, -12, -15, -18, -21, -24, -28, -31, -34, -37, -40, -43, -46,
+    -48, -51, -54, -57, -60, -63, -65, -68, -71, -73, -76, -78, -81, -83, -85, -88,
+    -90, -92, -94, -96, -98, -100, -102, -104, -106, -108, -109, -111, -112, -114, -115, -117,
+    -118, -119, -120, -121, -122, -123, -124, -124, -125, -126, -126, -127, -127, -127, -127, -127,
+    -127, -127, -127, -127, -127, -127, -126, -126, -125, -124, -124, -123, -122, -121, -120, -119,
+    -118, -117, -115, -114, -112, -111, -109, -108, -106, -104, -102, -100, -98, -96, -94, -92,
+    -90, -88, -85, -83, -81, -78, -76, -73, -71, -68, -65, -63, -60, -57, -54, -51,
+    -49, -46, -43, -40, -37, -34, -31, -28, -24, -21, -18, -15, -12, -9, -6, -3
+};
 
 void SoundInit(void)
 {
@@ -659,4 +860,13 @@ INCLUDE_ASM(SoundCmdPlayers);
 
 INCLUDE_ASM(SoundCmdGlobal);
 
-INCLUDE_ASM(SoundCmdProcess);
+void SoundCmdProcess(void)
+{
+    struct SoundCmd *cmd = SoundCmdPop();
+
+    while (cmd != NULL)
+    {
+        gSoundCmdHandlers[cmd->cmd >> 8](cmd);
+        cmd = SoundCmdPop();
+    }
+}
