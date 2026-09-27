@@ -110,20 +110,33 @@ Func_0201F420 = 0x0201F420; // thumb
 Func_02020150 = 0x02020150; // thumb
 UpdateItemEffect = 0x02020298; // thumb
 // placeholders so all versions share INCLUDE_ASM names
-Func_02018884 = 0x02018884; // thumb
-Func_02018944 = 0x02018944; // thumb
-Func_02018988 = 0x02018988; // thumb
-Func_02018A38 = 0x02018A38; // thumb
-Func_02018A90 = 0x02018A90; // thumb
-Func_02018AA4 = 0x02018AA4; // thumb
-Func_020190A8 = 0x020190A8; // thumb
-Func_0201920C = 0x0201920C; // thumb
-Func_020192D8 = 0x020192D8; // thumb
-Func_02019350 = 0x02019350; // thumb
-Func_02019510 = 0x02019510; // thumb
-Func_02019CAC = 0x02019CAC; // thumb
-Func_02019F5C = 0x02019F5C; // thumb
-Func_0201A0A8 = 0x0201A0A8; // thumb
+// move *pos by (target - *pos) / div, clamped to [minStep, maxStep] in size; returns what is left
+EaseTowardMinMax = 0x02018884; // thumb
+// move *pos by (target - *pos) / div, at most maxStep
+EaseTowardMax = 0x02018944; // thumb
+// StepToward for an s8
+StepTowardS8 = 0x02018988; // thumb
+// StepToward comparing (s16)(*pos - target), so it takes the short way round a wrapping angle
+StepTowardAngle = 0x02018A38; // thumb
+// if (*p) --*p; return *p
+CountDownU8 = 0x02018A90; // thumb
+CountDownU16 = 0x02018AA4; // thumb
+// DrawSpriteAt for a bare struct SpritePart list, keeping the parts' palettes
+DrawSpriteParts = 0x020190A8; // thumb
+// copy 16 map entries (gGameState.mapImage->map, width apart) down BG3's map column at (x, y), wrapping at the bottom
+CopyMapColumn = 0x0201920C; // thumb
+// copy 16 map entries along BG3's map row at (x, y), wrapping at the right edge
+CopyMapRow = 0x020192D8; // thumb
+// stream map columns/rows into BG3 as gGameState.mapX/Y move, then set BG3's scroll to them - 8
+ScrollMap = 0x02019350; // thumb
+// animate and draw the map markers (gGameState.markers) and the gGameState.icons[2] sprite
+DrawMapMarkers = 0x02019510; // thumb
+// on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gSlot14Data spots
+HighlightMapRooms = 0x02019CAC; // thumb
+// move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
+FollowMarkerFixedMap = 0x02019F5C; // thumb
+// the same for the streamed map (gMain.unk457 set): gGameState.mapX/Y, clamped to the map; ScrollMap follows
+FollowMarkerStreamedMap = 0x0201A0A8; // thumb
 MarkerDistance = 0x0201A8AC; // thumb
 UpdateTargetCompass = 0x0201A944; // thumb
 MapIconFollowMarker = 0x0201AC94; // thumb
@@ -459,6 +472,11 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+// x/y offsets (s16[8]) by marker direction (MapMarker.unk4 >> 5), for marker type 9.
+// port_symbols maps these and gSprite_0202BE28 wrong (the US DrawMapMarkers has one pool
+// entry fewer); the US files pin them.
+gMarkerDirOfsX = 0x020241D4; // data
+gMarkerDirOfsY = 0x020241E4; // data
 // (column, row) of the four sea chart squares around the view, added by UpdateMap
 gSeaQuadrantOffsets = 0x020241F4; // data
 // animated sea tile set per sea chart square (7x7), used by UpdateMap
@@ -526,10 +544,12 @@ gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
 gSprite_0202BD78 = 0x0202BD78; // data
+gSprite_0202BD80 = 0x0202BD80; // data
 gSprite_0202BDB8 = 0x0202BDB8; // data
 // map scroll cursor (UpdateMap)
 gSprite_0202BDC8 = 0x0202BDC8; // data
 gSprite_0202BDF0 = 0x0202BDF0; // data
+gSprite_0202BE28 = 0x0202BE28; // data
 gSprite_0202C130 = 0x0202C130; // data
 gSprite_0202C150 = 0x0202C150; // data
 gSprite_0202C200 = 0x0202C200; // data
@@ -545,6 +565,7 @@ gSprite_0202C448 = 0x0202C448; // data
 gSprite_0202C490 = 0x0202C490; // data
 gSprite_0202C498 = 0x0202C498; // data
 gSprite_0202C4A8 = 0x0202C4A8; // data
+gSprite_0202C4B8 = 0x0202C4B8; // data
 gSprite_0202C650 = 0x0202C650; // data
 gSprite_0202C740 = 0x0202C740; // data
 gSprite_0202C848 = 0x0202C848; // data
@@ -554,6 +575,7 @@ gSprite_0202C940 = 0x0202C940; // data
 gSprite_0202C950 = 0x0202C950; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
+gSprite_0202CAD8 = 0x0202CAD8; // data
 gSprite_0202CC50 = 0x0202CC50; // data
 gSprite_0202CC60 = 0x0202CC60; // data
 // seven pointers into the sound bank, see docs/layout.md; the sound driver's .rodata follows
@@ -592,7 +614,7 @@ gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
-// slot 14 payload (49 struct SeaChartEntry), copied by Mode0State3; read by Func_02019CAC, MapIconCursor, Func_0201B3A4
+// slot 14 payload (49 struct SeaChartEntry {x, y, big, square}), copied by Mode0State3; read by HighlightMapRooms, MapIconCursor, Func_0201B3A4
 gSlot14Data = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 // sound driver work area (030010F0-03002F64), see docs/layout.md "Sound driver"

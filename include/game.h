@@ -45,9 +45,11 @@ struct ItemSlot
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
 // 0x00C struct MapImage* mapImage  // the slot 2 map image (LoadMapImage)
 // 0x010 u32 unk010
-// 0x014 s16 mapX  // top left of the map view in the map image (pixels)
+// 0x014 s16 mapX  // top left of the map view in the map image (pixels); BG3 view + 8 when streamed (ScrollMap)
 // 0x016 s16 mapY
-// 0x018 u8 unk018  // cleared by UpdateMap
+// 0x018 u8 unk018  // cleared by UpdateMap; set when the followed marker stood still for 2 frames
+// 0x01E s16 unk01E  // followed marker's last x/y
+// 0x020 s16 unk020
 // 0x022 u16 unk022  // set to 240 when a target is placed (MapIconCursor)
 // 0x024 u16 targetScale  // pulse of the target compass sprite (UpdateTargetCompass)
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
@@ -71,7 +73,7 @@ struct ItemSlot
 // 0x0E5 u8 unk0E5
 // 0x0E8 u8 seaTileSet[4]  // gSeaSquareTileSets of each quadrant's square
 // 0x0EC u8 seaAnimFrame[4]  // index into gSeaAnimFrames
-// 0x0F0 u8 seaSquare[4]  // sea chart square of each quadrant
+// 0x0F0 u8 seaSquare[4]  // sea chart square of each quadrant; in a dungeon, the room in each BG map block at 0x0600C000
 // 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
@@ -84,9 +86,12 @@ struct ItemSlot
 // 0x105 u8 unk105
 // 0x106 u8 unk106
 // 0x107 u8 targetNear  // the near sound has played
-// 0x108 u8 unk108
+// 0x108 u8 unk108  // DrawMapMarkers's blink timers: count up, flip the next byte
+// 0x109 u8 unk109
 // 0x10A u8 unk10A
+// 0x10B u8 unk10B
 // 0x10C u8 unk10C
+// 0x10D u8 unk10D
 // 0x10E u8 unk10E
 // 0x10F u8 unk10F
 // 0x110 u8 unk110
@@ -108,8 +113,11 @@ struct ItemSlot
 // 0x122 u8 unk122
 // 0x123 u8 unk123
 // 0x124 u8 unk124
+// 0x125 u8 unk125  // animation timers (frame durations) for DrawMapMarkers
 // 0x126 u8 unk126
+// 0x127 u8 unk127
 // 0x128 u8 unk128
+// 0x129 u8 unk129
 // 0x12A u8 unk12A
 // 0x12B u8 unk12B  // item effect step (Effect5, Effect8, Effect12)
 // 0x12C u8 unk12C
@@ -120,7 +128,7 @@ struct ItemSlot
 // 0x131 u8 unk131
 // 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
-// 0x134 u8 unk134
+// 0x134 u8 scrolling  // the view is still catching up with the followed marker
 // 0x135 u8 unk135
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
@@ -171,7 +179,7 @@ struct ItemSlot
 // 0x1EA s16 unk1EA  // select window edge y
 // 0x1EE u8 unk1EE  // UpdateSelectWindow step (0: closed)
 // 0x1F4 u8 unk1F4  // DrawStatusIcon: which icon
-// 0x1F5 u8 unk1F5
+// 0x1F5 u8 unk1F5  // a type 2 marker has its highlight (MapMarker.unk5_6) set
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
@@ -201,7 +209,7 @@ struct ItemSlot
 // 0x228 u8 unk228
 // 0x229 u8 unk229
 // 0x22A u8 unk22A
-// 0x22B u8 unk22B
+// 0x22B u8 unk22B  // DrawMapMarkers runs the animation timers
 // 0x22C u8 unk22C
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
@@ -222,11 +230,13 @@ struct GameState
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
     /*0x00C*/ struct MapImage* mapImage;      // the slot 2 map image (LoadMapImage)
     /*0x010*/ u32 unk010;
-    /*0x014*/ s16 mapX;                       // top left of the map view in the map image (pixels)
+    /*0x014*/ s16 mapX;                       // top left of the map view in the map image (pixels); BG3 view + 8 when streamed (ScrollMap)
     /*0x016*/ s16 mapY;
-    /*0x018*/ u8 unk018;                      // cleared by UpdateMap
+    /*0x018*/ u8 unk018;                      // cleared by UpdateMap; set when the followed marker stood still for 2 frames
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
-    /*0x01A*/ u8 filler01A[0x022 - 0x01A];
+    /*0x01A*/ u8 filler01A[0x01E - 0x01A];
+    /*0x01E*/ s16 unk01E;                     // followed marker's last x/y
+    /*0x020*/ s16 unk020;
     /*0x022*/ u16 unk022;                     // set to 240 when a target is placed (MapIconCursor)
     /*0x024*/ u16 targetScale;                // pulse of the target compass sprite (UpdateTargetCompass)
     /*0x026*/ u16 unk026;
@@ -252,7 +262,7 @@ struct GameState
     /*0x0E6*/ u8 filler0E6[0x0E8 - 0x0E6];
     /*0x0E8*/ u8 seaTileSet[4];               // gSeaSquareTileSets of each quadrant's square
     /*0x0EC*/ u8 seaAnimFrame[4];             // index into gSeaAnimFrames
-    /*0x0F0*/ u8 seaSquare[4];                // sea chart square of each quadrant
+    /*0x0F0*/ u8 seaSquare[4];                // sea chart square of each quadrant; in a dungeon, the room in each BG map block at 0x0600C000
     /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
@@ -266,12 +276,12 @@ struct GameState
     /*0x105*/ u8 unk105;
     /*0x106*/ u8 unk106;
     /*0x107*/ u8 targetNear;                  // the near sound has played
-    /*0x108*/ u8 unk108;
-    /*0x109*/ u8 filler109[0x10A - 0x109];
+    /*0x108*/ u8 unk108;                      // DrawMapMarkers's blink timers: count up, flip the next byte
+    /*0x109*/ u8 unk109;
     /*0x10A*/ u8 unk10A;
-    /*0x10B*/ u8 filler10B[0x10C - 0x10B];
+    /*0x10B*/ u8 unk10B;
     /*0x10C*/ u8 unk10C;
-    /*0x10D*/ u8 filler10D[0x10E - 0x10D];
+    /*0x10D*/ u8 unk10D;
     /*0x10E*/ u8 unk10E;
     /*0x10F*/ u8 unk10F;
     /*0x110*/ u8 unk110;
@@ -294,11 +304,11 @@ struct GameState
     /*0x122*/ u8 unk122;
     /*0x123*/ u8 unk123;
     /*0x124*/ u8 unk124;
-    /*0x125*/ u8 filler125[0x126 - 0x125];
+    /*0x125*/ u8 unk125;                      // animation timers (frame durations) for DrawMapMarkers
     /*0x126*/ u8 unk126;
-    /*0x127*/ u8 filler127[0x128 - 0x127];
+    /*0x127*/ u8 unk127;
     /*0x128*/ u8 unk128;
-    /*0x129*/ u8 filler129[0x12A - 0x129];
+    /*0x129*/ u8 unk129;
     /*0x12A*/ u8 unk12A;
     /*0x12B*/ u8 unk12B;                      // item effect step (Effect5, Effect8, Effect12)
     /*0x12C*/ u8 unk12C;
@@ -309,7 +319,7 @@ struct GameState
     /*0x131*/ u8 unk131;
     /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
-    /*0x134*/ u8 unk134;
+    /*0x134*/ u8 scrolling;                   // the view is still catching up with the followed marker
     /*0x135*/ u8 unk135;
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
@@ -378,7 +388,7 @@ struct GameState
     /*0x1EE*/ u8 unk1EE;                      // UpdateSelectWindow step (0: closed)
     /*0x1EF*/ u8 filler1EF[0x1F4 - 0x1EF];
     /*0x1F4*/ u8 unk1F4;                      // DrawStatusIcon: which icon
-    /*0x1F5*/ u8 unk1F5;
+    /*0x1F5*/ u8 unk1F5;                      // a type 2 marker has its highlight (MapMarker.unk5_6) set
     /*0x1F6*/ u8 filler1F6[0x1F8 - 0x1F6];
     /*0x1F8*/ s16 unk1F8;
     /*0x1FA*/ u8 unk1FA;                      // MainLoop tests 0x1FA-0x1FB as one u16
@@ -412,7 +422,7 @@ struct GameState
     /*0x228*/ u8 unk228;
     /*0x229*/ u8 unk229;
     /*0x22A*/ u8 unk22A;
-    /*0x22B*/ u8 unk22B;
+    /*0x22B*/ u8 unk22B;                      // DrawMapMarkers runs the animation timers
     /*0x22C*/ u8 unk22C;
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
@@ -463,12 +473,13 @@ bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void UpdateSelectWindow(void);
-// Callers see s16 x and y (DrawTimerCount sign-extends them) and a wider a5 (DrawQuestMarkers
-// passes its 0/1 mosaic flag without the copy agbcc makes for a u8 argument).
-void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u32 a5, u16 a6, s16 a7, s16 a8,
-                u8 a9, u8 a10);
-// The definition takes u16 x and y; callers see s16 (they sign-extend).
-void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
+// sprite points to struct SpriteFrame[]; scale is 8.8 (0: no affine unless angle is set).
+// Callers see s16 x and y and a wider mosaic (DrawQuestMarkers passes its 0/1 flag without
+// the copy agbcc makes for a u8 argument).
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u32 mosaic, u16 scale, s16 ofsX,
+                s16 ofsY, u8 tileOfs, u8 palette);
+// sprite points to struct SpriteFrame[]; palette 0 keeps each part's palette, n uses palette n - 1
+void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 palette, u8 priority);
 bool32 LoadMapImage(void);  // returns nothing (falls off the end)
 bool32 ItemMenuInit(void);
 void ResetSelectWindow(void);
@@ -557,6 +568,91 @@ extern const u8 gSprite_0202CA40[];
 
 // ---- game.c part A (GZLJ01 02018884-0201A224) ----
 
+s16 EaseTowardMinMax(s16 *pos, s16 target, s16 div, s16 maxStep, s16 minStep);
+void EaseTowardMax(s16 *pos, s16 target, s16 div, s16 maxStep);
+bool32 StepTowardS8(s8 *pos, s8 target, s8 speed);
+bool32 StepTowardAngle(s16 *pos, s16 target, s16 speed);
+u8 CountDownU8(u8 *timer);
+u16 CountDownU16(u16 *timer);
+
+void CopyMapColumn(s16 x, s16 y, const u16 *src);
+void CopyMapRow(s16 y, s16 x, const u16 *src);
+void ScrollMap(struct GameState *state);
+void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority);
+void FollowMarkerFixedMap(void);
+void FollowMarkerStreamedMap(void);
+void DrawMapMarkers(void);
+void ObjUpdateAll(void);
+void Mode1SendSwitch(u8 soundArg);
+
+
+// A hardware OAM entry, as DrawSprite and DrawItemSprite write it into gOamBuffer.
+struct OamData
+{
+    /*0x0*/ u32 y:8;
+            u32 affineMode:2;
+            u32 objMode:2;
+            u32 mosaic:1;
+            u32 bpp:1;
+            u32 shape:2;
+    /*0x2*/ u32 x:9;
+            u32 matrixNum:3;
+            u32 hFlip:1;
+            u32 vFlip:1;
+            u32 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 affineParam;
+};
+
+// One OBJ of a sprite frame: OAM attributes relative to the sprite's position.
+struct SpritePart
+{
+    /*0x0*/ u8 y;
+    /*0x1*/ u8 affineMode:2;
+            u8 objMode:2;
+            u8 mosaic:1;
+            u8 bpp:1;
+            u8 shape:2;
+    /*0x2*/ s8 x;
+    /*0x3*/ u8 xHi:1;
+            u8 matrixNum:3;
+            u8 hFlip:1;
+            u8 vFlip:1;
+            u8 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 end;  // 0xFFFF: past the last part
+};
+
+// What DrawSprite's sprite argument points to (indexed by frame).
+struct SpriteFrame
+{
+    /*0x0*/ const struct SpritePart *parts;
+    /*0x4*/ u8 duration;  // frames
+    /*0x5*/ u8 unk5[3];
+};
+
+// sin(i * 2pi / 256) in 8.8 fixed point; 320 entries, so cos(i) = (gSinTable + 64)[i].
+extern const s16 gSinTable[];
+
+// Sprites (struct SpriteFrame[]) and tables in .rodata used by DrawMapMarkers.
+extern const struct SpriteFrame gSprite_0202BD80[];
+extern const struct SpriteFrame gSprite_0202BE28[];
+extern const struct SpriteFrame gSprite_0202C130[];
+extern const struct SpriteFrame gSprite_0202C200[];
+extern const struct SpriteFrame gSprite_0202C420[];
+extern const struct SpriteFrame gSprite_0202C440[];
+extern const struct SpriteFrame gSprite_0202C448[];
+extern const struct SpriteFrame gSprite_0202C498[];
+extern const struct SpriteFrame gSprite_0202C4A8[];
+extern const struct SpriteFrame gSprite_0202C4B8[];
+extern const struct SpriteFrame gSprite_0202CAD8[];
+extern const s16 gMarkerDirOfsX[8];
+extern const s16 gMarkerDirOfsY[8];
+
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
 
 // The map image the GC sends in slot 2, in the message buffer (gGbaComMessageBuf). Its two
@@ -579,10 +675,6 @@ struct MapImage
 #define GBACOM_BUF_MESSAGE ((u8 *)(PROG_BASE - 0xA800))
 
 u16 Sqrt(u32 x);
-void Func_02019F5C(void);
-void Func_0201A0A8(void);
-void Func_02019350(struct GameState *state);
-void Func_020192D8(s16 y, s16 x, u16 *map);
 void MapIconFollowMarker(struct MapIcon *icon);
 void InitMarkerIcon(void);
 void MapIconBlink(struct MapIcon *icon);
@@ -592,7 +684,6 @@ void MapIconCursor(struct MapIcon *icon);
 void UpdateMapIcons(void);
 extern void (*const gMapIconFuncs[])(struct MapIcon *icon);
 extern const u8 *const gMapIconSprites[];
-extern const s16 gSinTable[];
 extern const u8 gTargetBlinkPeriods[5];
 extern const u8 gSprite_0202C3F8[];
 extern const u8 gSprite_0202BDC8[];
@@ -602,8 +693,7 @@ extern const u8 gSeaAnimFrames[5];
 extern const u8 gSeaAnimPeriods[3];
 extern const u8 gSeaAnimTiles[0x2000];
 void Func_0201B2C0(void);
-void Func_02019CAC(void);
-void Func_02019510(struct GameState *state, u8 frameCount);
+void HighlightMapRooms(void);
 u16 ArcTan2(s32 x, s32 y);
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
@@ -622,9 +712,7 @@ void DrawChoiceCursor(void);
 #define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))
 extern const u32 gTextColorMasks[];
 extern const u16 gSoundIds_0202430E[];
-extern const u8 gSprite_0202C130[];
 extern const s16 gSounds_02024278[];
-void Mode1SendSwitch(u8 soundArg);
 void DrawQuestMarkers(void);
 // One OAM entry as bitfields (gOamBuffer holds 128 of them).
 struct OamData16
@@ -649,7 +737,6 @@ struct OamData16
 extern const u8 gPearlMarkerPos[6];
 extern const u8 gTriangleIslandPos[6];
 extern const u8 gTempleMarkerPos[4];
-extern const u8 gSprite_0202C200[];
 extern const u16 gTable_02024274[2];
 s32 ChoiceMenuUpdate(void);  // the definition returns u8
 // Per question (unk142): the ids, then the sound per choice (0xFFFF: none).
@@ -658,10 +745,6 @@ extern const u16 gTwoChoiceSounds[];  // [id index * 2 + choice]
 extern const u16 gThreeChoiceIds[];
 extern const u16 gThreeChoiceSounds[];  // [id index * 3 + choice]
 void UpdateTargetCompass(void);
-void InitMarkerIcon(void);
-void InitTargetIcon(void);
-void InitCursorIcon(void);
-void UpdateMapIcons(void);
 void Func_0201E584(void);
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
@@ -686,26 +769,6 @@ void DrawItemIcon(u8 item, u16 *map);
 void DrawItemCount(u8 item, u16 *map);
 void SetSelectedItem(u8 item);
 
-// One OAM entry (the hardware attribute layout), as DrawItemSprite fills gOamBuffer.
-struct OamData
-{
-    /*0x0*/ u32 y:8;
-            u32 affineMode:2;
-            u32 objMode:2;
-            u32 mosaic:1;
-            u32 bpp:1;
-            u32 shape:2;
-    /*0x2*/ u32 x:9;
-            u32 matrixNum:3;
-            u32 hFlip:1;
-            u32 vFlip:1;
-            u32 size:2;
-    /*0x4*/ u16 tileNum:10;
-            u16 priority:2;
-            u16 paletteNum:4;
-    /*0x6*/ u16 affineParam;
-};
-
 // gGameState.items ... slotItems (0x160-0x1DB) seen as one block: SetSlotItem addresses
 // slotItems through a pointer to it (base + 0x6F), which is how the original loads it.
 struct ItemMenu
@@ -728,7 +791,6 @@ extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
 extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
 
 void Mode1StartFadeOut(void);
-void Func_02018988(s8 *pos, u8 target, s8 speed);  // steps *pos toward target
 void Func_0201BEA0(s8 pos);
 // Tingle's animations (gGameState.unk226), each a list of sprites (gGameState.unk227 picks one).
 extern const u8 *const *const gTingleAnims[21];
@@ -765,7 +827,6 @@ bool32 MsgStartSilent(s16 id);
 void DrawSlotCursor(u8 cursor);
 void DrawItemSprite(u8 item, u8 x, u8 y, u8 mosaic);
 void ChestCounterMain(void);
-u8 Func_02018A90(u8 *timer);  // counts *timer down to 0 and returns it
 extern const s16 gChestRowIds[5];
 extern const u16 gHudPanelTiles[3];
 u32 MarkerDistance(u8 arg);
@@ -818,14 +879,8 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind);
 void Func_0201FEEC(void);
 void DrawTimerCount(s16 x, s16 y);
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
-void Func_020190A8(const void *sprite, s16 x, s16 y, u8 a3, u8 a4);
 extern const u8 gSprite_0202CC50[];
-extern const u8 gSprite_0202C420[];
 extern const u8 gSprite_0202C428[];
 extern const u8 gSprite_0202C430[];
-extern const u8 gSprite_0202C440[];
-extern const u8 gSprite_0202C448[];
-extern const u8 gSprite_0202C498[];
-extern const u8 gSprite_0202C4A8[];
 
 #endif // GUARD_GAME_H
