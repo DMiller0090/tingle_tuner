@@ -476,9 +476,75 @@ void Func_0201EDC4(void)
     GamePlaySound(0x23, 1);
 }
 
+// Draw the item effect sprite (kind 0: gSprite_0202C928, else gSprite_0202C940) at a map
+// position. Nearly matches, but the original sign-extends x and y again before each
+// subtraction (agbcc drops that, since only the low half reaches DrawSpriteAt), and y and
+// the mosaic flag swap r7/r8:
+//     void Func_0201EDF8(s16 x, s16 y, u8 kind)
+//     {
+//         u32 mosaic = gMain.mosaic != 0;
+//         const struct SpriteAnimFrame *anim;
+//         u8 flip;
+//
+//         if (kind == 0)
+//         {
+//             if (gGameState.unk12E == 0)
+//             {
+//                 gGameState.unk12F ^= 1;
+//                 gGameState.unk12E = gSprite_0202C928[gGameState.unk12F].duration;
+//                 anim = gSprite_0202C928;
+//             }
+//             else
+//             {
+//                 gGameState.unk12E--;
+//                 anim = gSprite_0202C928;
+//             }
+//             flip = 0;
+//             if (gGameState.effect[0] == 12)
+//                 flip = 16;
+//             DrawSpriteAt(anim, gGameState.unk12F, x - gMain.bgOfs[3][0] + 3,
+//                          y - gMain.bgOfs[3][1] - 24, mosaic, flip, 1);
+//         }
+//         else
+//         {
+//             if (gGameState.unk130 == 0)
+//             {
+//                 gGameState.unk131 ^= 1;
+//                 gGameState.unk130 = gSprite_0202C940[gGameState.unk131].duration;
+//                 anim = gSprite_0202C940;
+//             }
+//             else
+//             {
+//                 gGameState.unk130--;
+//                 anim = gSprite_0202C940;
+//             }
+//             flip = 0;
+//             if (gGameState.effect[0] == 12)
+//                 flip = 8;
+//             if (gGameState.unk131 == 0)
+//                 DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] - 4,
+//                              y - gMain.bgOfs[3][1], mosaic, flip, 1);
+//             else
+//                 DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] + 4,
+//                              y - gMain.bgOfs[3][1], mosaic, flip, 1);
+//         }
+//     }
 INCLUDE_ASM(Func_0201EDF8);
 
-INCLUDE_ASM(Func_0201EF98);
+// Draw the flags.timer count (two digits) at x, y; a sound plays when it changes.
+void Func_0201EF98(s16 x, s16 y)
+{
+    u32 mosaic = gMain.mosaic != 0;
+    u8 digit;
+
+    if (gGameState.flags.timer != gGameState.timer)
+        SoundPlay(0xC - SOUND_ID_SHIFT, 0);
+    digit = gGameState.flags.timer / 10;
+    if (digit != 0)
+        DrawSprite(gSpriteTable[10], 0, x, y, 0, mosaic, 0, 0, 0, digit + 1, 0);
+    digit = gGameState.flags.timer % 10;
+    DrawSprite(gSpriteTable[10], 0, x + 8, y, 0, mosaic, 0, 0, 0, digit + 1, 0);
+}
 
 INCLUDE_ASM(Func_0201F068);
 

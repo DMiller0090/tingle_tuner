@@ -351,7 +351,8 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+// Callers see s16 x and y (Func_0201EF98 sign-extends them).
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
@@ -456,6 +457,8 @@ void Func_0201E584(void);
 void Func_0201EC10(void);
 void Func_0201ECC4(void);
 void Func_0201ED08(void);
+void Func_0201EDF8(s16 x, s16 y, u8 kind);
+void Func_0201EF98(s16 x, s16 y);
 void Func_0201F2A8(void);
 void Func_0201DCEC(u8 arg);
 u32 Func_0201A8AC(u8 arg);
