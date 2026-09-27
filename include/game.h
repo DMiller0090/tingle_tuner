@@ -396,4 +396,16 @@ void Func_02020298(void);
 extern const u8 gSprite_0202CA08[];
 extern const u8 gSprite_0202CA40[];
 
+// ---- game.c part A (GZLJ01 02018884-0201A224) ----
+
+// ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
+
+// ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
+
+// ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
+
+// ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
+
+// ---- game.c part F (GZLJ01 0201F308-02020E28) ----
+
 #endif // GUARD_GAME_H
