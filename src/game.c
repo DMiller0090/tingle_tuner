@@ -245,13 +245,31 @@ void Func_0201F420(void)
 
 INCLUDE_ASM(Func_0201F460);
 
-INCLUDE_ASM(Func_0201F878);
+void Func_0201F878(void)
+{
+    Func_0201ECC4();
+    gGameState.unk1E5_1 = 0;
+    gGameState.unk1E5_2 = 1;
+    gGameState.unk12E = gSprite_0202C928[4];
+    gGameState.unk12F = 0;
+    GamePlaySound(0x27, 1);
+}
 
 INCLUDE_ASM(Func_0201F8C4);
 
 INCLUDE_ASM(Func_0201FA2C);
 
-INCLUDE_ASM(Func_0201FCA0);
+void Func_0201FCA0(void)
+{
+    if (!gGameState.unk1E5_3)
+        GamePlaySound(0xD2, 1);
+    else
+        GamePlaySound(0xDB, 1);
+    gGameState.effect[0] = 11;
+    gGameState.unk1E5_2 = 1;
+    gGameState.unk1E5_1 = 0;
+    gGameState.unk1E2 = 0;
+}
 
 INCLUDE_ASM(Func_0201FD04);
 
@@ -275,7 +293,19 @@ void Func_02020150(void)
 
 INCLUDE_ASM(Func_02020190);
 
-INCLUDE_ASM(Func_02020298);
+// Run the current item effect (effect[0], from slot 7) while one is active.
+void UpdateItemEffect(void)
+{
+    if (gGameState.unk1E5_2)
+    {
+        if (!gGameState.unk1E5_1)
+        {
+            if (gGameState.unk1C8 != 0)
+                gGameState.unk1C8--;
+            gItemEffectFuncs[gGameState.effect[0]]();
+        }
+    }
+}
 
 // Link lost: load the title graphics with the "link lost" BG map and fade in (state 1).
 void Mode2State0(void)
@@ -558,7 +588,33 @@ void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude)
     }
 }
 
-INCLUDE_ASM(Func_020208FC);
+void Func_020208FC(u8 open)
+{
+    s16 step;
+
+    if (open)
+        step = 16;
+    else
+        step = -16;
+    gMain.winin = 0x1F;
+    gGameState.unk1E8 = gGameState.unk1E8 + step;
+    if (gGameState.unk1E8 >= 0xE8 && gGameState.unk1E8 <= 0xF8)
+    {
+        gMain.win0h = 0xEF;
+    }
+    else if (gGameState.unk1E8 + 8 == 0)
+    {
+        gMain.win0h = 0;
+        gMain.winin = 0;
+    }
+    else
+    {
+        gMain.win0h = gGameState.unk1E8 + 8;
+    }
+    gMain.win0v = 0x9F;
+    gMain.winout = 0;
+    gMain.dispcnt |= 0x2000;
+}
 
 void Func_020209A0(void)
 {

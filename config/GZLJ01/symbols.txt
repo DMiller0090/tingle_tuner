@@ -100,7 +100,7 @@ Func_0201F274 = 0x0201F274; // thumb
 Func_0201F2C4 = 0x0201F2C4; // thumb
 Func_0201F420 = 0x0201F420; // thumb
 Func_02020150 = 0x02020150; // thumb
-Func_02020298 = 0x02020298; // thumb
+UpdateItemEffect = 0x02020298; // thumb
 // placeholders so all versions share INCLUDE_ASM names
 Func_02018884 = 0x02018884; // thumb
 Func_02018944 = 0x02018944; // thumb
@@ -314,6 +314,7 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+gItemEffectFuncs = 0x020244E4; // data
 gMode2StateFuncs = 0x0202452C; // data
 gObjFuncs = 0x02024534; // data
 gObjBurstOfsX = 0x02024538; // data
@@ -333,6 +334,7 @@ gSprite_0202BD78 = 0x0202BD78; // data
 gSprite_0202C150 = 0x0202C150; // data
 gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C848 = 0x0202C848; // data
+gSprite_0202C928 = 0x0202C928; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
