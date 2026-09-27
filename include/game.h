@@ -511,5 +511,8 @@ void Func_0201FEEC(void);
 void Func_0201DCEC(u8 arg);
 void Func_0201EDF8(s16 x, s16 y, u8 arg);
 void Func_0201EF98(s16 x, s16 y);
+// The definition narrows x and y to u16; callers see s16 (they sign-extend).
+void Func_020190A8(const void *sprite, s16 x, s16 y, u8 a3, u8 a4);
+extern const u8 gSprite_0202CC50[];
 
 #endif // GUARD_GAME_H

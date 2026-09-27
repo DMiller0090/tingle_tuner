@@ -292,6 +292,7 @@ gSprite_0202C928 = 0x02032F74; // data
 gSprite_0202C938 = 0x02032F84; // data
 gSprite_0202CA08 = 0x02033054; // data
 gSprite_0202CA40 = 0x0203308C; // data
+gSprite_0202CC50 = 0x0203329C; // data
 gSoundBankHeader = 0x020333BC; // data
 __data_lma_start = 0x02033928; // data
 __data_lma_end = 0x02034A15; // data

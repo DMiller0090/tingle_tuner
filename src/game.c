@@ -784,7 +784,43 @@ void Func_02020150(void)
     gGameState.unk227 = 0;
 }
 
-INCLUDE_ASM(Func_02020190);
+// Item effect 14: a countdown (unk1C8) that ticks faster near the end, drawn at the type 3
+// marker; at 0 it switches to effect 2.
+void Func_02020190(void)
+{
+    u8 mosaic = gMain.mosaic != 0;
+    s32 m;
+
+    if (gGameState.flags.busy & 1)
+        gGameState.unk1C8++;
+    if (gGameState.unk1EE == 0)
+    {
+        gGameState.unk13E = 0;
+        if (gGameState.unk1C8 > 179)
+        {
+            if ((u16)(gGameState.unk1C8 % 30) == 0)
+                SoundPlay(0xC - SOUND_ID_SHIFT, 0);
+        }
+        else if (gGameState.unk1C8 > 59)
+        {
+            if ((u16)(gGameState.unk1C8 % 20) == 0)
+                SoundPlay(0xC - SOUND_ID_SHIFT, 0);
+        }
+        else if (gGameState.unk1C8 == 0)
+        {
+            gGameState.unk13E = 300;
+            gGameState.effect[0] = 2;
+            Func_0201EBD4();
+        }
+        else if ((u16)(gGameState.unk1C8 % 10) == 0)
+        {
+            SoundPlay(0xC - SOUND_ID_SHIFT, 0);
+        }
+        m = FindMarker(3);
+        Func_020190A8(gSprite_0202CC50, gGameState.markers[m].x - gMain.bgOfs[3][0],
+                      gGameState.markers[m].y - gMain.bgOfs[3][1], mosaic, 0);
+    }
+}
 
 // Run the current item effect (effect[0], from slot 7) while one is active.
 void UpdateItemEffect(void)
