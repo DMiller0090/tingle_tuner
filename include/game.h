@@ -16,11 +16,16 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
+struct GameData;
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
+// 0x00C struct GameData * unk00C  // width at +0x30 (game.c part A)
 // 0x010 u32 unk010
+// 0x014 s16 scrollX  // BG3 map view + 8 (ScrollMap streams the map in as it moves)
+// 0x016 s16 scrollY
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
 // 0x030 u16 unk030
@@ -132,9 +137,11 @@ struct MapMarker
 struct GameState
 {
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
-    /*0x00C*/ u8 filler00C[0x010 - 0x00C];
+    /*0x00C*/ struct GameData * unk00C;       // width at +0x30 (game.c part A)
     /*0x010*/ u32 unk010;
-    /*0x014*/ u8 filler014[0x019 - 0x014];
+    /*0x014*/ s16 scrollX;                    // BG3 map view + 8 (ScrollMap streams the map in as it moves)
+    /*0x016*/ s16 scrollY;
+    /*0x018*/ u8 filler018[0x019 - 0x018];
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
     /*0x01A*/ u8 filler01A[0x026 - 0x01A];
     /*0x026*/ u16 unk026;
@@ -405,6 +412,19 @@ bool32 StepTowardS8(s8 *pos, s8 target, s8 speed);
 bool32 StepTowardAngle(s16 *pos, s16 target, s16 speed);
 u8 CountDownU8(u8 *timer);
 u16 CountDownU16(u16 *timer);
+
+// Pointed to by gGameState.unk00C.
+struct GameData
+{
+    /*0x00*/ u8 filler00[0x30];
+    /*0x30*/ u8 width;  // map width in tiles
+    /*0x31*/ u8 filler31[3];
+    /*0x34*/ const u16 *map;  // BG map entries, width per row
+};
+
+void CopyMapColumn(s16 x, s16 y, const u16 *src);
+void CopyMapRow(s16 y, s16 x, const u16 *src);
+void ScrollMap(struct GameState *state);
 
 // A hardware OAM entry, as DrawSprite writes it into gOamBuffer.
 struct OamData

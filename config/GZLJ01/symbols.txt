@@ -114,9 +114,12 @@ StepTowardAngle = 0x02018A38; // thumb
 CountDownU8 = 0x02018A90; // thumb
 CountDownU16 = 0x02018AA4; // thumb
 Func_020190A8 = 0x020190A8; // thumb
-Func_0201920C = 0x0201920C; // thumb
-Func_020192D8 = 0x020192D8; // thumb
-Func_02019350 = 0x02019350; // thumb
+// copy 16 map entries (gGameState.unk00C->map, width apart) down BG3's map column at (x, y), wrapping at the bottom
+CopyMapColumn = 0x0201920C; // thumb
+// copy 16 map entries along BG3's map row at (x, y), wrapping at the right edge
+CopyMapRow = 0x020192D8; // thumb
+// stream map columns/rows into BG3 as gGameState.scrollX/Y move, then set BG3's scroll to them - 8
+ScrollMap = 0x02019350; // thumb
 Func_02019510 = 0x02019510; // thumb
 Func_02019CAC = 0x02019CAC; // thumb
 Func_02019F5C = 0x02019F5C; // thumb

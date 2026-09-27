@@ -1,4 +1,5 @@
 #include "global.h"
+#include "gba/syscall.h"
 #include "main.h"
 #include "game.h"
 #include "sound.h"
@@ -261,11 +262,131 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
 
 INCLUDE_ASM(Func_020190A8);
 
-INCLUDE_ASM(Func_0201920C);
+void CopyMapColumn(s16 x, s16 y, const u16 *src)
+{
+    u16 *dest = (u16 *)(((y & 0xF8) << 3) + ((x & 0xF8) >> 2) + 0x06005800);
+    s32 total = 16;
+    s32 n = 32 - ((y >> 3) & 0x1F);
+    bool32 wrapped = FALSE;
+    const u16 *end;
 
-INCLUDE_ASM(Func_020192D8);
+    if (n > total)
+        n = total;
+    end = src + gGameState.unk00C->width * n;
+    n = total - n;
+    do
+    {
+        *dest = *src;
+        dest += 0x20;
+        if (dest > (u16 *)0x06005FFF)
+        {
+            dest -= 0x800;
+            wrapped = TRUE;
+        }
+        src += gGameState.unk00C->width;
+    } while (src < end);
+    total = n;
+    if (total != 0)
+    {
+        if (wrapped)
+            dest += 0x400;
+        else
+            dest -= 0x400;
+        end = src + gGameState.unk00C->width * total;
+        do
+        {
+            *dest = *src;
+            dest += 0x20;
+            if (dest > (u16 *)0x06005FFF)
+                dest -= 0x800;
+            src += gGameState.unk00C->width;
+        } while (src < end);
+    }
+}
 
-INCLUDE_ASM(Func_02019350);
+void CopyMapRow(s16 y, s16 x, const u16 *src)
+{
+    u16 *dest = (u16 *)(((y & 0xF8) << 3) + ((x & 0xF8) >> 2) + 0x06005800);
+    s32 total = 16;
+    s32 n = 32 - ((x >> 3) & 0x1F);
+    s32 size;
+
+    if (n > 16)
+        n = 16;
+    size = n * 2;
+    CpuCopy16(src, dest, size);
+    total -= n;
+    if (total != 0)
+    {
+        src = (u16 *)((u8 *)src + size);
+        dest = (u16 *)((u8 *)dest + (size - 0x40));
+        size = total * 2;
+        CpuCopy16(src, dest, size);
+    }
+}
+
+void ScrollMap(struct GameState *state)
+{
+    s16 ox = gMain.bgOfs[3][0] + 8;
+    s16 oy = gMain.bgOfs[3][1] + 8;
+    s16 dx = (state->scrollX & ~7) - (ox & ~7);
+    s16 dy = (state->scrollY & ~7) - (oy & ~7);
+    s16 colStep;
+    s16 rowStep;
+    s16 rowPix;
+    s16 colPix;
+    const u16 *src;
+
+    if (dx == 0 && dy == 0)
+        goto end;
+    if (dx != 0)
+    {
+        if (dx < 0)
+        {
+            colStep = -1;
+            colPix = -8;
+        }
+        else
+        {
+            ox += 120;
+            colStep = 1;
+            colPix = 8;
+        }
+        src = &gGameState.unk00C->map[(state->scrollY >> 3) * gGameState.unk00C->width + (ox >> 3)];
+        do
+        {
+            ox += colPix;
+            src += colStep;
+            CopyMapColumn(ox, state->scrollY, src);
+            dx -= colPix;
+        } while (dx != 0);
+    }
+    if (dy != 0)
+    {
+        if (dy < 0)
+        {
+            rowStep = -gGameState.unk00C->width;
+            rowPix = -8;
+        }
+        else
+        {
+            oy += 120;
+            rowStep = gGameState.unk00C->width;
+            rowPix = 8;
+        }
+        src = &gGameState.unk00C->map[(oy >> 3) * gGameState.unk00C->width + (state->scrollX >> 3)];
+        do
+        {
+            oy += rowPix;
+            src += rowStep;
+            CopyMapRow(oy, state->scrollX, src);
+            dy -= rowPix;
+        } while (dy != 0);
+    }
+end:
+    gMain.bgOfs[3][0] = state->scrollX - 8;
+    gMain.bgOfs[3][1] = state->scrollY - 8;
+}
 
 INCLUDE_ASM(Func_02019510);
 
