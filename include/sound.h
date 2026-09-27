@@ -11,6 +11,7 @@
 #define SOUND_ID_SHIFT 1
 #endif
 #define SE_RUPEE_COUNT_END  (9 - SOUND_ID_SHIFT)
+#define SE_TITLE            (0x16 - SOUND_ID_SHIFT)  // Mode0State0
 #define SE_KEY_BLOCKED      (0x1C - SOUND_ID_SHIFT)  // key pressed while the screen waits
 #define SE_RUPEE_COUNT_UP   (0x1D - SOUND_ID_SHIFT)
 #define SE_RUPEE_COUNT_DOWN (0x1E - SOUND_ID_SHIFT)

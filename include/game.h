@@ -23,6 +23,8 @@ struct MapMarker
 // 0x010 u32 unk010
 // 0x026 u16 unk026
 // 0x030 u16 unk030
+// 0x032 u16 unk032
+// 0x034 u16 unk034
 // 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
 // 0x03D u8 switchStageNo
@@ -60,6 +62,7 @@ struct MapMarker
 // 0x136 u8 unk136
 // 0x138 u8 unk138  // sent as GbaFlg.unk2
 // 0x140 s16 unk140
+// 0x14A u8 unk14A
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x1CC u8 unk1CC
@@ -101,7 +104,9 @@ struct GameState
     /*0x026*/ u16 unk026;
     /*0x028*/ u8 filler028[0x030 - 0x028];
     /*0x030*/ u16 unk030;
-    /*0x032*/ u8 filler032[0x03A - 0x032];
+    /*0x032*/ u16 unk032;
+    /*0x034*/ u16 unk034;
+    /*0x036*/ u8 filler036[0x03A - 0x036];
     /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
     /*0x03C*/ u8 switchNo;                    // 0xFF: none
     /*0x03D*/ u8 switchStageNo;
@@ -157,7 +162,9 @@ struct GameState
     /*0x138*/ u8 unk138;                      // sent as GbaFlg.unk2
     /*0x139*/ u8 filler139[0x140 - 0x139];
     /*0x140*/ s16 unk140;
-    /*0x142*/ u8 filler142[0x157 - 0x142];
+    /*0x142*/ u8 filler142[0x14A - 0x142];
+    /*0x14A*/ u8 unk14A;
+    /*0x14B*/ u8 filler14B[0x157 - 0x14B];
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 filler158[0x15A - 0x158];
     /*0x15A*/ u8 unk15A;
@@ -258,6 +265,13 @@ struct Obj
 };
 
 extern struct Obj gObjs[16];
+
+// 0x03005640, just before gObjs; Mode0State0 sets the first four bytes.
+extern u8 gMode0Work[0x10];
+
+#ifndef VERSION_GZLJ01
+void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);
+#endif
 
 void ObjReset(struct Obj *obj);
 void ObjResetActive(void);  // ObjReset on every active entry
