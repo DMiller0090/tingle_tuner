@@ -1,0 +1,2 @@
+# C source ranges: file start end (end = next function start)
+src/main.c 0x02014A0C 0x02014A2C

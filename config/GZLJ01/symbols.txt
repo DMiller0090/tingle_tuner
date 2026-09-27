@@ -1,0 +1,10 @@
+// GZLJ01 symbols: name = 0xADDR; // arm|thumb|data
+// crt0 is the stock AGB SDK crt0.s (identical in all versions).
+_start = 0x02014800; // arm
+RomHeaderLogo = 0x02014804; // data
+start_vector = 0x020148C0; // arm
+intr_main = 0x020148FC; // arm
+AgbMain = 0x02014A0C; // thumb
+InitSystem = 0x02014CE4; // thumb
+MainLoop = 0x02014E50; // thumb
+gMain = 0x03003080; // data

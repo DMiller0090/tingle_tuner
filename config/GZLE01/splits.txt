@@ -1,0 +1,2 @@
+# C source ranges: file start end (end = next function start)
+src/main.c 0x0201B20C 0x0201B22C

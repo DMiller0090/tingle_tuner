@@ -1,0 +1,29 @@
+# Target binaries. Each is a GBA multiboot image sent by the GameCube over the JOY bus
+# (d_a_agb.cpp -> JUTGba::doJoyBoot). Layout of every client:
+#
+#   0x000  GBA header (entry branch, logo, title/game code)
+#   0x0C0  multiboot entry -> packer stub (ARM): JOY handshake, CpuSet the raw tail
+#          to tail_dest, LZ77UnCompWram the program to prog_base, jump there
+#   0x1A4  LZ77 stream: the program (itself a full SDK multiboot image + crt0)
+#   ....   raw tail (sound data?), copied to tail_dest before decompressing
+#
+# sha1 values are of the files as they appear on the retail discs.
+
+GZLJ01:
+  disc_path: /res/Gba/client.bin
+  sha1: 574c16296320934aef9e92b29d562e83d0c832c5
+  prog_base: 0x02014800
+  tail_dest: 0x0202F000
+
+GZLE01:
+  disc_path: /res/Gba/client_u.bin
+  sha1: eb6746f48465cd9677ae4f040ce99199fedfdebe
+  prog_base: 0x0201B000
+  tail_dest: 0x02034E00
+
+# Second USA build on the disc; not referenced by the game code (d_a_agb.cpp loads client_u.bin).
+GZLE01_ud:
+  disc_path: /res/Gba/client_ud.bin
+  sha1: be851f25bad0dbc559ab3b8c1b7bc1512b4a25b7
+  prog_base: 0x0201B000
+  tail_dest: 0x02034E00
