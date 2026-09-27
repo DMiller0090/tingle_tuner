@@ -47,52 +47,42 @@ void MultiSioStop(void)
     gMultiSioUnk_03005370 = gMultiSioArea.startFlag = FALSE;
 }
 
-// Nearly matches: in the parent case the three ORs come out in a different order.
-// u32 MultiSioMain(void *recvp)
-// {
-//     struct SioMultiCnt siocnt = REG_SIOMULTICNT;
-//     u32 recvSuccess, connected;
-//     u32 flags;
-//
-//     switch (gMultiSioArea.state)
-//     {
-//     case 0:
-//         if (siocnt.id == 0)
-//         {
-//             if (siocnt.sd != 1 || siocnt.enable != 0)
-//                 break;
-//             if (siocnt.si == 0 && gMultiSioArea.sendBufCounter == 12)
-//             {
-//                 REG_IME = 0;
-//                 REG_IE &= ~INTR_FLAG_SERIAL;
-//                 REG_IE |= INTR_FLAG_TIMER3;
-//                 REG_IME = 1;
-//                 REG_TM3CNT = MULTI_SIO_TIMER_COUNT;
-//                 REG_SIOMULTICNT.ifEnable = 0;
-//                 REG_IF = INTR_FLAG_TIMER3 | INTR_FLAG_SERIAL;
-//                 gMultiSioArea.type = MULTI_SIO_TYPE_PARENT;
-//             }
-//         }
-//         gMultiSioArea.state = 1;
-//     case 1:
-//         MultiSioRecvDataCheck(recvp);
-//         break;
-//     }
-//
-//     gMultiSioArea.sendFrameCounter++;
-//     recvSuccess = gMultiSioArea.recvSuccessFlags;
-//     connected = gMultiSioArea.connectedFlags << 8;
-//     if (gMultiSioArea.type == MULTI_SIO_TYPE_PARENT)
-//         flags = recvSuccess | connected | 0x80;
-//     else
-//         flags = recvSuccess | connected;
-//     if (gMultiSioArea.hardError)
-//         flags |= 0x1000;
-//     if (siocnt.id > 3)
-//         flags |= 0x2000;
-//     return flags;
-// }
-INCLUDE_ASM(MultiSioMain);
+u32 MultiSioMain(void *recvp)
+{
+    struct SioMultiCnt siocnt = REG_SIOMULTICNT;
+
+    switch (gMultiSioArea.state)
+    {
+    case 0:
+        if (siocnt.id == 0)
+        {
+            if (siocnt.sd != 1 || siocnt.enable != 0)
+                break;
+            if (siocnt.si == 0 && gMultiSioArea.sendBufCounter == 12)
+            {
+                REG_IME = 0;
+                REG_IE &= ~INTR_FLAG_SERIAL;
+                REG_IE |= INTR_FLAG_TIMER3;
+                REG_IME = 1;
+                REG_TM3CNT = MULTI_SIO_TIMER_COUNT;
+                REG_SIOMULTICNT.ifEnable = 0;
+                REG_IF = INTR_FLAG_TIMER3 | INTR_FLAG_SERIAL;
+                gMultiSioArea.type = MULTI_SIO_TYPE_PARENT;
+            }
+        }
+        gMultiSioArea.state = 1;
+    case 1:
+        MultiSioRecvDataCheck(recvp);
+        break;
+    }
+
+    gMultiSioArea.sendFrameCounter++;
+    return gMultiSioArea.recvSuccessFlags | (gMultiSioArea.type == MULTI_SIO_TYPE_PARENT) << 7
+         | (gMultiSioArea.connectedFlags << 8)
+         | (gMultiSioArea.hardError != 0) << 12
+         | (siocnt.id >= 4) << 13;
+}
+
 
 void MultiSioSendDataSet(void *sendp)
 {
