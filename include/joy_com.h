@@ -17,6 +17,17 @@ enum
     JOYCOM_STATE_LINKED,     // context echoed: packets flow
 };
 
+// Packet word expected next (JoyCom.recvState, JoyCom.sendState)
+enum
+{
+    JOYCOM_WORD_START,     // 0xFEFEFEFE
+    JOYCOM_WORD_TYPE,      // slot
+    JOYCOM_WORD_STATUS,    // sender's slot status
+    JOYCOM_WORD_SIZE,      // only if data follows
+    JOYCOM_WORD_CHECKSUM,
+    JOYCOM_WORD_DATA,
+};
+
 // Wire words
 #define JOYCOM_PACKET_START 0xFEFEFEFE
 #define JOYCOM_CLOSE        0xEFEFEFEF

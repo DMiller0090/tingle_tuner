@@ -58,8 +58,12 @@ typedef u32 bool32;
 #define SIO_MULTI_MODE       0x2000
 #define SIO_IF_ENABLE        0x4000
 #define RCNT_JOY_BUS         0xC000
+#define JOYCNT_RESET         0x0001  // JOY reset command received
+#define JOYCNT_RECV          0x0002  // GC wrote JOY_RECV
+#define JOYCNT_SEND          0x0004  // GC read JOY_TRANS
 #define JOYCNT_ACK_ALL       0x0007  // reset / receive / send complete (write 1 to clear)
 #define JOYCNT_INTR          0x0040
+#define JOYSTAT_SEND         0x0008  // JOY_TRANS not read by the GC yet
 #define JOYSTAT_GP_FLAG0     0x0010  // general-purpose flags the GC sees in its status byte
 #define JOYSTAT_GP_FLAG1     0x0020
 #define DISPSTAT_VBLANK_INTR 0x0008

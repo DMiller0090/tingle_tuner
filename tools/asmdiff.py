@@ -8,6 +8,8 @@ build/<ver>/prog.elf (nm), so a size change earlier in the file doesn't misalign
 Differing lines are marked with '*'.
 """
 import argparse
+import difflib
+import re
 import subprocess
 
 import capstone
@@ -42,10 +44,20 @@ def disasm(data, base, addr, size, mode):
     return [f'{i.mnemonic} {i.op_str}'.strip() for i in md.disasm(code, addr)]
 
 
+def mask(ins):
+    """Hide what moves whenever code size changes: branch targets and pc-relative offsets."""
+    op = ins.split(' ', 1)[0]
+    if op in ('bl', 'blx') or (op.startswith('b') and re.match(r'b(\w\w)?(\.w)?$', op)):
+        return op + ' ...'
+    return re.sub(r'\[pc, #[^\]]*\]', '[pc, ...]', ins)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('version', choices=sorted(versions()))
     ap.add_argument('function')
+    ap.add_argument('-u', '--unified', action='store_true',
+                    help='aligned diff (difflib) with branch/pool offsets masked')
     args = ap.parse_args()
     base = versions()[args.version]['prog_base']
     funcs = functions(args.version)
@@ -61,6 +73,11 @@ def main():
     a = disasm(orig, base, addr, size, mode)
     b = disasm(built, base, built_addr, size, mode)
     print(f'{name}: original {addr:#010x}, built {built_addr:#010x}')
+    if args.unified:
+        for line in difflib.unified_diff([mask(x) for x in a], [mask(y) for y in b],
+                                         'original', 'built', n=2, lineterm=''):
+            print(line)
+        return
     for i in range(max(len(a), len(b))):
         x = a[i] if i < len(a) else ''
         y = b[i] if i < len(b) else ''

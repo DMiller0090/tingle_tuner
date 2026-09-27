@@ -76,7 +76,9 @@ from the extracted binary on every build.
 4. `python tools/build.py all`. On a mismatch it reports the first differing address and function.
    `python tools/asmdiff.py <ver> <function>` shows that function side by side (original vs
    built). It finds the built copy by symbol, so a size change earlier in the file doesn't
-   misalign it. Branch and literal-pool offsets differ whenever sizes do, so look past those.
+   misalign it. Branch and literal-pool offsets differ whenever sizes do, so look past those;
+   `asmdiff.py -u` masks them and aligns the two listings with difflib, which is easier to
+   read once an instruction is added or dropped.
 
 Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `build/<ver>/asm/funcs/`, written for every function in a C range). A second line
@@ -84,7 +86,7 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `.rodata` block (see `main.c`).
 
 In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but
-`VBlankIntr`/`MainLoop`), `src/gba_com.c`, `src/joy_com.c` (all but `JoyComIntr`),
+`VBlankIntr`/`MainLoop`), `src/gba_com.c`, `src/joy_com.c`,
 `src/multi_sio.c` (all but `MultiSioMain`/`MultiSioRecvDataCheck`), `src/heap.c`
 (`HeapCompact`) and `src/libc/rand.c`. main.c, gba_com.c and multi_sio.c own their `.rodata`.
 Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
