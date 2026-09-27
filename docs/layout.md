@@ -108,9 +108,12 @@ VBlank. The rest are `IntrDummy`. `JoyComInit` then points the serial slot at th
 - **GZLE01 vs GZLE01_ud** (`client_ud.bin`): byte-identical except one function,
   `sub_02024AB8` (JP `sub_0201DEAC`), which grows by `0x234` bytes. Everything after it
   shifts by `0x234`, and `.rodata`/`.data` are the same apart from relocated pointers. The
-  extra code reads L (bit 9 of the new-keys word at `gMain+0x418`) to toggle a flag, and uses
-  the D-pad to step a counter with extra divisions. It looks like a debug or tuning mode,
-  consistent with "ud" = "USA debug". The game only loads `client_u.bin`.
+  extra code is a **sound test**. L (bit 9 of `gMain.newKeys`) toggles bit 5 of
+  `gGameState+0x1E5`; while it is set, Up/Down step a sound ID at `gGameState+0x142` by 1,
+  Left/Right by 10 and R by 100, wrapping within 0-0x437 (the range `GamePlaySound` accepts).
+  The ID is shown as four digits at BG map `0x06006464`, in the rupee counter's digit tiles,
+  and passed to `sub_0202453C`, which plays it. "ud" is plausibly "USA debug". The game only
+  loads `client_u.bin`.
 
 ## Answers to earlier open questions
 
