@@ -155,7 +155,7 @@ INCLUDE_ASM(Func_0201A0A8);
 //                     clamped = TRUE;
 //                 }
 //                 if (!clamped && (gMain.heldKeys & 0xF0))
-//                     Func_02021284(8, 8, NULL);
+//                     SoundPlayLoop(8, 8, NULL);
 //             }
 //             Func_02019350(&gGameState);
 //         }
