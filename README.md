@@ -116,7 +116,9 @@ docs/                      layout.md (sections, modules), protocol.md (GC<->GBA 
 
 See [docs/layout.md](docs/layout.md) for the program's sections and modules and
 [docs/protocol.md](docs/protocol.md) for the JOY bus protocol. The earlier questions about the
-tail block, `client_ud.bin`, `msg_LZ.bin` and the packer's copy are answered in layout.md.
+tail block, `client_ud.bin`, `msg_LZ.bin` and the packer's copy are answered in layout.md,
+and so is the sound bank's format (see "Sound driver" and "Raw tail block" there).
 
-- What the smaller tables at the start of the sound bank are (sequences? instruments?).
+- Sound: what track +0x4C (sequence command `E3`) was for (voices copy it, nothing reads it;
+  an echo send for the unused `PcmEchoMix`?), and which effect each sound ID is.
 - What slots 3, 11 and 14 were for; no GC code sends them (see protocol.md).
