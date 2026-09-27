@@ -26,6 +26,10 @@ def uncomment(src_text, name):
     """src_text with INCLUDE_ASM(name) replaced by the commented-out C just above it."""
     lines = src_text.split('\n')
     at = next(i for i, l in enumerate(lines) if l.strip() == f'INCLUDE_ASM({name});')
+    if lines[at - 1].strip() == '*/':
+        # A /* ... */ block (used when the code has macros with line continuations).
+        start = max(i for i in range(at) if lines[i].strip() == '/*')
+        return '\n'.join(lines[:start] + lines[start + 1:at - 1] + lines[at + 1:])
     start = at
     while start > 0 and lines[start - 1].startswith('//'):
         start -= 1
