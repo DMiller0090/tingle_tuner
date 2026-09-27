@@ -376,7 +376,7 @@ void Mode1State2(void)
      && gGameState.unk1EE == 0)
     {
         if (gGameState.flags.isFree)
-            Func_02021284(7, 7, 0);
+            SoundPlayLoop(7, 7, 0);
         else if (!gGameState.flags.followTarget)
         {
             // An 8-byte parameter block; only the low half of word 1 is set (the rest is
@@ -389,7 +389,7 @@ void Mode1State2(void)
             params[0] = 0;
             v = (gGameState.flags.unk5_2 - 1) ^ 3;
             params[1] = (params[1] & mask) | v;
-            Func_02021284(9, 9, params);
+            SoundPlayLoop(9, 9, params);
         }
     }
     if (gGameState.flags.isFree != gGameState.isFree)
@@ -417,7 +417,7 @@ void Mode1State2(void)
             if (gGameState.unk156 != 0)
             {
                 gGameState.unk156--;
-                Func_02021284(6, 6, 0);
+                SoundPlayLoop(6, 6, 0);
                 if (gGameState.unk156 == 0)
                     gGameState.unk13E = 300;
             }

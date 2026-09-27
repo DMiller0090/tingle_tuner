@@ -140,7 +140,7 @@ void Mode0State1(void)
             gMain.modeState = 0;
         }
     }
-    Func_02021284(5, 5, 0);
+    SoundPlayLoop(5, 5, 0);
 }
 // Wait for the name (slot 10) and slot 14, and in a dungeon for the map image (slot 2).
 void Mode0State2(void)
@@ -179,7 +179,7 @@ void Mode0State2(void)
             }
         }
     }
-    Func_02021284(5, 5, 0);
+    SoundPlayLoop(5, 5, 0);
 }
 // Wait for the markers (slot 3), take the name and slot 14, and start mode 1.
 void Mode0State3(void)
@@ -207,7 +207,7 @@ void Mode0State3(void)
     }
     else
     {
-        Func_02021284(5, 5, 0);
+        SoundPlayLoop(5, 5, 0);
     }
     if (GbaComCheckDataStatus(GBACOM_SLOT_3, GBACOM_STATUS_IDLE))
     {

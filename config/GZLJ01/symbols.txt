@@ -241,18 +241,137 @@ HeapFree = 0x020187C8; // thumb
 HeapCompact = 0x020187FC; // thumb
 
 // ---- sound: custom PCM driver (not m4a); sound bank is the packer's raw tail ----
+// See docs/layout.md "Sound driver". API layer (game side, runs in the main loop):
 SoundInit = 0x02020E28; // thumb
+// SoundApiUpdate, then SoundCmdFlush (commands posted this frame run at the next VBlank)
 SoundMain = 0x02020E3C; // thumb
+// unused: pause players 1-19 / stop players 0-19 / stop players 0-18
+SoundPauseAll = 0x02020E4C; // thumb
+SoundStopAll = 0x02020E64; // thumb
+SoundStopMost = 0x02020E78; // thumb
+SoundApiInit = 0x02020E8C; // thumb
+// drops loop sounds nobody refreshed this frame; clears gSoundPlayerSoundId of idle players
+SoundApiUpdate = 0x02020EE0; // thumb
+// params->x (s16 at +0) -> pan 0-0x7F; params->x / params->y (s16 at +2) -> volume 0-0x80
+SoundPanFromX = 0x02020F9C; // thumb
+SoundVolumeFromX = 0x02020FF8; // thumb
+SoundVolumeFromY = 0x02021034; // thumb
+// play sound `id` (gSoundTable entry) on its player unless a higher-priority one is playing
+SoundPlay = 0x02021070; // thumb
+// unused: gSoundPlayerSoundId[player of id] == id
+SoundIsPlaying = 0x0202118C; // thumb
+SoundFindLoopSlot = 0x020211C0; // thumb
+// TRUE until 150 frames after loop sound 9 stopped (it restarts with sequence + 1)
+SoundLoop9Recent = 0x02021200; // thumb
+SoundLoop9Tempo = 0x0202121C; // thumb
+// (owner, id, params): loop sound gSoundLoopTable[id] on player 16/17, kept alive by calling
+// it every frame; SoundApiUpdate stops it the first frame nobody does
+SoundPlayLoop = 0x02021284; // thumb
+// core (VBlank side)
+SoundDriverInit = 0x020213C0; // thumb
 // VBlankIntr: SoundVSync first thing, SoundVSyncProc last; SoundDmaStop on gMain.soundDmaStop
 SoundVSync = 0x02021480; // thumb
+// SoundCmdProcess, PlayerUpdateAll, CgbUpdate, then PcmMixFrame (if gPcmEnabled)
 SoundVSyncProc = 0x0202148C; // thumb
+PcmInit = 0x020214B0; // thumb
+// restart DMA1/DMA2 (FIFO A/B) on the buffer mixed last frame and flip gPcmBufIndex
+PcmVSync = 0x02021520; // thumb
 SoundDmaStop = 0x020215D0; // thumb
-SoundDriverInit = 0x020213C0; // thumb
-// play sound `id` (index into gSoundBankHeader+0x1C) unless a higher-priority one is playing
-SoundPlay = 0x02021070; // thumb
-// (a, id, params): Mode1State2 calls it with a == id (6, 7, 9)
-Func_02021284 = 0x02021284; // thumb
-// ARM, copied to IWRAM by SoundDriverInit and called through pointers
+// unused counterpart of SoundDmaStop: sets gPcmEnabled
+SoundDmaStart = 0x0202161C; // thumb
+// (voice, env on, step, pan): mix one voice into gPcmMixBuffer through gPcmMixFunc; TRUE at the end
+PcmMixVoice = 0x02021628; // thumb
+DrumInstrumentInit = 0x020217B4; // thumb
+// (track, key, out): instrument record, envelope, duty/wave table, fixed pan for the key
+TrackLookupInstrument = 0x020217D0; // thumb
+VoicesInit = 0x020218AC; // thumb
+VoiceListRemove = 0x02021A2C; // thumb
+VoiceListPush = 0x02021A48; // thumb
+// insert into gPcmActiveVoices, ordered by priority
+VoiceListInsert = 0x02021A60; // thumb
+// (voice, key, base key): PCM step (gPcmPitchTable), CGB frequency or noise index
+VoiceNoteFreq = 0x02021AE8; // thumb
+NoiseFreq = 0x02021B3C; // thumb
+EnvelopeStep = 0x02021B58; // thumb
+// command 0x300: empty
+SoundCmdNop = 0x02021BC8; // thumb
+// command 0x304: move PCM voices between the free and disabled lists (7 at init)
+SetPcmVoiceCount = 0x02021BCC; // thumb
+PcmVoiceVolume = 0x02021C7C; // thumb
+// returns the NRx2 envelope byte for a CGB voice
+CgbVoiceVolume = 0x02021CE4; // thumb
+// portamento, pitch bend, vibrato
+VoiceUpdatePitch = 0x02021DF0; // thumb
+// clear gPcmMixBuffer, mix every active PCM voice, clip into the DMA buffer
+PcmMixFrame = 0x02021F84; // thumb
+// the four GB channels (square 1, square 2, wave, noise)
+CgbUpdate = 0x02022094; // thumb
+// (track, key, velocity, length)
+TrackNoteOn = 0x02022328; // thumb
+VoiceNoteOff = 0x020224F4; // thumb
+VoiceStop = 0x020225E0; // thumb
+CgbVoiceStart = 0x02022678; // thumb
+// (pool, priority): pool 0 = PCM (free list or steal), 1-4 = the GB channel
+VoiceAlloc = 0x020227D8; // thumb
+TracksInit = 0x02022870; // thumb
+TrackAlloc = 0x0202289C; // thumb
+// (track, player, pc)
+TrackStart = 0x020228C4; // thumb
+TrackReleaseNotes = 0x02022980; // thumb
+TrackStop = 0x020229B0; // thumb
+// sequence interpreter: 0 while running
+TrackExecute = 0x020229C8; // thumb
+TrackAddVoice = 0x02022E38; // thumb
+TrackRemoveVoice = 0x02022E54; // thumb
+TrackReadVarLen = 0x02022E80; // thumb
+// sequence command C7
+TrackSetBank = 0x02022EA8; // thumb
+PlayersInit = 0x02022EDC; // thumb
+PlayerReset = 0x02022F10; // thumb
+// fades, then TrackExecute for every track of every active player
+PlayerUpdateAll = 0x02022F50; // thumb
+// command 0: song path, empty in this bank (its tables are gSoundBankHeader[2] and [5])
+PlayerStartSong = 0x02022FE0; // thumb
+// command 1: (player, set, index) through gSoundBankHeader[3] and [6]
+PlayerStartSe = 0x02023008; // thumb
+PlayerStartSongData = 0x02023034; // thumb
+PlayerStartSeData = 0x020230BC; // thumb
+PlayerStop = 0x02023128; // thumb
+PlayerFadeOut = 0x02023164; // thumb
+PlayerSetPause = 0x0202319C; // thumb
+// player state: 0 idle, 1 playing, 2 fading out
+PlayerGetState = 0x020231C0; // thumb
+// command queue (12-byte {u16 cmd; u32 a; u32 b}, 46 entries): the API writes, VBlank reads
+SoundCmdPush = 0x020231D4; // thumb
+SoundCmdQueueInit = 0x020231FC; // thumb
+SoundCmdPop = 0x0202323C; // thumb
+SoundCmdFlush = 0x02023278; // thumb
+// command wrappers; cmd >> 8 picks the gSoundCmdHandlers entry
+SoundCmdStartSong = 0x0202328C; // thumb
+SoundCmdStartSe = 0x020232B0; // thumb
+SoundCmdFadeOut = 0x020232D8; // thumb
+SoundCmdPause = 0x020232FC; // thumb
+SoundCmdFadeOutPlayers = 0x02023320; // thumb
+SoundCmdPausePlayers = 0x02023340; // thumb
+SoundCmdSetTempo = 0x02023364; // thumb
+SoundCmdSetVolume = 0x02023388; // thumb
+SoundCmdSetFlags = 0x020233AC; // thumb
+SoundCmdMuteTracks = 0x020233D0; // thumb
+SoundCmdSetTrackVolume = 0x020233F8; // thumb
+SoundCmdSetTrackBend = 0x02023420; // thumb
+SoundCmdSetTrackPan = 0x02023450; // thumb
+SoundCmdNop300 = 0x02023478; // thumb
+SoundCmdSetPcmVoices = 0x02023498; // thumb
+SoundCmdCall = 0x020234B8; // thumb
+SoundCmdSetSeqHook = 0x020234D8; // thumb
+SoundCmdSetNoteHook = 0x020234F4; // thumb
+// handlers: 0x0xx one player, 0x1xx tracks of a player (mask), 0x2xx players (mask), 0x3xx global
+SoundCmdPlayer = 0x02023510; // thumb
+SoundCmdTracks = 0x020235A4; // thumb
+SoundCmdPlayers = 0x020236C0; // thumb
+SoundCmdGlobal = 0x02023730; // thumb
+SoundCmdProcess = 0x02023798; // thumb
+// ARM, copied to IWRAM by SoundDriverInit and called through pointers (PcmEchoMix never is)
 PcmClipS16ToS8 = 0x020237CC; // arm
 PcmMixChannel = 0x020238EC; // arm
 PcmEchoMix = 0x020239E4; // arm
@@ -326,7 +445,26 @@ gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
+// seven pointers into the sound bank, see docs/layout.md; the sound driver's .rodata follows
 gSoundBankHeader = 0x0202CD20; // data
+// u32 per SoundPlay id: bits 0-15 SE index, 16-23 player, 24 pan/volume from params x,
+// 25 low priority, 26 high priority, 27 add params+4 to the index, 28 don't restart, 29 volume from y
+gSoundTable = 0x0202CD3C; // data
+// same format, for SoundPlayLoop (the player bits are unused)
+gSoundLoopTable = 0x0202CDEC; // data
+// instrument type (0 PCM, 1-4 GB channel) -> VoiceAlloc pool
+gInstTypeToVoicePool = 0x0202CE18; // data
+gDefaultEnvelope = 0x0202CE20; // data
+// SOUND3CNT_H volume codes for 0, 25, 50, 75, 100%
+gCgbWaveVolumes = 0x0202CE2C; // data
+gSoundCmdHandlers = 0x0202CE34; // data
+// u16 GB frequency per note index (index = key + 0x30 - base key, 0-0x77; the first 24 are 0)
+gCgbFreqTable = 0x0202CE44; // data
+gNoiseFreqTable = 0x0202CF34; // data
+// u32 PCM step per note index, 0x800 * 2^(index / 12)
+gPcmPitchTable = 0x0202CFAC; // data
+// s8 sine, 256 entries
+gVibratoTable = 0x0202D18C; // data
 
 // ---- .data load image (end of the program) ----
 __data_lma_start = 0x0202D290; // data
@@ -346,6 +484,55 @@ gMode0Work = 0x03005640; // data
 // slot 14 payload (0xC4 bytes), copied by Mode0State3; read by sub_02019CAC, sub_0201AD90, sub_0201B3A4
 gSlot14Data = 0x03002FB0; // data
 gObjs = 0x03005650; // data
+// sound driver work area (030010F0-03002F64), see docs/layout.md "Sound driver"
+// u16[19]: SoundPlay id per player (0xFFFF none); u8[19]: set by SoundPlay until the next SoundMain
+gSoundPlayerSoundId = 0x030010F0; // data
+gSoundStarted = 0x03001118; // data
+// loop sound 9: running, its player, frames since it stopped (150 max), tempo offset, last param
+gSoundLoop9Active = 0x0300112B; // data
+gSoundLoop9Player = 0x0300112C; // data
+gSoundLoop9Timer = 0x0300112E; // data
+gSoundLoop9TempoOfs = 0x03001130; // data
+gSoundLoop9Param = 0x03001132; // data
+// 2 x {u32 owner (-1 free); u8 refreshed}, players 16 and 17
+gSoundLoopSlots = 0x03001138; // data
+// DMA buffer pointers for FIFO A and B, x2 (double-buffered); timer 0 reload (0xF9C4: 10512 Hz)
+gPcmBufA = 0x03001148; // data
+gPcmBufB = 0x03001150; // data
+gPcmTimerReload = 0x03001158; // data
+gPcmBufIndex = 0x0300115A; // data
+gPcmEnabled = 0x0300115B; // data
+// instrument record built by TrackLookupInstrument for type 0x11 (drum kit) keys
+gDrumInstrument = 0x03001160; // data
+// wave RAM contents last loaded (CgbVoiceStart)
+gCgbWaveLoaded = 0x03001168; // data
+gPcmActiveVoices = 0x0300116C; // data
+gPcmFreeVoices = 0x03001170; // data
+gPcmDisabledVoices = 0x03001174; // data
+gPcmVoiceCount = 0x03001178; // data
+// optional hooks: replaces TrackNoteOn (players with flags bit 0); sequence command CA
+gSoundNoteHook = 0x03001180; // data
+gSoundSeqHook = 0x03001184; // data
+gSoundCmdQueue = 0x03001188; // data
+gSoundCmdRead = 0x030013BC; // data
+gSoundCmdWrite = 0x030013C0; // data
+gSoundCmdLimit = 0x030013C4; // data
+gSoundCmdEnd = 0x030013C8; // data
+// gSoundBankHeader, and the IWRAM addresses of the three ARM routines
+gSoundBank = 0x030013CC; // data
+gPcmClipFunc = 0x030013D0; // data
+gPcmMixFunc = 0x030013D4; // data
+gPcmEchoFunc = 0x030013D8; // data
+// 4 x 0xB0 s8: A0, B0, A1, B1 (176 samples per frame)
+gPcmDmaBuffers = 0x030013DC; // data
+// s16 L[176], R[176]
+gPcmMixBuffer = 0x0300169C; // data
+// 24 x 0x54 tracks, 0x360 bytes of ARM code, 7 x 0x78 PCM voices, 4 x 0x78 GB voices, 20 x 0x48 players
+gSoundTracks = 0x0300195C; // data
+gPcmCode = 0x0300213C; // data
+gPcmVoices = 0x0300249C; // data
+gCgbVoices = 0x030027E4; // data
+gSoundPlayers = 0x030029C4; // data
 
 // ---- EWRAM below the program: link receive buffers (gGbaComBuffers) ----
 gGbaComMessageBuf = 0x0200A000; // data

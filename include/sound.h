@@ -3,8 +3,8 @@
 
 #include "global.h"
 
-// Sound IDs (SoundPlay). The US sound table has one entry fewer somewhere below 7, so the
-// IDs from there on are one lower (7 and up, at least).
+// Sound IDs (SoundPlay: gSoundTable index). IDs 0-6 are voice clips on player 4; the US
+// table drops ID 6 (and its clip), so the IDs from 7 on are one lower.
 #ifdef VERSION_GZLJ01
 #define SOUND_ID_SHIFT 0
 #else
@@ -23,7 +23,8 @@ void SoundVSync(void);
 void SoundVSyncProc(void);
 void SoundDmaStop(void);
 void SoundPlay(u16 id, void *params);
-// Reads params[1]'s low half (as an s16) when id is 9.
-void Func_02021284(u32 a, u16 id, u32 *params);
+// Loop sound gSoundLoopTable[id] for `owner`; call it every frame to keep it playing.
+// Reads params[1]'s low half (as an s16, a tempo step) when id is 9.
+void SoundPlayLoop(u32 owner, u16 id, u32 *params);
 
 #endif // GUARD_SOUND_H

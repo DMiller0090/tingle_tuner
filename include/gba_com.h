@@ -57,7 +57,7 @@ struct GbaComFlags
             u8 dungeonChests:5; // field_0x3_0..4: isStageTbox(0xF) for WT, ET, TOTG, FW, DRC
     /*0x4*/ u8 timer;           // field_0x4: (field_0x65c + 29) / 30
     /*0x5*/ u8 walletSize:2;    // field_0x5_6: dComIfGs_getWalletSize()
-            u8 unk5_2:3;        // field_0x5_3; Mode1State2 passes (unk5_2 - 1) ^ 3 to Func_02021284
+            u8 unk5_2:3;        // field_0x5_3; Mode1State2 passes (unk5_2 - 1) ^ 3 to SoundPlayLoop
             u8 unk5_5:1;        // field_0x5_2 (MainMode1 sets it on a type 12 mail)
             u8 unk5_6:1;        // field_0x5_1
             u8 unk5_7:1;        // field_0x5_0
