@@ -159,6 +159,18 @@ struct SoundTrack
     /*0x53*/ u8 notesWait;
 };
 
+struct EnvelopeStep;
+
+struct VoiceEnvelope
+{
+    /*0x00*/ u32 level;
+    /*0x04*/ s32 target;
+    /*0x08*/ u16 frames;  // left in this step
+    /*0x0A*/ s16 step;    // added to level per frame
+    /*0x0C*/ const struct EnvelopeStep *steps;
+    /*0x10*/ s8 index;
+};
+
 // A voice (gPcmVoices 7, gCgbVoices 4).
 struct SoundVoice
 {
@@ -166,7 +178,15 @@ struct SoundVoice
     /*0x01*/ u8 state;  // 0 free, 1 on, 2 released
     /*0x04*/ struct SoundTrack *track;
     /*0x08*/ u8 priority;
-    /*0x09*/ u8 unk09[0x5F];
+    /*0x09*/ u8 key;
+    /*0x0A*/ u8 velocity;
+    /*0x0B*/ u8 unk0B[9];
+    /*0x14*/ u32 volume;
+    /*0x18*/ u8 unk18[0x28];
+    /*0x40*/ struct VoiceEnvelope env;
+    /*0x54*/ u8 unk54[4];
+    /*0x58*/ u8 release;  // released: volume * (0xE6 + release) / 512 per frame
+    /*0x59*/ u8 unk59[0xF];
     /*0x68*/ struct SoundVoice *prev;  // in gPcmActiveVoices / gPcmFreeVoices
     /*0x6C*/ struct SoundVoice *next;
     /*0x70*/ struct SoundVoice *trackPrev;
@@ -188,24 +208,41 @@ struct SoundInstrument
 #define REG_SOUND1CNT_H   (*(vu16 *)0x04000062)
 #define REG_SOUNDCNT_L    (*(vu16 *)0x04000080)
 #define REG_SOUNDCNT_H_LO (*(vu8 *)0x04000082)
+#define REG_SOUNDCNT_H_HI (*(vu8 *)0x04000083)
 #define REG_SOUNDCNT_X    (*(vu8 *)0x04000084)
 #define REG_SOUNDBIAS     (*(vu16 *)0x04000088)
+#define REG_FIFO_A        (*(vu32 *)0x040000A0)
+#define REG_FIFO_B        (*(vu32 *)0x040000A4)
+#define REG_TM0CNT        (*(vu32 *)0x04000100)
+
+#define PCM_FRAME_SAMPLES 176  // per channel at 10512 Hz
 
 extern u8 gPcmEnabled;
 extern struct SoundInstrument gDrumInstrument;
 extern struct SoundVoice *gPcmActiveVoices;
+extern struct SoundVoice *gPcmFreeVoices;
+extern struct SoundVoice *gPcmDisabledVoices;
+extern u8 gPcmVoiceCount;
+extern s8 *gPcmBufA[2];
+extern s8 *gPcmBufB[2];
+extern u16 gPcmTimerReload;
+extern u8 gPcmBufIndex;
 extern u32 gPcmCode[];
 extern void *gPcmClipFunc;
 extern void *gPcmMixFunc;
 extern void *gPcmEchoFunc;
-extern u8 gPcmDmaBuffers[];
+extern s8 gPcmDmaBuffers[];
 
 // ARM, run from the IWRAM copy in gPcmCode.
 void PcmClipS16ToS8(void);
 void PcmMixChannel(void);
 void PcmEchoMix(void);
 
-void PcmInit(void *buffers);
+void PcmInit(s8 *buffers);
+struct SoundVoice *VoiceAlloc(u8 type, u8 priority);
+u32 EnvelopeStep(struct SoundVoice *voice);
+void VoiceListRemove(struct SoundVoice *voice, struct SoundVoice **list);
+void VoiceListPush(struct SoundVoice *voice, struct SoundVoice **list);
 void PcmVSync(void);
 void PcmMixFrame(void);
 void CgbUpdate(void);
@@ -246,10 +283,10 @@ struct SoundBankHeader
 // Entry i of an offset table: the table's address plus the offset stored there.
 #define SOUND_OFFSET(table, i) ((const void *)((const u8 *)(table) + (table)[i]))
 
-// One step of a volume envelope: ramp linearly to level over frames (0xFFFF: hold).
+// One step of a volume envelope: ramp linearly to level over frames (-1: hold).
 struct EnvelopeStep
 {
-    u16 frames;
+    s16 frames;
     s16 level;
 };
 
@@ -350,7 +387,7 @@ const struct EnvelopeStep gDefaultEnvelope[3] =
 {
     {1, 0x7FFF},
     {0x7FFF, 0x7FFF},
-    {0xFFFF, 0}
+    {-1, 0}
 };
 
 const u8 gCgbWaveVolumes[5] =
@@ -714,9 +751,35 @@ void SoundVSyncProc(void)
         PcmMixFrame();
 }
 
-INCLUDE_ASM(PcmInit);
+// Four 176-byte buffers: gPcmBufA/B[0] and [1], left and right, mixed and played in turn.
+void PcmInit(s8 *buffers)
+{
+    u8 unused[4];  // FAKEMATCH: the original has an unused 4-byte stack slot
 
-INCLUDE_ASM(PcmVSync);
+    gPcmEnabled = TRUE;
+    gPcmBufA[0] = buffers;
+    gPcmBufB[0] = buffers + PCM_FRAME_SAMPLES;
+    gPcmBufA[1] = buffers + PCM_FRAME_SAMPLES * 2;
+    gPcmBufB[1] = buffers + PCM_FRAME_SAMPLES * 3;
+    gPcmTimerReload = 0xF9C4;  // 16.78 MHz / (0x10000 - 0xF9C4) = 10512 Hz
+    gPcmBufIndex = 0;
+    REG_SOUNDCNT_H_HI = 0x9A;
+    REG_FIFO_A = 0;
+    REG_FIFO_B = 0;
+}
+
+void PcmVSync(void)
+{
+    REG_TM0CNT = gPcmTimerReload | 0x800000;
+    if (gPcmEnabled)
+    {
+        DmaStop(1);
+        DmaStop(2);
+        DmaSet(1, gPcmBufA[gPcmBufIndex], &REG_FIFO_A, 0xB6400004);
+        DmaSet(2, gPcmBufB[gPcmBufIndex], &REG_FIFO_B, 0xB6400004);
+        gPcmBufIndex = 1 - gPcmBufIndex;
+    }
+}
 
 void SoundDmaStop(void)
 {
@@ -808,19 +871,137 @@ void VoiceListInsert(struct SoundVoice *voice)
         gPcmActiveVoices = voice;
 }
 
-INCLUDE_ASM(VoiceNoteFreq);
+// A voice's frequency value for key (relative to the instrument's base key): the PCM step
+// (gPcmPitchTable), the noise channel's key, or a GB channel's frequency register.
+u32 VoiceNoteFreq(struct SoundVoice *voice, u8 key, u8 baseKey)
+{
+    s16 k = key + 0x30 - baseKey;
 
-INCLUDE_ASM(NoiseFreq);
+    if (k < 0)
+        k = 0;
+    else if (k > 0x77)
+        k = 0x78;
+    if (voice->type == 0)
+        return gPcmPitchTable[k];
+    if (voice->type == 4)
+        return k;
+    return gCgbFreqTable[k];
+}
 
-INCLUDE_ASM(EnvelopeStep);
+u8 NoiseFreq(u16 key)
+{
+    if (key > 0x77)
+        key = 0x77;
+    return gNoiseFreqTable[key];
+}
+
+// Advance the envelope by a frame; at the end of a step, set up the next (a negative frame
+// count holds the current one). Returns the level.
+u32 EnvelopeStep(struct SoundVoice *voice)
+{
+    struct VoiceEnvelope *env = &voice->env;
+
+    if (env->frames == 0)
+    {
+        u8 index;
+
+        voice->env.level = env->target;
+        index = env->index;
+        env->index = index + 1;
+        if (env->steps[env->index].frames < 0)
+            env->index = index;
+        env->target = env->steps[env->index].level;
+        env->frames = env->steps[env->index].frames;
+        env->step = env->target;
+        env->step -= voice->env.level;
+        env->step /= env->frames;
+    }
+    env->level += env->step;
+    env->frames--;
+    return env->level;
+}
 
 void SoundCmdNop(u8 arg)
 {
 }
 
-INCLUDE_ASM(SetPcmVoiceCount);
+// Move voices between gPcmDisabledVoices and gPcmFreeVoices (taking playing ones with
+// VoiceAlloc) until count PCM voices are enabled.
+void SetPcmVoiceCount(u8 count)
+{
+        s8 diff = count - gPcmVoiceCount;
+    struct SoundVoice *voice;
+    struct SoundVoice *next;
 
-INCLUDE_ASM(PcmVoiceVolume);
+    if (diff == 0)
+        return;
+    if (diff > 0)
+    {
+        next = gPcmDisabledVoices;
+
+        while (next != NULL && diff > 0)
+        {
+            voice = next;
+            next = voice->next;
+            VoiceListRemove(voice, &gPcmDisabledVoices);
+            VoiceListPush(voice, &gPcmFreeVoices);
+            diff--;
+            gPcmVoiceCount++;
+        }
+    }
+    else
+    {
+        diff = -diff;
+        while (diff > 0)
+        {
+                        voice = VoiceAlloc(0, 0xFF);
+            if (voice == NULL)
+                break;
+            VoiceListRemove(voice, &gPcmActiveVoices);
+            voice->state = 0;
+            VoiceListPush(voice, &gPcmDisabledVoices);
+            diff--;
+            gPcmVoiceCount--;
+        }
+    }
+}
+
+// A PCM voice's volume this frame (0-0x7F): velocity, the player's fade and volumes, the
+// track's volumes and the envelope; a released voice decays by gRelease.
+u32 PcmVoiceVolume(struct SoundVoice *voice)
+{
+    u32 volume;
+
+    if (voice->state == 1)
+    {
+                struct SoundTrack *track;
+        struct SoundPlayer *player;
+
+        volume = voice->velocity;
+        volume <<= 7;
+        track = voice->track;
+        player = track->player;
+        volume *= player->fadeVolume;
+        volume >>= 8;
+        volume *= player->unk40;
+        volume >>= 7;
+        volume *= player->volume;
+        volume >>= 8;
+        volume *= track->volume;
+        volume >>= 8;
+        volume *= track->cmdVolume;
+        volume >>= 15;
+        volume *= EnvelopeStep(voice);
+        volume >>= 11;
+        voice->volume = volume;
+    }
+    else
+    {
+        volume = voice->volume = (voice->release + 0xE6) * voice->volume >> 9;
+    }
+        volume >>= 8;
+    return volume;
+}
 
 INCLUDE_ASM(CgbVoiceVolume);
 
