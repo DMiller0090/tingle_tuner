@@ -27,7 +27,7 @@ MODES = {'arm': capstone.CS_MODE_ARM, 'thumb': capstone.CS_MODE_THUMB}
 
 
 class Image:
-    def __init__(self, ver):
+    def __init__(self, ver, skip=()):
         self.ver = ver
         self.base = versions()[ver]['prog_base']
         self.data = (BUILD / ver / 'prog.bin').read_bytes()
@@ -35,7 +35,8 @@ class Image:
         self.funcs = []  # (addr, size, mode)
         for line in (BUILD / ver / 'functions.txt').read_text().splitlines():
             a, size, mode, _ = line.split()
-            self.funcs.append((int(a, 16), int(size, 16), mode))
+            if int(a, 16) not in skip:
+                self.funcs.append((int(a, 16), int(size, 16), mode))
         self.sigs = [self.signature(f) for f in self.funcs]
 
     def signature(self, func):
@@ -65,8 +66,16 @@ def match_functions(src, dst):
     return pairs
 
 
+def dst_only(src_ver, dst_ver):
+    """Destination names the source doesn't have: {addr: (name, kind)}."""
+    src_names = {n for n, _ in load_symbols(src_ver).values()}
+    return {a: nk for a, nk in load_symbols(dst_ver).items() if nk[0] not in src_names}
+
+
 def port(src_ver, dst_ver):
-    src, dst = Image(src_ver), Image(dst_ver)
+    # Functions only the destination has (named in its file) are left out of the matching,
+    # so the pairing in order doesn't give their names' neighbours the wrong function.
+    src, dst = Image(src_ver), Image(dst_ver, skip=dst_only(src_ver, dst_ver))
     pairs = match_functions(src, dst)
     src_index = {f[0]: i for i, f in enumerate(src.funcs)}
     lines = []
@@ -142,12 +151,23 @@ def main():
         if by_name.get(name) != new:
             print(f'  {name}: {by_name.get(name, 0):#010x} -> {new:#010x}')
         out.append(f'{name} = 0x{new:08X}; // {attrs}')
-    # Names only the destination has (version-specific code) are kept as they are.
+    # Names only the destination has (version-specific code) are kept as they are, with
+    # the comments above them.
     ported_names = {p[0] for p in ported}
-    extra = [(a, n, k) for a, (n, k) in existing.items() if n not in ported_names]
+    extra = []
+    marker = f'// {args.dst} only'
+    text = (CONFIG / args.dst / 'symbols.txt').read_text().splitlines()
+    if marker in text:
+        for line in text[text.index(marker) + 1:]:
+            m = SYM_RE.match(line)
+            if m is None or m.group(1) not in ported_names:
+                extra.append(line)
+    listed = {SYM_RE.match(l).group(1) for l in extra if SYM_RE.match(l)}
+    extra += [f'{n} = 0x{a:08X}; // {k}' for a, (n, k) in sorted(existing.items())
+              if n not in ported_names and n not in listed]
     if extra:
-        out.append(f'// {args.dst} only')
-        out += [f'{n} = 0x{a:08X}; // {k}' for a, n, k in sorted(extra)]
+        out.append(marker)
+        out += extra
     if args.write:
         (CONFIG / args.dst / 'symbols.txt').write_text('\n'.join(out) + '\n')
 
