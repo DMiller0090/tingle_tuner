@@ -386,7 +386,101 @@ void Func_0201AD4C(void)
     }
 }
 
-INCLUDE_ASM(Func_0201AD90);
+// Icon type 2: the cursor. While placing a target (unk105 == 1), move it a sea chart square
+// (16 pixels) at a time with the D-pad and place the target (icons[2]) with A. Then name the
+// square under the cursor if its unk0F4 bit is set.
+void Func_0201AD90(struct MapIcon *icon)
+{
+    u16 keys;
+    u16 pos;
+    u8 square;
+    s32 i;
+
+    if (gGameState.unk105 == 1)
+    {
+        if ((gMain.newKeys & 0xF0) == 0)
+        {
+            keys = gMain.heldKeys;
+            if (keys & 0xF0)
+            {
+                if (++icon->timer == 2)
+                    icon->timer = 0;
+            }
+            else
+            {
+                icon->timer = 0;
+            }
+        }
+        else
+        {
+            keys = gMain.newKeys;
+            icon->timer = 0;
+        }
+        if (icon->timer == 0 && (keys & 0xF0))
+        {
+            pos = icon->y >> 4;
+            if (keys & 0x40)
+            {
+                if (pos != 0)
+                    icon->y -= 0x10;
+            }
+            else if (keys & 0x80)
+            {
+                if (pos != 0x6F)
+                    icon->y += 0x10;
+            }
+            pos = icon->x >> 4;
+            if (keys & 0x20)
+            {
+                if (pos != 0)
+                    icon->x -= 0x10;
+            }
+            else if (keys & 0x10)
+            {
+                if (pos != 0x6F)
+                    icon->x += 0x10;
+            }
+        }
+        if (gMain.newKeys & 1)
+        {
+            gGameState.icons[2].type = 3;
+            gGameState.icons[2].x = icon->x;
+            gGameState.icons[2].y = icon->y;
+            Func_0201ACD0();
+            Func_0201AD24();
+            gGameState.unk022 = 240;
+            SoundPlay(10 - SOUND_ID_SHIFT, 0);
+        }
+    }
+    square = (icon->x >> 8) + (icon->y >> 8) * 7;
+    if ((gGameState.unk0F4[square >> 3] >> (square & 7)) & 1)
+    {
+        for (i = 0; i < 49; i++)
+        {
+            if (gSlot14Data[i].square == square)
+            {
+                if (square == 25 && !gGameState.flags.unkA_4)
+                {
+                    gGameState.unk13C = 0;
+                }
+                else
+                {
+                    if (square == 32 && gGameState.flags.unk5_6)
+                        GamePlaySound(0x13E, 1);
+                    else
+                        GamePlaySound(0x14E + gSlot14Data[i].square, 1);
+#ifndef VERSION_GZLJ01
+                    gGameState.unk13E = 0;
+#endif
+                }
+            }
+        }
+    }
+    else
+    {
+        gGameState.unk13C = 0;
+    }
+}
 
 // Update and draw the map icons.
 void Func_0201AF48(void)

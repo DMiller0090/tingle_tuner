@@ -489,7 +489,7 @@ gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
-// slot 14 payload (0xC4 bytes), copied by Mode0State3; read by sub_02019CAC, sub_0201AD90, sub_0201B3A4
+// slot 14 payload (49 struct SeaChartEntry), copied by Mode0State3; read by Func_02019CAC, Func_0201AD90, Func_0201B3A4
 gSlot14Data = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 // sound driver work area (030010F0-03002F64), see docs/layout.md "Sound driver"

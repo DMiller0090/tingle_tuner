@@ -36,6 +36,7 @@ struct MapIcon
 // 0x010 u32 unk010
 // 0x014 s16 mapX  // top left of the map view in the map image (pixels)
 // 0x016 s16 mapY
+// 0x022 u16 unk022  // set to 240 when a target is placed (Func_0201AD90)
 // 0x024 u16 targetScale  // pulse of the target compass sprite (Func_0201A944)
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
@@ -53,7 +54,7 @@ struct MapIcon
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0E5 u8 unk0E5
-// 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here)
+// 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
 // 0x101 u8 targetBlinkOn
@@ -156,7 +157,8 @@ struct GameState
     /*0x016*/ s16 mapY;
     /*0x018*/ u8 filler018[0x019 - 0x018];
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
-    /*0x01A*/ u8 filler01A[0x024 - 0x01A];
+    /*0x01A*/ u8 filler01A[0x022 - 0x01A];
+    /*0x022*/ u16 unk022;                     // set to 240 when a target is placed (Func_0201AD90)
     /*0x024*/ u16 targetScale;                // pulse of the target compass sprite (Func_0201A944)
     /*0x026*/ u16 unk026;
     /*0x028*/ u8 filler028[0x030 - 0x028];
@@ -178,7 +180,7 @@ struct GameState
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 unk0E5;
     /*0x0E6*/ u8 filler0E6[0x0F4 - 0x0E6];
-    /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here)
+    /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
     /*0x0FE*/ u8 filler0FE[0x101 - 0x0FE];
@@ -380,8 +382,18 @@ struct Mode0Work
 
 extern struct Mode0Work gMode0Work;
 
-// Slot 14 data (IWRAM 0x03002FB0), received once at boot by Mode0State3.
-extern u8 gSlot14Data[0xC4];
+// One entry of the slot 14 data: an island or other named place on the sea chart.
+struct SeaChartEntry
+{
+    /*0x0*/ u8 x;       // pixels within its square?
+    /*0x1*/ u8 y;
+    /*0x2*/ u8 unk2;
+    /*0x3*/ u8 square;  // sea chart square (row * 7 + column); its name sound is 0x14E + square
+};
+
+// Slot 14 data (IWRAM 0x03002FB0), received once at boot by Mode0State3: one entry per
+// sea chart square.
+extern struct SeaChartEntry gSlot14Data[49];
 
 #ifndef VERSION_GZLJ01
 void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);
