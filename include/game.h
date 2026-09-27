@@ -16,6 +16,14 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
+// 8-byte entries at GameState 0x164 (indexed by effect; entry 5 is read by Func_0201F308).
+struct Unk164
+{
+    /*0x0*/ u8 filler0[2];
+    /*0x2*/ u8 unk2;
+    /*0x3*/ u8 filler3[5];
+};
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
@@ -75,6 +83,7 @@ struct MapMarker
 // 0x12F u8 unk12F
 // 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
+// 0x134 u8 unk134
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C
@@ -92,7 +101,7 @@ struct MapMarker
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
-// 0x18E u8 unk18E
+// 0x164 struct Unk164 unk164[12] size=96
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
@@ -221,7 +230,8 @@ struct GameState
     /*0x130*/ u8 filler130[0x132 - 0x130];
     /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
-    /*0x134*/ u8 filler134[0x136 - 0x134];
+    /*0x134*/ u8 unk134;
+    /*0x135*/ u8 filler135[0x136 - 0x135];
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
     /*0x138*/ u8 unk138_0:2;                  // sent as GbaFlg.unk2
@@ -252,9 +262,9 @@ struct GameState
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
-    /*0x160*/ u8 filler160[0x18E - 0x160];
-    /*0x18E*/ u8 unk18E;
-    /*0x18F*/ u8 filler18F[0x1C8 - 0x18F];
+    /*0x160*/ u8 filler160[0x164 - 0x160];
+    /*0x164*/ struct Unk164 unk164[12];
+    /*0x1C4*/ u8 filler1C4[0x1C8 - 0x1C4];
     /*0x1C8*/ u16 unk1C8;
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
@@ -493,6 +503,8 @@ void SendItemUse(u8 item, u8 arg);
 extern const u8 gShopRequests[9];
 extern const s16 gBobOffsets_020244DA[4];
 extern const u8 gSprite_0202C490[];
-void Func_0201F8C4(u16 x, u16 y, u8 kind);
+// The definition narrows x and y to u16; callers see s16 (they sign-extend).
+void Func_0201F8C4(s16 x, s16 y, u8 kind);
+void Func_0201FEEC(void);
 
 #endif // GUARD_GAME_H

@@ -251,7 +251,7 @@ void Func_0201F308(void)
                 }
                 else if (gGameState.effect[1] == 0x13)
                 {
-                    SendItemUse(0x13, gGameState.unk18E);
+                    SendItemUse(0x13, gGameState.unk164[5].unk2);
                     gGameState.unk12B = 5;
                 }
                 else
@@ -497,6 +497,111 @@ void Func_0201F878(void)
 //     }
 INCLUDE_ASM(Func_0201F8C4);
 
+// Item effects 8-10: the title sprite drops in over the type 1 marker and sends the item use.
+// Doesn't match by one instruction: in state 2 the original stores a fresh 0 to unk120 where this
+// reuses the register holding unk132 (known to be 0):
+//     void Func_0201FA2C(void)
+//     {
+//         struct Main *main = &gMain;
+//         s32 m = FindMarker(1);
+//         u8 idx = gGameState.effect[0] - 8;
+//         u16 x, y;
+//         u8 arg;
+//
+//         if (gGameState.unk12B <= 3)
+//             Func_0201ED08();
+//         if (gGameState.unk12B == 2)
+//         {
+//             if (gGameState.unk1FA == 0)
+//             {
+//                 if (gGameState.unk132 == 0)
+//                 {
+//                     gGameState.unk120 = 0;
+//                     gGameState.unk132 = 8;
+//                     gGameState.unk12B = 3;
+//                     gGameState.flags.isFree = 0;
+//                     gGameState.unk1E4 = gGameState.effect[0];
+//                     SendItemUse(0x14, 0);
+//                 }
+//                 else
+//                 {
+//                     gGameState.unk132--;
+//                 }
+//             }
+//         }
+//         else if (gGameState.unk12B == 3)
+//         {
+//             if (gGameState.unk132 == 0)
+//             {
+//                 if (gGameState.unk134 == 0)
+//                 {
+//                     gGameState.unk034 = main->bgOfs[3][1] - 0x30;
+//                     gGameState.unk12B = 4;
+//                 }
+//             }
+//             else
+//             {
+//                 gGameState.unk132--;
+//                 gGameState.flags.isFree = 0;
+//             }
+//         }
+//         else if (gGameState.unk12B == 4)
+//         {
+//             if (main->frameCount & 1)
+//                 gGameState.unk034++;
+//             if (gGameState.markers[m].y - gGameState.unk034 <= 0x18)
+//             {
+//                 gGameState.unk132 = (idx + 2) * 60;
+//                 gGameState.unk034 = gGameState.markers[m].y - 0x18;
+//                 gGameState.unk12B = 6;
+//                 GamePlaySound(0x28, 1);
+//             }
+//             Func_0201F8C4(gGameState.markers[m].x - 0x18, gGameState.unk034, 1);
+//         }
+//         else if (gGameState.unk12B == 6)
+//         {
+//             x = gGameState.markers[m].x - 0x18;
+//             y = gGameState.markers[m].y - 0x18;
+//             Func_0201F8C4(x, y, 1);
+//             if (gGameState.unk132 == 0)
+//             {
+//                 if (gGameState.unk1DE == 5)
+//                     arg = gGameState.unk164[5].unk2;
+//                 else
+//                     arg = gGameState.unk164[idx + 8].unk2;
+//                 SendItemUse(idx + 8, arg);
+//                 gGameState.unk034 = y;
+//                 gGameState.unk12B = 5;
+//             }
+//             else
+//             {
+//                 Func_02021284(1, 1, 0);
+//                 if (--gGameState.unk132 == 10)
+//                     gGameState.unk13E = 300;
+//             }
+//         }
+//         else if (gGameState.unk12B == 5)
+//         {
+//             x = gGameState.markers[m].x - 0x18;
+//             y = gGameState.markers[m].y - 0x18;
+//             Func_0201F8C4(x, y, 1);
+//         }
+//         else if (gGameState.unk12B == 7)
+//         {
+//             gGameState.unk034--;
+//             Func_0201F8C4(gGameState.markers[m].x - 0x18, gGameState.unk034, 0);
+//             if (gGameState.unk034 < (s16)main->bgOfs[3][1] - 0x30)
+//             {
+//                 gGameState.unk12B = 0;
+//                 if (gGameState.unk1DE == 5)
+//                     GamePlaySound(0x30, 1);
+//                 else
+//                     GamePlaySound(gGameState.effect[0] + 0x10, 1);
+//                 Func_0201EBAC();
+//             }
+//         }
+//     }
+//
 INCLUDE_ASM(Func_0201FA2C);
 
 void Func_0201FCA0(void)
