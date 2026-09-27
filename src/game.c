@@ -113,9 +113,86 @@ INCLUDE_ASM(Func_0201C568);
 
 INCLUDE_ASM(Func_0201C60C);
 
-INCLUDE_ASM(Func_0201C660);
+// Draw a run of consecutive glyphs (a word stored as one piece in the font).
+void Func_0201C660(u8 id)
+{
+    u16 ch = gGlyphRunStart[id];
+    s32 n = gGlyphRunLength[id];
+#ifndef VERSION_GZLJ01
+    // The US builds draw the run 8 pixels per glyph (the width is not restored on an early
+    // return).
+    u8 width = gGameState.unk157;
+#endif
+    s32 i;
 
+#ifndef VERSION_GZLJ01
+    gGameState.unk157 = 8;
+#endif
+    for (i = 0; i < n; i++)
+    {
+        if (!Func_0201C60C())
+            return;
+        Func_0201BCC0(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
+        ch++;
+        if (gGameState.unk15A)
+            gGameState.textX += gGameState.unk157 * 2;
+        else
+            gGameState.textX += gGameState.unk157;
+    }
+#ifndef VERSION_GZLJ01
+    gGameState.unk157 = width;
+#endif
+}
+
+#ifdef VERSION_GZLJ01
+bool32 Func_0201C704(u8 ch)
+{
+    if (!Func_0201C60C())
+        return FALSE;
+    if (ch == 0xBC)
+        gGameState.unk159 = 1;
+    else
+        gGameState.unk159 = 0;
+    if (ch > 0xE5)
+    {
+        Func_0201BDE4(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC4);
+        if (ch <= 0xEA)
+            ch += 0x33;
+        else
+            ch = gGlyphTable_0202438E[ch - 0xEB];
+    }
+    else if (ch > 0xBC)
+    {
+        Func_0201BDE4(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC2);
+        if (ch <= 0xC1)
+            ch += 0x48;
+        else if (ch <= 0xC6)
+            ch += 0x48;
+        else if (ch <= 0xCB)
+            ch += 0x48;
+        else if (ch <= 0xD0)
+            ch += 0x4D;
+        else if (ch <= 0xD5)
+            ch += 0x6B;
+        else if (ch <= 0xDA)
+            ch += 0x6B;
+        else if (ch <= 0xDF)
+            ch += 0x6B;
+        else
+            ch = gGlyphTable_0202438E[ch - 0xE0];
+    }
+    Func_0201BCC0(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
+    if (gGameState.unk15A)
+        gGameState.textX += gGameState.unk157 * 2;
+    else
+        gGameState.textX += gGameState.unk157;
+    if ((u16)gGameState.unk140 == 0xFFFF)
+        SoundPlay(0x28, 0);
+    return TRUE;
+}
+#else
 INCLUDE_ASM(Func_0201C704);
+#endif
 
 #ifndef VERSION_GZLJ01
 bool32 UsFunc_02023390(u8 ch)

@@ -314,6 +314,9 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+gGlyphRunStart = 0x02024376; // data
+gGlyphRunLength = 0x02024386; // data
+gGlyphTable_0202438E = 0x0202438E; // data
 gDayNameChars = 0x02024394; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data

@@ -467,6 +467,9 @@ struct ItemMenu
     u8 filler6D[2];
     u8 slotItems[13];
 };
+extern const u16 gGlyphRunStart[];  // Func_0201C660: first glyph of each run
+extern const u8 gGlyphRunLength[];
+extern const u8 gGlyphTable_0202438E[];
 extern const u8 gDayNameChars[7 * 2];  // glyphs of each weekday's name (flags.dayOfWeek)
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
