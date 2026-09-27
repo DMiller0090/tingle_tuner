@@ -20,9 +20,10 @@ struct MapMarker
 struct ItemSlot
 {
     /*0x0*/ u16 tile;   // BG map entry of the icon's top-left tile (2x2 tiles)
-    /*0x2*/ u8 filler2[4];
+    /*0x2*/ u16 objTile;  // OBJ tile of the icon as a sprite (Func_0201DB50)
+    /*0x4*/ u8 filler4[2];
     /*0x6*/ u8 count;
-    /*0x7*/ u8 unk7;
+    /*0x7*/ u8 objPalette;
 };
 
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
@@ -361,7 +362,7 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
@@ -458,6 +459,28 @@ void Func_0201D8D8(s16 id);
 void DrawItemIcon(u8 item, u16 *map);
 void DrawItemCount(u8 item, u16 *map);
 void Func_0201DCEC(u8 item);
+void Func_0201E2FC(void);
+extern const u8 gSprite_0202BDB8[];  // menu slot cursor (Func_0201DA78)
+// One OAM entry (the hardware attribute layout), as Func_0201DB50 fills gOamBuffer.
+struct OamData
+{
+    /*0x0*/ u32 y:8;
+            u32 affineMode:2;
+            u32 objMode:2;
+            u32 mosaic:1;
+            u32 bpp:1;
+            u32 shape:2;
+    /*0x2*/ u32 x:9;
+            u32 matrixNum:3;
+            u32 hFlip:1;
+            u32 vFlip:1;
+            u32 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 affineParam;
+};
+
 struct ItemMenu
 {
     struct ItemSlot items[13];

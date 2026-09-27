@@ -326,6 +326,7 @@ gMode1SeaMap = 0x020270B8; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+gSprite_0202BDB8 = 0x0202BDB8; // data
 gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data

@@ -459,9 +459,40 @@ void Func_0201DA50(void)
 INCLUDE_ASM(DrawString);
 #endif
 
-INCLUDE_ASM(Func_0201DA78);
+// Draw the blinking cursor on menu slot (rows 0-1: the item grid, row 2: the bottom row).
+void Func_0201DA78(u8 slot)
+{
+    // (row compares signed, so it is an int; the x sums only match in s16.)
+    u8 col = slot % 5;
+    s32 row = (u8)(slot / 5);
+    bool32 mosaic = gMain.mosaic != 0;
 
-INCLUDE_ASM(Func_0201DB50);
+    if (row <= 1)
+        DrawSprite(gSprite_0202BDB8, (gMain.frameCount >> 4) & 1,
+                   (s16)gMain.bgOfs[1][0] + (s16)(col * 24 + 24), row * 40 + 20, 0, mosaic, 0, 0, 0,
+                   0, 0);
+    else
+        DrawSprite(gSprite_0202BDB8, (gMain.frameCount >> 4) & 1,
+                   (s16)gMain.bgOfs[1][0] + (s16)(col * 16 + 0x27), 0x6C, 0, mosaic, 0, 0, 0, 0, 0);
+}
+
+// Add an item's icon as a 16x16 sprite to gOamBuffer.
+void Func_0201DB50(u8 item, u8 x, u8 y, u8 mosaic)
+{
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+
+    oam->y = y;
+    oam->mosaic = mosaic;
+    oam->shape = 0;
+    oam->x = x;
+    oam->hFlip = 0;
+    oam->vFlip = 0;
+    oam->size = 1;
+    oam->tileNum = gGameState.items[item].objTile;
+    oam->priority = 0;
+    oam->paletteNum = gGameState.items[item].objPalette;
+    gMain.unk450++;
+}
 
 // Draw an item's 2x2-tile icon at map (a blank tile for item 0).
 void DrawItemIcon(u8 item, u16 *map)
@@ -540,7 +571,45 @@ void Func_0201DD20(u8 slot, u8 item)
     DrawItemCount(item, map);
 }
 
-INCLUDE_ASM(Func_0201DDA0);
+// The dungeon chest counter (MainMode1 starts it at state 1): state 2 blinks the new chest
+// bits until unk1FA is clear, state 3 waits 300 frames or a key.
+void Func_0201DDA0(void)
+{
+    if (gGameState.unk1E0 == 3)
+    {
+        if (--gGameState.unk1CA == 0 || gMain.newKeys != 0)
+        {
+            Func_0201E2FC();
+            SoundPlay(0x2A - SOUND_ID_SHIFT, 0);
+            gGameState.unk1CC = 0;
+            gGameState.unk13C = 0;
+            gGameState.unk1E0 = 0;
+            gGameState.unk104 = 1;
+            gGameState.unk1CA = 0;
+        }
+    }
+    else if (gGameState.unk1E0 == 2)
+    {
+        if (++gGameState.unk1CA == 0x20)
+            SoundPlay(0x12 - SOUND_ID_SHIFT, 0);
+        if (gGameState.unk1CA & 0x20)
+        {
+            if (!(gGameState.unk1CA & 0x1F))
+                SoundPlay(0x25 - SOUND_ID_SHIFT, 0);
+            gGameState.flags.dungeonChests |= gGameState.unk1E1;
+        }
+        else
+        {
+            gGameState.flags.dungeonChests &= ~gGameState.unk1E1;
+        }
+        Func_0201E2FC();
+        if (gGameState.unk1FA == 0 && (gGameState.unk1CA & 0x20))
+        {
+            gGameState.unk1CA = 300;
+            gGameState.unk1E0++;
+        }
+    }
+}
 
 INCLUDE_ASM(Func_0201DEAC);
 
