@@ -192,7 +192,119 @@ INCLUDE_ASM(Func_0201DD20);
 
 INCLUDE_ASM(Func_0201DDA0);
 
+#ifdef VERSION_GZLE01_ud
+// This version adds a sound test (L toggles it; see docs/layout.md).
 INCLUDE_ASM(Func_0201DEAC);
+#else
+// Item menu: move the cursor over the 5 x 3 slots with the d-pad (with key repeat); B picks
+// the item under it, and the cursor sprite slides there.
+void Func_0201DEAC(void)
+{
+    s32 col = (u8)(gGameState.menuCursor % 5);
+    s32 row = (u8)(gGameState.menuCursor / 5);
+    u16 keys = gMain.heldKeys;
+    u8 item;
+    struct ShopItem *entry;
+
+#ifdef VERSION_GZLJ01
+    if (gGameState.unk1E0 != 0)
+#else
+    if (gGameState.unk1E0 > 1)
+#endif
+    {
+        Func_0201DDA0();
+        return;
+    }
+    if (gGameState.unk1E5_0)
+    {
+        gGameState.menuCursorX += gGameState.menuCursorDX;
+        gGameState.menuCursorY += gGameState.menuCursorDY;
+        if (gGameState.menuCursorX == 0x9000)
+        {
+            gGameState.unk1E5_0 = 0;
+            Func_0201DCEC(gGameState.menuSlots[gGameState.menuCursor]);
+            SoundPlay(0x15 - SOUND_ID_SHIFT, 0);
+        }
+        Func_0201DB50(gGameState.menuSlots[gGameState.menuCursor], gGameState.menuCursorX >> 8,
+                      gGameState.menuCursorY >> 8, gMain.mosaic != 0);
+        return;
+    }
+    if (gMain.newKeys & keys & 0xF0)
+    {
+        gGameState.menuKeyRepeat = 16;
+        keys = gMain.newKeys;
+        gGameState.unk1DF = 0;
+        SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
+    }
+    else if (Func_02018A90(&gGameState.menuKeyRepeat))
+    {
+        keys = 0;
+    }
+    else if (keys & 0xF0)
+    {
+        gGameState.menuKeyRepeat = 4;
+        SoundPlay(0x15 - SOUND_ID_SHIFT, 0);
+    }
+    if (keys & 0x20)
+    {
+        if (--col < 0)
+            col = 4;
+    }
+    else if (keys & 0x10)
+    {
+        if (++col > 4)
+            col = 0;
+    }
+    if (keys & 0x40)
+    {
+        if (--row < 0)
+            row = 2;
+    }
+    else if (keys & 0x80)
+    {
+        if (++row > 2)
+            row = 0;
+    }
+    gGameState.menuCursor = row * 5 + col;
+    item = gGameState.menuSlots[gGameState.menuCursor];
+    if (row == 2)
+    {
+        if ((gGameState.flags.dungeonChests >> col) & 1)
+            Func_0201DA24(gChestRowIds[col]);
+        else
+            gGameState.unk13C = 0;
+    }
+    else
+    {
+        if (gMain.newKeys & 2)
+        {
+            if (item == 0)
+            {
+                gGameState.unk1DF = 1;
+            }
+            else if (item != gGameState.unk1DE)
+            {
+                gGameState.menuCursorX = ((gGameState.menuCursor % 5) * 24 + 20) << 8;
+                gGameState.menuCursorY = ((gGameState.menuCursor / 5) * 40 + 20) << 8;
+                gGameState.menuCursorDX = (0x9000 - gGameState.menuCursorX) >> 4;
+                gGameState.menuCursorDY = (0x8800 - gGameState.menuCursorY) >> 4;
+                gGameState.unk1E5_0 = 1;
+                SoundPlay(0x14 - SOUND_ID_SHIFT, 0);
+            }
+            else
+            {
+                SoundPlay(0x1C - SOUND_ID_SHIFT, 0);
+            }
+        }
+        entry = &gGameState.items[item];
+        if (item == 0)
+            gGameState.unk13C = 0;
+        else
+            Func_0201DA24(entry->unk4);
+    }
+    Func_0201DA78(gGameState.menuCursor);
+}
+#endif
 
 // Set up the item menu: reset the item table, adjust prices and the dungeon item, and draw
 // the ten slots.
@@ -252,7 +364,7 @@ bool32 Func_0201E190(void)
     Func_0201E5E0();
     Func_0201E2FC();
     gGameState.unk1CC = 0;
-    gGameState.unk1CD = 0;
+    gGameState.menuCursor = 0;
     gGameState.unk1E5_0 = 0;
     return TRUE;
 }

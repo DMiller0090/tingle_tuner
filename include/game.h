@@ -21,7 +21,7 @@ struct ShopItem
 {
     /*0x0*/ u16 tile;        // BG map entry of the icon (palette in the top 4 bits)
     /*0x2*/ u16 unk2;
-    /*0x4*/ u16 unk4;
+    /*0x4*/ s16 unk4;        // passed to Func_0201DA24
     /*0x6*/ u8 price;        // rupees? (0, 10-80)
     /*0x7*/ u8 unk7;
 };
@@ -100,12 +100,19 @@ struct ShopItem
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
 // 0x160 struct ShopItem items[12] size=0x60
+// 0x1C0 u16 menuCursorX  // item menu cursor position (8.8), moving toward the slot
+// 0x1C2 u16 menuCursorY
+// 0x1C4 u16 menuCursorDX
+// 0x1C6 u16 menuCursorDY
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
-// 0x1CD u8 unk1CD
+// 0x1CD u8 menuCursor  // item menu slot (5 x 3; row 2 is the dungeon chest row)
+// 0x1CE u8 menuKeyRepeat  // frames to the next d-pad repeat
+// 0x1CF u8 menuSlots[10] size=10  // item in each slot of rows 0-1 (index into items)
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
+// 0x1DF u8 unk1DF
 // 0x1E1 u8 unk1E1  // chest bits that changed
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
@@ -253,14 +260,19 @@ struct GameState
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
     /*0x160*/ struct ShopItem items[12];
-    /*0x1C0*/ u8 filler1C0[0x1C8 - 0x1C0];
+    /*0x1C0*/ u16 menuCursorX;                // item menu cursor position (8.8), moving toward the slot
+    /*0x1C2*/ u16 menuCursorY;
+    /*0x1C4*/ u16 menuCursorDX;
+    /*0x1C6*/ u16 menuCursorDY;
     /*0x1C8*/ u16 unk1C8;
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
-    /*0x1CD*/ u8 unk1CD;
-    /*0x1CE*/ u8 filler1CE[0x1DE - 0x1CE];
+    /*0x1CD*/ u8 menuCursor;                  // item menu slot (5 x 3; row 2 is the dungeon chest row)
+    /*0x1CE*/ u8 menuKeyRepeat;               // frames to the next d-pad repeat
+    /*0x1CF*/ u8 menuSlots[10];               // item in each slot of rows 0-1 (index into items)
+    /*0x1D9*/ u8 filler1D9[0x1DE - 0x1D9];
     /*0x1DE*/ u8 unk1DE;
-    /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
+    /*0x1DF*/ u8 unk1DF;
     /*0x1E0*/ u8 unk1E0;
     /*0x1E1*/ u8 unk1E1;                      // chest bits that changed
     /*0x1E2*/ u8 filler1E2[0x1E3 - 0x1E2];
@@ -461,6 +473,13 @@ void Func_0201EDF8(s16 x, s16 y, u8 kind);
 void Func_0201EF98(s16 x, s16 y);
 void Func_0201F2A8(void);
 void Func_0201DCEC(u8 arg);
+// The definition takes a u16; callers see s16 (they sign-extend).
+bool32 Func_0201DA24(s16 id);
+void Func_0201DA78(u8 cursor);
+void Func_0201DB50(u8 item, u8 x, u8 y, u8 mosaic);
+void Func_0201DDA0(void);
+u8 Func_02018A90(u8 *timer);  // counts *timer down to 0 and returns it
+extern const s16 gChestRowIds[5];
 u32 Func_0201A8AC(u8 arg);
 void Func_0201FCA0(void);
 void Func_0201F878(void);
