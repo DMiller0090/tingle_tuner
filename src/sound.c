@@ -1,8 +1,58 @@
 #include "global.h"
 #include "sound.h"
+#include "gba/syscall.h"
 
 // The sound driver (GZLJ01 02020E28-020237CC): the API the game calls, then the sequencer,
 // PCM mixer front end, GB channels and the command queue. See docs/layout.md "Sound driver".
+
+// gSoundTable/gSoundLoopTable entries: bits 0-15 SE index, 16-23 player, then these flags.
+#define SOUND_PAN_X          (1 << 24)  // pan and volume from params->x
+#define SOUND_LOW_PRIORITY   (1 << 25)
+#define SOUND_HIGH_PRIORITY  (1 << 26)
+#define SOUND_ADD_ARG        (1 << 27)  // add params->arg to the SE index
+#define SOUND_NO_RESTART     (1 << 28)  // ignored while the same ID plays
+#define SOUND_VOLUME_Y       (1 << 29)  // volume (also) from params->y
+
+#define SOUND_API_PLAYERS 19  // players 0-18; SoundPlayLoop uses 16 and 17
+
+struct SoundParams
+{
+    /*0x0*/ s16 x;    // screen position of the source
+    /*0x2*/ s16 y;
+    /*0x4*/ s16 arg;  // SOUND_ADD_ARG; loop 9's tempo step
+};
+
+struct SoundLoopSlot
+{
+    /*0x0*/ u32 owner;  // -1: free
+    /*0x4*/ u8 refreshed;
+};
+
+extern const u8 gSoundBankHeader[];
+extern const u32 gSoundTable[];
+extern const u32 gSoundLoopTable[];
+
+extern s16 gSoundPlayerSoundId[SOUND_API_PLAYERS];  // -1: none
+extern u8 gSoundStarted[SOUND_API_PLAYERS];         // started this frame
+extern u8 gSoundLoop9Active;
+extern u16 gSoundLoop9Player;
+extern u8 gSoundLoop9Timer;       // frames since loop 9 stopped, up to 150
+extern s16 gSoundLoop9TempoOfs;
+extern u8 gSoundLoop9Param;
+extern struct SoundLoopSlot gSoundLoopSlots[2];
+
+void SoundDriverInit(const void *bankHeader);
+void SoundApiInit(void);
+void SoundApiUpdate(void);
+u32 PlayerGetState(u32 player);
+void SoundCmdFlush(void);
+void SoundCmdStartSe(u16 player, u16 set, u16 index);
+void SoundCmdFadeOut(u16 player, u16 frames);
+void SoundCmdPausePlayers(u32 mask, u8 on);
+void SoundCmdFadeOutPlayers(u32 mask, u16 frames);
+void SoundCmdSetTempo(u16 player, s16 tempo);
+void SoundCmdSetTrackVolume(u16 player, u32 mask, u8 volume);
+void SoundCmdSetTrackPan(u16 player, u32 mask, u8 pan);
 
 // Commands (struct SoundCmd.cmd): the high byte selects the handler table (SoundCmdPlayer,
 // SoundCmdTracks, SoundCmdPlayers, SoundCmdGlobal), the low byte the command.
@@ -43,36 +93,249 @@ extern struct SoundCmd *gSoundCmdWrite;
 extern struct SoundCmd *gSoundCmdLimit;  // end of what SoundCmdFlush published
 extern struct SoundCmd *gSoundCmdEnd;
 
-INCLUDE_ASM(SoundInit);
+void SoundInit(void)
+{
+    SoundDriverInit(&gSoundBankHeader);
+    SoundApiInit();
+}
 
-INCLUDE_ASM(SoundMain);
+void SoundMain(void)
+{
+    SoundApiUpdate();
+    SoundCmdFlush();
+}
 
-INCLUDE_ASM(SoundPauseAll);
+void SoundPauseAll(u8 on)
+{
+    SoundCmdPausePlayers(0xFFFFE, on);
+}
 
-INCLUDE_ASM(SoundStopAll);
+void SoundStopAll(void)
+{
+    SoundCmdFadeOutPlayers(0xFFFFF, 0);
+}
 
-INCLUDE_ASM(SoundStopMost);
+void SoundStopMost(void)
+{
+    SoundCmdFadeOutPlayers(0x7FFFF, 0);
+}
 
-INCLUDE_ASM(SoundApiInit);
+void SoundApiInit(void)
+{
+    s32 i;
 
-INCLUDE_ASM(SoundApiUpdate);
+    for (i = 0; i < SOUND_API_PLAYERS; i++)
+        gSoundStarted[i] = FALSE;
+    gSoundLoop9Active = FALSE;
+    gSoundLoop9Timer = 150;
+    CpuFill16(0xFFFF, gSoundPlayerSoundId, sizeof(gSoundPlayerSoundId));
+}
 
-INCLUDE_ASM(SoundPanFromX);
+// Stop the loop slots nobody refreshed this frame, count the frames since loop 9 stopped, and
+// forget the sound of each player that has finished.
+void SoundApiUpdate(void)
+{
+    s32 i;
 
-INCLUDE_ASM(SoundVolumeFromX);
+    for (i = 0; i < 2; i++)
+    {
+        if (gSoundLoopSlots[i].refreshed == 0)
+        {
+            s32 player = i + 16;
 
-INCLUDE_ASM(SoundVolumeFromY);
+            if (PlayerGetState(player) != 0)
+                SoundCmdFadeOut(player, 0);
+            gSoundLoopSlots[i].owner = -1;
+            if (gSoundLoop9Active && player == gSoundLoop9Player)
+            {
+                gSoundLoop9Active = FALSE;
+                gSoundLoop9Timer = 0;
+            }
+        }
+        else
+        {
+            gSoundLoopSlots[i].refreshed = 0;
+        }
+    }
+    if (!gSoundLoop9Active && gSoundLoop9Timer < 150)
+        gSoundLoop9Timer++;
+    for (i = 0; i < SOUND_API_PLAYERS; i++)
+    {
+        if (gSoundStarted[i])
+            gSoundStarted[i] = FALSE;
+        else if (PlayerGetState(i) == 0)
+            gSoundPlayerSoundId[i] = -1;
+    }
+}
 
+u8 SoundPanFromX(struct SoundParams *params)
+{
+    if (params == NULL)
+        return 0x40;
+    if (params->x < -0x150)
+        return 0;
+    if (params->x < 0x3C)
+        return (params->x >> 3) + 0x2A;
+    if (params->x < 0xB4)
+        return ((params->x - 0x3C) >> 2) + 0x31;
+    if (params->x <= 0x233)
+        return ((params->x - 0xB4) >> 3) + 0x4F;
+    return 0x7F;
+}
+
+u16 SoundVolumeFromX(struct SoundParams *params)
+{
+    if (params == NULL)
+        return 0x80;
+    if (params->x < -0x80)
+        return 0;
+    if (params->x < 0)
+        return params->x + 0x80;
+    if (params->x > 0x170)
+        return 0;
+    if (params->x > 0xF0)
+        return 0x170 - params->x;
+    return 0x80;
+}
+
+u16 SoundVolumeFromY(struct SoundParams *params)
+{
+    if (params == NULL)
+        return 0x80;
+    if (params->y < -0x80)
+        return 0;
+    if (params->y < 0)
+        return params->y + 0x80;
+    if (params->y > 0x120)
+        return 0;
+    if (params->y > 0xA0)
+        return 0x120 - params->y;
+    return 0x80;
+}
+
+#define SOUND_PRIORITY(entry) ((entry) & SOUND_HIGH_PRIORITY ? 2 : !((entry) & SOUND_LOW_PRIORITY))
+
+// Near-miss: identical but for one register copy in the volume product (`volume * y >> 7`
+// shifts a copy instead of the product's register) and so 4 bytes longer.
+//     void SoundPlay_(u16 id, struct SoundParams *params) asm("SoundPlay");
+//     void SoundPlay_(u16 id, struct SoundParams *params)
+//     {
+//         u8 player = (gSoundTable[id] & 0xFF0000) >> 16;
+//         u32 entry = gSoundTable[id];
+//         u32 volume = 0x80;
+//         u16 index;
+//         u32 cur;
+//
+//         if (gSoundPlayerSoundId[player] != -1)
+//         {
+//             if ((entry & SOUND_NO_RESTART) && id == gSoundPlayerSoundId[player])
+//                 return;
+//             cur = gSoundTable[gSoundPlayerSoundId[player]];
+//             if (SOUND_PRIORITY(entry) < SOUND_PRIORITY(cur))
+//                 return;
+//         }
+//         index = entry;
+//         if (entry & SOUND_ADD_ARG)
+//             index += params->arg;
+//         SoundCmdStartSe(player, 0, index);
+//         gSoundPlayerSoundId[player] = id;
+//         gSoundStarted[player] = TRUE;
+//         if (entry & SOUND_PAN_X)
+//         {
+//             SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
+//             volume = SoundVolumeFromX(params);
+//         }
+//         if (entry & SOUND_VOLUME_Y)
+//             volume = volume * SoundVolumeFromY(params) >> 7;
+//         SoundCmdSetTrackVolume(player, 1, volume);
+//     }
 INCLUDE_ASM(SoundPlay);
 
-INCLUDE_ASM(SoundIsPlaying);
+bool32 SoundIsPlaying(u16 id)
+{
+    u32 player = (gSoundTable[id] & 0xFF0000) >> 16;
+    bool32 playing = FALSE;
 
-INCLUDE_ASM(SoundFindLoopSlot);
+    if (gSoundPlayerSoundId[player] == id)
+        playing = TRUE;
+    return playing;
+}
 
-INCLUDE_ASM(SoundLoop9Recent);
+s8 SoundFindLoopSlot(u32 owner)
+{
+    s8 i;
 
-INCLUDE_ASM(SoundLoop9Tempo);
+    for (i = 0; i < 2; i++)
+    {
+        if (gSoundLoopSlots[i].owner == -1 || gSoundLoopSlots[i].owner == owner)
+            return i;
+    }
+    return -1;
+}
 
+u8 SoundLoop9Recent(void)
+{
+    if (gSoundLoop9Timer < 150)
+        return TRUE;
+    return FALSE;
+}
+
+s16 SoundLoop9Tempo(struct SoundParams *params)
+{
+    gSoundLoop9Param = params->arg;
+    if (params->arg == 0)
+        return -30 * params->arg;
+    else if (params->arg == 1)
+        return -30 * params->arg;
+    else if (params->arg == 2)
+        return -30 * params->arg;
+    else if (params->arg == 3)
+        return -30 * params->arg;
+}
+
+// Near-miss: the volume and the slot index (spilled) swap stack slots, and the volume
+// product multiplies into the other register.
+//     void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params) asm("SoundPlayLoop");
+//     void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params)
+//     {
+//         u32 volume = 0x80;
+//         u32 entry = gSoundLoopTable[id];
+//         u16 index = *(u16 *)&gSoundLoopTable[id];
+//         s8 i = SoundFindLoopSlot(owner);
+//
+//         if (i >= 0)
+//         {
+//             u32 player = i + 16;
+//
+//             if (owner != gSoundLoopSlots[i].owner)
+//             {
+//                 if (id == 9)
+//                 {
+//                     gSoundLoop9Player = player;
+//                     gSoundLoop9Active = TRUE;
+//                     index += SoundLoop9Recent();
+//                 }
+//                 SoundCmdStartSe(player, 0, index);
+//                 gSoundLoopSlots[i].owner = owner;
+//             }
+//             if (id == 9)
+//             {
+//                 if (params->arg != gSoundLoop9Param)
+//                     gSoundLoop9TempoOfs = SoundLoop9Tempo(params);
+//                 SoundCmdSetTempo(player, gSoundLoop9TempoOfs);
+//             }
+//             gSoundPlayerSoundId[player] = id;
+//             if (entry & SOUND_PAN_X)
+//             {
+//                 SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
+//                 volume = SoundVolumeFromX(params);
+//             }
+//             if (entry & SOUND_VOLUME_Y)
+//                 volume = volume * SoundVolumeFromY(params) >> 7;
+//             SoundCmdSetTrackVolume(player, 1, volume);
+//             gSoundLoopSlots[i].refreshed = TRUE;
+//         }
+//     }
 INCLUDE_ASM(SoundPlayLoop);
 
 INCLUDE_ASM(SoundDriverInit);

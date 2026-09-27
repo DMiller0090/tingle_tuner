@@ -25,6 +25,6 @@ void SoundDmaStop(void);
 void SoundPlay(u16 id, void *params);
 // Loop sound gSoundLoopTable[id] for `owner`; call it every frame to keep it playing.
 // Reads params[1]'s low half (as an s16, a tempo step) when id is 9.
-void SoundPlayLoop(u32 owner, u16 id, u32 *params);
+void SoundPlayLoop(u32 owner, u16 id, void *params);
 
 #endif // GUARD_SOUND_H
