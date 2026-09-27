@@ -443,6 +443,16 @@ void Mode2State0(void);
 void Mode2State1(void);
 // The message data (slot 0, msg_LZ.bin), unpacked to the start of EWRAM by Mode0State1.
 #define MSG_DATA ((const u8 *)0x02000000)
+// Object type 0 (ObjBurst): five pieces, per piece (unk1C) an offset and a velocity.
+extern const s16 gObjBurstOfsX[5];
+extern const s16 gObjBurstOfsY[5];
+extern const s16 gObjBurstVelX[5];
+extern const s16 gObjBurstVelY[5];
+extern void (*const gObjBurstStateFuncs[])(struct Obj *obj);
+extern const u8 gSprite_0202C150[];
+void ObjBurstInit(struct Obj *obj);
+void ObjBurstFly(struct Obj *obj);
+void ObjBurst(struct Obj *obj);
 void Func_0201BAD8(void);
 #ifndef VERSION_GZLJ01
 extern const u8 gMode2UsString[];

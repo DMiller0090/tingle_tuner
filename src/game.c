@@ -455,11 +455,89 @@ void ObjResetActive(void)
     }
 }
 
-INCLUDE_ASM(Func_02020668);
+// Place this piece and up to four more at the first type 3 marker, flying out in a fan.
+void ObjBurstInit(struct Obj *obj)
+{
+    s16 ofsX = gObjBurstOfsX[obj->unk1C];
+    s16 ofsY = gObjBurstOfsY[obj->unk1C];
+    s32 i = 0;
+    s32 idx;
+    s32 j;
 
-INCLUDE_ASM(Func_020207D4);
+    do
+    {
+        if (gGameState.markers[i].type == 3)
+            break;
+        i++;
+    } while (i < gGameState.markerCount);
 
-INCLUDE_ASM(Func_0202081C);
+    obj->x = (gGameState.markers[i].x << 8) + ofsX;
+    obj->y = (gGameState.markers[i].y << 8) + ofsY;
+    obj->unk1A = obj->unk18 = 0;
+    obj->vx = gObjBurstVelX[obj->unk1C];
+    obj->vy = gObjBurstVelY[obj->unk1C];
+    obj->vz = -0x100;
+    obj->unk1E = 0;
+    obj->unk12 = 2;
+    obj->unk16 = 0x180;
+    obj->active++;
+
+    for (j = 1; j <= 4; j++)
+    {
+        idx = ObjFindFree();
+        if (idx != -1)
+        {
+            // BUG: indexes from obj, not gObjs (the same when obj is gObjs[0])
+            obj[idx].unk1C = j;
+            ofsX = gObjBurstOfsX[obj[idx].unk1C];
+            ofsY = gObjBurstOfsY[obj[idx].unk1C];
+            obj[idx].type = 0;
+            obj[idx].active = 1;
+            obj[idx].x = (gGameState.markers[i].x << 8) + ofsX;
+            obj[idx].y = (gGameState.markers[i].y << 8) + ofsY;
+            obj[idx].unk1A = obj[idx].unk18 = 0;
+            obj[idx].vx = gObjBurstVelX[obj[idx].unk1C];
+            obj[idx].vy = gObjBurstVelY[obj[idx].unk1C];
+            obj[idx].vz = -0x100;
+            obj[idx].unk1E = 0;
+            obj[idx].unk12 = 2;
+            obj[idx].unk16 = 0x180;
+            obj[idx].active = 2;
+        }
+    }
+}
+
+// Fly, spinning, and scale with the vertical speed; vanish on landing.
+void ObjBurstFly(struct Obj *obj)
+{
+    ObjDecelX(obj, 0);
+    ObjDecelY(obj, 0);
+    ObjFall(obj, 5);
+    if (obj->z == 0)
+        ObjReset(obj);
+    obj->unk1E -= 16;
+    if (obj->vz < 0)
+        obj->unk16 = 0x80 - obj->vz;
+    else
+        obj->unk16 = obj->vz + 0x80;
+}
+
+// Object type 0: pieces flying out of the type 3 marker (spawned by Func_0201EBD4).
+void ObjBurst(struct Obj *obj)
+{
+    u8 mosaic = (gMain.bgcnt[0] >> 6) & 1;
+    s32 x, y;
+
+    if (!(gGameState.flags.busy & 1))
+        gObjBurstStateFuncs[obj->active - 1](obj);
+    if (obj->active)
+    {
+        x = (obj->x >> 8) - gMain.bgOfs[3][0];
+        y = ((obj->y + obj->z) >> 8) - gMain.bgOfs[3][1];
+        DrawSprite(gSprite_0202C150, 0, x, y, obj->unk1E, mosaic, obj->unk16, obj->unk18,
+                   obj->unk1A, 0, 0);
+    }
+}
 
 // Fill a per-line BG0HOFS table: BG0's scroll plus a sine wave of the given amplitude (8.8),
 // advancing the phase by 4 per line.
