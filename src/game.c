@@ -3,6 +3,7 @@
 #include "game.h"
 #include "sound.h"
 #include "gba_com.h"
+#include "gba/syscall.h"
 
 // Game code after heap.c, up to the sound driver (GZLJ01 02018884-02020E28). Not split into
 // objects yet: see docs/layout.md for the groups the .rodata order implies.
@@ -85,11 +86,43 @@ INCLUDE_ASM(Func_0201B7D4);
 
 INCLUDE_ASM(Func_0201B8C8);
 
-INCLUDE_ASM(Func_0201BA2C);
+void Func_0201BA2C(s8 row)
+{
+    u16 *map = (u16 *)0x06006120 + row * 32;
+    u16 tile = row * 12 + 0xF370;
+    s32 i;
 
-INCLUDE_ASM(Func_0201BA9C);
+    map[0] = map[0x20] = 0x9023;
+    map++;
+    for (i = 0; i < 12; i++)
+    {
+        map[0x20] = tile + 12;
+        *map = tile++;
+        map++;
+    }
+    map[0] = map[0x20] = 0xD024;
+}
 
-INCLUDE_ASM(Func_0201BAD8);
+void Func_0201BA9C(s8 row)
+{
+    u16 *src = (u16 *)0x06007800;
+    s32 off = row * 32;
+
+    src += off;
+    CpuSet(src, (u16 *)0x060061A0 + off, 14);
+    src += 0x20;
+    CpuSet(src, (u16 *)0x060061E0 + off, 14);
+}
+
+void Func_0201BAD8(void)
+{
+    u32 *p = (u32 *)0x0600F100;
+    u32 fill = 0x11111111;
+    s32 i;
+
+    for (i = 0x3C0; i != 0; i--)
+        *p++ = fill;
+}
 
 INCLUDE_ASM(Func_0201BAF8);
 
@@ -101,7 +134,29 @@ INCLUDE_ASM(Func_0201BDE4);
 
 INCLUDE_ASM(Func_0201BEA0);
 
-INCLUDE_ASM(Func_0201C0E8);
+void Func_0201C0E8(u8 playSound)
+{
+    u32 params[2];
+    u32 mask;
+    s32 r;
+
+    Func_0201BAD8();
+    gGameState.unk148 = 0;
+    gGameState.unk149 = 8;
+    if (playSound)
+    {
+        mask = 0xFFFF0000;
+        params[0] = 0;
+        r = gMain.random % 3;
+        if (r == 0)
+            params[1] = params[1] & mask;
+        else if (r == 1)
+            params[1] = (params[1] & mask) | 1;
+        else
+            params[1] = (params[1] & mask) | 2;
+        SoundPlay(0x13 - SOUND_ID_SHIFT, params);
+    }
+}
 
 INCLUDE_ASM(Func_0201C164);
 
@@ -111,7 +166,23 @@ INCLUDE_ASM(Func_0201C484);
 
 INCLUDE_ASM(Func_0201C568);
 
-INCLUDE_ASM(Func_0201C60C);
+bool32 Func_0201C60C(void)
+{
+    u8 step;
+
+    if (gGameState.unk148 < 0x60)
+        return TRUE;
+    gGameState.unk148 = 0;
+    if (gGameState.unk15A)
+        step = 24;
+    else
+        step = 12;
+    gGameState.unk149 += step;
+    step -= 12;
+    if (gGameState.unk149 < 0x50 - step)
+        return TRUE;
+    return FALSE;
+}
 
 INCLUDE_ASM(Func_0201C660);
 

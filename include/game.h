@@ -76,6 +76,8 @@ struct MapMarker
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
 // 0x142 s16 unk142
+// 0x148 u8 unk148
+// 0x149 u8 unk149
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
 // 0x156 u8 unk156
@@ -217,7 +219,9 @@ struct GameState
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
     /*0x142*/ s16 unk142;
-    /*0x144*/ u8 filler144[0x14A - 0x144];
+    /*0x144*/ u8 filler144[0x148 - 0x144];
+    /*0x148*/ u8 unk148;
+    /*0x149*/ u8 unk149;
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
     /*0x14C*/ u8 filler14C[0x156 - 0x14C];
@@ -401,6 +405,11 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
+void Func_0201BA2C(s8 row);
+void Func_0201BA9C(s8 row);
+void Func_0201BAD8(void);
+void Func_0201C0E8(u8 playSound);
+bool32 Func_0201C60C(void);
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 
