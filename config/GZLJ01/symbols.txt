@@ -315,6 +315,7 @@ gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
 gShopRequests = 0x020244D0; // data
+gBobOffsets_020244DA = 0x020244DA; // data
 gItemEffectFuncs = 0x020244E4; // data
 gMode2StateFuncs = 0x0202452C; // data
 gObjFuncs = 0x02024534; // data
@@ -334,6 +335,7 @@ gMode1ObjPalette = 0x0202BB78; // data
 gSprite_0202BD78 = 0x0202BD78; // data
 gSprite_0202C150 = 0x0202C150; // data
 gSprite_0202C438 = 0x0202C438; // data
+gSprite_0202C490 = 0x0202C490; // data
 gSprite_0202C848 = 0x0202C848; // data
 gSprite_0202C928 = 0x0202C928; // data
 gSprite_0202C938 = 0x0202C938; // data

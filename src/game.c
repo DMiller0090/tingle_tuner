@@ -465,6 +465,36 @@ void Func_0201F878(void)
     GamePlaySound(0x27, 1);
 }
 
+// Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gSprite_0202C490 with a
+// palette per effect, kind 2 flips it and adds gSprite_0202C928 at (unk036, unk038).
+// Doesn't match: the original keeps x, y and bob in registers (spilling copies of kind and
+// mosaic instead) and loads BG3's scroll as a folded gMain+0x432 constant in the first and
+// last calls; this keeps the address in a register:
+//     s16 bob = gBobOffsets_020244DA[(gMain.frameCount & 0x30) >> 4];
+//     u8 mosaic = gMain.mosaic != 0;
+//     u8 flags = 0;
+//     u8 palette;
+//
+//     if (kind == 2)
+//         flags = 8;
+//     DrawSpriteAt(gSprite_0202C938, 0, (s16)x - gMain.bgOfs[3][0] + bob,
+//                  (s16)y - gMain.bgOfs[3][1], mosaic, flags, 1);
+//     if (kind == 1)
+//     {
+//         if (gGameState.effect[0] == 8)
+//             palette = 8;
+//         else if (gGameState.effect[0] == 9)
+//             palette = 15;
+//         else
+//             palette = 4;
+//         DrawSprite(gSprite_0202C490, 0, (s16)x - gMain.bgOfs[3][0] + (bob + 11),
+//                    (s16)y - gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, palette);
+//     }
+//     else if (kind == 2)
+//     {
+//         DrawSpriteAt(gSprite_0202C928, 0, gGameState.unk036 - gMain.bgOfs[3][0] + bob,
+//                      gGameState.unk038 - gMain.bgOfs[3][1], mosaic, 16, 1);
+//     }
 INCLUDE_ASM(Func_0201F8C4);
 
 INCLUDE_ASM(Func_0201FA2C);

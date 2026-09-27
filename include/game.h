@@ -26,6 +26,8 @@ struct MapMarker
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
 // 0x034 s16 unk034  // title sprite y
+// 0x036 u16 unk036
+// 0x038 u16 unk038
 // 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
 // 0x03D u8 switchStageNo
@@ -154,7 +156,8 @@ struct GameState
     /*0x030*/ u16 unk030;
     /*0x032*/ s16 unk032;                     // title sprite x
     /*0x034*/ s16 unk034;                     // title sprite y
-    /*0x036*/ u8 filler036[0x03A - 0x036];
+    /*0x036*/ u16 unk036;
+    /*0x038*/ u16 unk038;
     /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
     /*0x03C*/ u8 switchNo;                    // 0xFF: none
     /*0x03D*/ u8 switchStageNo;
@@ -488,5 +491,8 @@ void SendItemUse(u8 item, u8 arg);
 #define GBACOM_BUF_ITEM_BUY ((u8 *)(PROG_BASE - 0x560))
 // Shop purchase requests (slot 12), 3 bytes each.
 extern const u8 gShopRequests[9];
+extern const s16 gBobOffsets_020244DA[4];
+extern const u8 gSprite_0202C490[];
+void Func_0201F8C4(u16 x, u16 y, u8 kind);
 
 #endif // GUARD_GAME_H
