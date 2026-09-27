@@ -49,7 +49,7 @@ INCLUDE_ASM(Func_0201A0A8);
 // seaAnimTimer[j]) in the loop body's first block, next to the row read; this computes it
 // in the else. Writing `t = j * 2;` after the row and `seaAnimTimer[t / 2]++` gets it within
 // one scheduling slot. The locals dx and dy double as the loop's column and row.
-//     void Func_0201A224(void)
+//     void UpdateMap(void)
 //     {
 //         u16 maxX = gGameState.mapImage->width - 120;
 //         u16 maxY = gGameState.mapImage->height - 120;
@@ -162,7 +162,7 @@ INCLUDE_ASM(Func_0201A0A8);
 //         if (gGameState.unk224 == 0)
 //             Func_02019510(&gGameState, gMain.frameCount);
 //     }
-INCLUDE_ASM(Func_0201A224);
+INCLUDE_ASM(UpdateMap);
 
 void Func_0201A540(void)
 {
@@ -185,7 +185,7 @@ void Func_0201A540(void)
 #endif
 
 // Draw the dungeon floor number next to the map (blank outside dungeons or with no floor).
-void Func_0201A570(void)
+void DrawFloorNumber(void)
 {
     u16 *map = (u16 *)0x06006074;
     u8 floor;
@@ -232,7 +232,7 @@ void Func_0201A570(void)
 
 // Point gGameState.mapImage at the received map image and relocate its data offsets (unless
 // they are already addresses).
-bool32 Func_0201A69C(void)
+bool32 LoadMapImage(void)
 {
     gGameState.mapImage = (struct MapImage *)GBACOM_BUF_MESSAGE;
     if (*(u32 *)(GBACOM_BUF_MESSAGE + 8) <= 0x01FFFFFF)
@@ -245,7 +245,7 @@ bool32 Func_0201A69C(void)
 
 // Set up the map view on the player's marker: in map mode, load the map image's tiles and
 // draw the visible part of its map; otherwise just centre the view.
-bool32 Func_0201A6D4(void)
+bool32 InitMapView(void)
 {
     u8 i = FindMarker(3);
     u16 maxX, maxY;
@@ -280,7 +280,7 @@ bool32 Func_0201A6D4(void)
                 gGameState.mapY = maxY;
             gMain.bgOfs[3][0] = gGameState.mapX - 8;
             gMain.bgOfs[3][1] = gGameState.mapY - 8;
-            Func_0201A570();
+            DrawFloorNumber();
             x = gGameState.mapX;
             y = gGameState.mapY;
             yEnd = y + 120;
@@ -315,7 +315,7 @@ u8 FindMarker(u8 type)
 }
 
 // Distance from the type 1 marker to icons[2] (arg 0) or to the type 3 marker.
-u32 Func_0201A8AC(u8 arg)
+u32 MarkerDistance(u8 arg)
 {
     u8 i = FindMarker(1);
     s32 dx, dy;
@@ -345,7 +345,7 @@ u32 Func_0201A8AC(u8 arg)
 // Nearly matches: the logic and instruction selection are right, but registers differ from
 // the start (the ArcTan2 operands land in r4 instead of r2, so the address temporaries shift
 // and the targetNear stores of levels 2 and 4 are not cross-jumped):
-// void Func_0201A944(void)
+// void UpdateTargetCompass(void)
 // {
 //     u8 angle;
 //     s32 x, y;
@@ -369,7 +369,7 @@ u32 Func_0201A8AC(u8 arg)
 //     y = (gSinTable + 64)[angle];
 //     y >>= 3;
 //     DrawSprite(gMapIconSprites[gGameState.icons[2].type], 0, (u16)(x + 0xB8), (u16)(y + 0x58), 0, 0, 0, 0, 0, 0, 0);
-//     level = Func_0201A8AC(0);
+//     level = MarkerDistance(0);
 //     if ((u32)level <= 0x18)
 //     {
 //         if (gGameState.unk224 == 0)
@@ -441,7 +441,7 @@ u32 Func_0201A8AC(u8 arg)
 //         }
 //     }
 // }
-INCLUDE_ASM(Func_0201A944);
+INCLUDE_ASM(UpdateTargetCompass);
 
 // Copy each view quadrant's current sea animation frame into the BG tiles, then the map image
 // tiles (loaded at 0x0600C000) to 0x06004000.
@@ -472,7 +472,7 @@ INCLUDE_ASM(Func_0201A944);
 INCLUDE_ASM(Mode1VBlank);
 
 // Icon type 1: follow the player's marker (type 3, else type 1).
-void Func_0201AC94(struct MapIcon *icon)
+void MapIconFollowMarker(struct MapIcon *icon)
 {
     u8 i = FindMarker(3);
 
@@ -482,16 +482,16 @@ void Func_0201AC94(struct MapIcon *icon)
     icon->y = gGameState.markers[i].y;
 }
 
-void Func_0201ACD0(void)
+void InitMarkerIcon(void)
 {
     gGameState.icons[0].type = 1;
     gGameState.icons[0].frame = 0;
     gGameState.icons[0].timer = 0;
-    Func_0201AC94(&gGameState.icons[0]);
+    MapIconFollowMarker(&gGameState.icons[0]);
 }
 
 // Icon type 3: blink between frames 0 and 1.
-void Func_0201ACF8(struct MapIcon *icon)
+void MapIconBlink(struct MapIcon *icon)
 {
     if (icon->timer != 0)
     {
@@ -509,15 +509,15 @@ void Func_0201ACF8(struct MapIcon *icon)
     }
 }
 
-void Func_0201AD24(void)
+void InitTargetIcon(void)
 {
     gGameState.icons[2].type = 3;
     gGameState.icons[2].frame = 1;
     gGameState.icons[2].timer = 0;
-    Func_0201ACF8(&gGameState.icons[2]);
+    MapIconBlink(&gGameState.icons[2]);
 }
 
-void Func_0201AD4C(void)
+void InitCursorIcon(void)
 {
     gGameState.icons[1].type = 2;
     if (gGameState.icons[2].type != 0)
@@ -535,7 +535,7 @@ void Func_0201AD4C(void)
 // Icon type 2: the cursor. While placing a target (unk105 == 1), move it a sea chart square
 // (16 pixels) at a time with the D-pad and place the target (icons[2]) with A. Then name the
 // square under the cursor if its unk0F4 bit is set.
-void Func_0201AD90(struct MapIcon *icon)
+void MapIconCursor(struct MapIcon *icon)
 {
     u16 keys;
     u16 pos;
@@ -592,8 +592,8 @@ void Func_0201AD90(struct MapIcon *icon)
             gGameState.icons[2].type = 3;
             gGameState.icons[2].x = icon->x;
             gGameState.icons[2].y = icon->y;
-            Func_0201ACD0();
-            Func_0201AD24();
+            InitMarkerIcon();
+            InitTargetIcon();
             gGameState.unk022 = 240;
             SoundPlay(10 - SOUND_ID_SHIFT, 0);
         }
@@ -629,7 +629,7 @@ void Func_0201AD90(struct MapIcon *icon)
 }
 
 // Update and draw the map icons.
-void Func_0201AF48(void)
+void UpdateMapIcons(void)
 {
     u8 mosaic = gMain.mosaic != 0;
     s32 i;

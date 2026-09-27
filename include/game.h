@@ -32,16 +32,16 @@ struct MapIcon
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
-// 0x00C struct MapImage* mapImage  // the slot 2 map image (Func_0201A69C)
+// 0x00C struct MapImage* mapImage  // the slot 2 map image (LoadMapImage)
 // 0x010 u32 unk010
 // 0x014 s16 mapX  // top left of the map view in the map image (pixels)
 // 0x016 s16 mapY
-// 0x018 u8 unk018  // cleared by Func_0201A224
-// 0x022 u16 unk022  // set to 240 when a target is placed (Func_0201AD90)
-// 0x024 u16 targetScale  // pulse of the target compass sprite (Func_0201A944)
+// 0x018 u8 unk018  // cleared by UpdateMap
+// 0x022 u16 unk022  // set to 240 when a target is placed (MapIconCursor)
+// 0x024 u16 targetScale  // pulse of the target compass sprite (UpdateTargetCompass)
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
-// 0x028 u16 seaAnimTimer[4] size=8  // per quadrant of the view (Func_0201A224)
+// 0x028 u16 seaAnimTimer[4] size=8  // per quadrant of the view (UpdateMap)
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
 // 0x034 s16 unk034  // title sprite y
@@ -52,7 +52,7 @@ struct MapIcon
 // 0x03F u8 switchType  // the GC switches on type - 1
 // 0x040 u8 switchNo2
 // 0x042 u8 unk042
-// 0x044 struct MapIcon icons[4] size=0x20  // drawn over the map by Func_0201AF48
+// 0x044 struct MapIcon icons[4] size=0x20  // drawn over the map by UpdateMapIcons
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0E5 u8 unk0E5
@@ -63,7 +63,7 @@ struct MapIcon
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
 // 0x101 u8 targetBlinkOn
-// 0x102 u8 targetDir  // direction (0-7) last announced by Func_0201A944; 0xFF: none
+// 0x102 u8 targetDir  // direction (0-7) last announced by UpdateTargetCompass; 0xFF: none
 // 0x103 u8 targetBlinkTimer
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
 // 0x105 u8 unk105
@@ -87,7 +87,7 @@ struct MapIcon
 // 0x11C u8 unk11C
 // 0x11D u8 unk11D
 // 0x11E u8 unk11E
-// 0x11F u8 mapScrolling  // L pressed to scroll the map (Func_0201A224)
+// 0x11F u8 mapScrolling  // L pressed to scroll the map (UpdateMap)
 // 0x120 u8 unk120
 // 0x121 u8 unk121
 // 0x122 u8 unk122
@@ -157,17 +157,17 @@ struct MapIcon
 struct GameState
 {
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
-    /*0x00C*/ struct MapImage* mapImage;      // the slot 2 map image (Func_0201A69C)
+    /*0x00C*/ struct MapImage* mapImage;      // the slot 2 map image (LoadMapImage)
     /*0x010*/ u32 unk010;
     /*0x014*/ s16 mapX;                       // top left of the map view in the map image (pixels)
     /*0x016*/ s16 mapY;
-    /*0x018*/ u8 unk018;                      // cleared by Func_0201A224
+    /*0x018*/ u8 unk018;                      // cleared by UpdateMap
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
     /*0x01A*/ u8 filler01A[0x022 - 0x01A];
-    /*0x022*/ u16 unk022;                     // set to 240 when a target is placed (Func_0201AD90)
-    /*0x024*/ u16 targetScale;                // pulse of the target compass sprite (Func_0201A944)
+    /*0x022*/ u16 unk022;                     // set to 240 when a target is placed (MapIconCursor)
+    /*0x024*/ u16 targetScale;                // pulse of the target compass sprite (UpdateTargetCompass)
     /*0x026*/ u16 unk026;
-    /*0x028*/ u16 seaAnimTimer[4];            // per quadrant of the view (Func_0201A224)
+    /*0x028*/ u16 seaAnimTimer[4];            // per quadrant of the view (UpdateMap)
     /*0x030*/ u16 unk030;
     /*0x032*/ s16 unk032;                     // title sprite x
     /*0x034*/ s16 unk034;                     // title sprite y
@@ -181,7 +181,7 @@ struct GameState
     /*0x041*/ u8 filler041[0x042 - 0x041];
     /*0x042*/ u8 unk042;
     /*0x043*/ u8 filler043[0x044 - 0x043];
-    /*0x044*/ struct MapIcon icons[4];        // drawn over the map by Func_0201AF48
+    /*0x044*/ struct MapIcon icons[4];        // drawn over the map by UpdateMapIcons
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 unk0E5;
@@ -194,7 +194,7 @@ struct GameState
     /*0x0FD*/ u8 unk0FD;
     /*0x0FE*/ u8 filler0FE[0x101 - 0x0FE];
     /*0x101*/ u8 targetBlinkOn;
-    /*0x102*/ u8 targetDir;                   // direction (0-7) last announced by Func_0201A944; 0xFF: none
+    /*0x102*/ u8 targetDir;                   // direction (0-7) last announced by UpdateTargetCompass; 0xFF: none
     /*0x103*/ u8 targetBlinkTimer;
     /*0x104*/ u8 unk104;                      // cleared while a menu or event runs on the GC
     /*0x105*/ u8 unk105;
@@ -222,7 +222,7 @@ struct GameState
     /*0x11C*/ u8 unk11C;
     /*0x11D*/ u8 unk11D;
     /*0x11E*/ u8 unk11E;
-    /*0x11F*/ u8 mapScrolling;                // L pressed to scroll the map (Func_0201A224)
+    /*0x11F*/ u8 mapScrolling;                // L pressed to scroll the map (UpdateMap)
     /*0x120*/ u8 unk120;
     /*0x121*/ u8 unk121;
     /*0x122*/ u8 unk122;
@@ -347,10 +347,10 @@ extern const u8 gSprite_0202C938[];
 extern const u8 *const gSpriteTable[];
 
 void Mode1VBlank(void);
-void Func_0201A570(void);
+void DrawFloorNumber(void);
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
 void GamePlaySound(s16 id, u8 arg);
-bool32 Func_0201A6D4(void);
+bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
@@ -359,7 +359,7 @@ void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
-bool32 Func_0201A69C(void);  // returns nothing (falls off the end)
+bool32 LoadMapImage(void);  // returns nothing (falls off the end)
 void Func_0201E190(void);
 void Func_02020BEC(void);
 bool32 Func_0201D8AC(void);
@@ -410,7 +410,7 @@ void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);
 
 void ObjReset(struct Obj *obj);
 void ObjResetActive(void);  // ObjReset on every active entry
-void Func_0201A224(void);
+void UpdateMap(void);
 void Func_0201CFE8(void);
 void Func_0201B7D4(void);
 void Func_0201DA50(void);
@@ -442,7 +442,7 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
 
 // The map image the GC sends in slot 2, in the message buffer (gGbaComMessageBuf). Its two
-// data pointers arrive as offsets from the header; Func_0201A69C turns them into addresses.
+// data pointers arrive as offsets from the header; LoadMapImage turns them into addresses.
 struct MapImage
 {
     /*0x00*/ u16 width;       // pixels
@@ -465,14 +465,14 @@ void Func_02019F5C(void);
 void Func_0201A0A8(void);
 void Func_02019350(struct GameState *state);
 void Func_020192D8(s16 y, s16 x, u16 *map);
-void Func_0201AC94(struct MapIcon *icon);
-void Func_0201ACD0(void);
-void Func_0201ACF8(struct MapIcon *icon);
-void Func_0201AD24(void);
-void Func_0201AD4C(void);
-void Func_0201AD90(struct MapIcon *icon);
-void Func_0201AF48(void);
-u32 Func_0201A8AC(u8 arg);
+void MapIconFollowMarker(struct MapIcon *icon);
+void InitMarkerIcon(void);
+void MapIconBlink(struct MapIcon *icon);
+void InitTargetIcon(void);
+void InitCursorIcon(void);
+void MapIconCursor(struct MapIcon *icon);
+void UpdateMapIcons(void);
+u32 MarkerDistance(u8 arg);
 extern void (*const gMapIconFuncs[])(struct MapIcon *icon);
 extern const u8 *const gMapIconSprites[];
 extern const s16 gSinTable[];

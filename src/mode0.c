@@ -164,7 +164,7 @@ void Mode0State2(void)
              && GbaComRecvStatusCheck(GBACOM_SLOT_14))
             {
                 gGameState.unk10E = 1;
-                Func_0201A69C();
+                LoadMapImage();
                 gMode0Work.linkTimeout = 120;
                 gMain.modeState++;
             }

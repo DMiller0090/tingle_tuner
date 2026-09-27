@@ -140,7 +140,7 @@ void Mode1Func_0201521C(void)
     if (gGameState.flags.dungeonNo == 0)
     {
         CpuCopy16((void *)0x06007B40, (void *)0x06006840, 0x80);
-        Func_0201A570();
+        DrawFloorNumber();
         LZ77UnCompVram(gMode1SeaMap, (void *)0x06002000);
         gMain.bgcnt[2] = 0xC409;
         gMain.bgcnt[3] = 0xC809;
@@ -230,18 +230,18 @@ void Mode1State0(void)
         gGameState.unk10E = 1;
     }
     Func_02020BEC();
-    Func_0201A6D4();
+    InitMapView();
     if (gGameState.flags.dungeonNo != 0)
     {
         gGameState.unk108 = 0;
         gGameState.unk10A = 0;
         gGameState.unk10C = 0;
         if (gGameState.unk10E)
-            Func_0201A224();
+            UpdateMap();
     }
     else
     {
-        Func_0201A224();
+        UpdateMap();
     }
     Func_0201D8AC();
     gGameState.switchSound = 0xFFFF;
@@ -334,7 +334,7 @@ void Mode1State5(void)
             gGameState.fadeTimer = 2;
         }
     }
-    Func_0201A224();
+    UpdateMap();
     Func_0201CFE8();
 }
 // Near-miss: the original loads GBACOM_BUF_SWITCH + 1 into r2 after the first store; this
@@ -472,7 +472,7 @@ void Mode1State2(void)
     Func_0201CFE8();
     if (gGameState.unk138_0)
     {
-        Func_0201A224();
+        UpdateMap();
     }
     else
     {
@@ -512,13 +512,13 @@ void Mode1State2(void)
                 }
                 else if (gGameState.unk10E)
                 {
-                    Func_0201A224();
+                    UpdateMap();
                 }
             }
             else if (gGameState.unk1CC == 0)
             {
                 if (gGameState.unk10E)
-                    Func_0201A224();
+                    UpdateMap();
                 // (Through a u32 local: tested directly, agbcc copies the 2 before the and.)
                 keys = gMain.newKeys;
                 if ((keys & 2) && gGameState.unk1E5_1 && gGameState.unk104
@@ -615,7 +615,7 @@ void Mode1State3(void)
             gGameState.fadeTimer = 2;
         }
     }
-    Func_0201A224();
+    UpdateMap();
     Func_0201CFE8();
     StepToward((s16 *)&gMain.bgOfs[1][0], target, 16);
 }
@@ -766,7 +766,7 @@ void Mode1Func_02016350(void)
         gGameState.unk1E5_2 = 0;
         gGameState.unk12B = 0;
     }
-    Func_0201A6D4();
+    InitMapView();
 }
 // Wait for the GC to switch maps (slots 1-3), then load the new one and fade in (state 5).
 void Mode1State4(void)
@@ -775,7 +775,7 @@ void Mode1State4(void)
     {
         gGameState.unk10E = 1;
         gGameState.unk237 = 20;
-        Func_0201A69C();
+        LoadMapImage();
     }
     if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
     {
