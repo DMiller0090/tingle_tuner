@@ -229,7 +229,7 @@ void Mode1State0(void)
         gMain.unk457 = gMain.inDungeon;
         gGameState.unk10E = 1;
     }
-    Func_02020BEC();
+    ResetSelectWindow();
     InitMapView();
     if (gGameState.flags.dungeonNo != 0)
     {
@@ -399,7 +399,7 @@ void Mode1State2(void)
         else
             SoundPlay(7 - SOUND_ID_SHIFT, 0);
     }
-    Func_020209E0();
+    UpdateSelectWindow();
     if (gGameState.unk1EE != 0)
         return;
     gMain.bgOfs[0][0] = 0;
@@ -575,7 +575,7 @@ void Mode1State2(void)
             gGameState.unk1E5_4 = 1;
         }
     }
-    Func_02020C10();
+    DrawStatusIcon();
 }
 // Fade out: step the mosaic and brightness up every other frame while BG1 slides to
 // its target, then go to state 4.
@@ -585,7 +585,7 @@ void Mode1State3(void)
 
     if (gGameState.unk1FB)
     {
-        Func_020209E0();
+        UpdateSelectWindow();
         return;
     }
     if (--gGameState.fadeTimer == 0)
@@ -875,7 +875,7 @@ void MainMode1(void)
     s32 i;
     s32 chest = 0;
 
-    Func_02020298();
+    UpdateItemEffect();
 
     // A dungeon chest was opened: count them and play the newest one's sound.
     if (gGameState.dungeonChests != gGameState.flags.dungeonChests && gGameState.unk1E0 == 0)

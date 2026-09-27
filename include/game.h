@@ -55,6 +55,8 @@ struct ShopItem
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
 // 0x034 s16 unk034  // title sprite y
+// 0x036 s16 unk036
+// 0x038 s16 unk038
 // 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
 // 0x03D u8 switchStageNo
@@ -103,7 +105,10 @@ struct ShopItem
 // 0x122 u8 unk122
 // 0x123 u8 unk123
 // 0x124 u8 unk124
-// 0x12B u8 unk12B
+// 0x126 u8 unk126
+// 0x128 u8 unk128
+// 0x12A u8 unk12A
+// 0x12B u8 unk12B  // item effect step (Effect5, Effect8, Effect12)
 // 0x12C u8 unk12C
 // 0x12D u8 unk12D
 // 0x12E u8 unk12E
@@ -112,14 +117,20 @@ struct ShopItem
 // 0x131 u8 unk131
 // 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
+// 0x134 u8 unk134
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
 // 0x142 s16 unk142
+// 0x144 const u8 * unk144  // US: a message in the message data (MSG_DATA)
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
+// 0x14E u8 unk14E
+// 0x14F u8 unk14F
+// 0x150 u8 unk150
+// 0x151 u8 unk151
 // 0x156 u8 unk156
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
@@ -139,10 +150,15 @@ struct ShopItem
 // 0x1DE u8 unk1DE
 // 0x1DF u8 unk1DF
 // 0x1E1 u8 unk1E1  // chest bits that changed
+// 0x1E2 u8 unk1E2  // item effect step (Effect7, Effect11)
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
-// 0x1EE u8 unk1EE
+// 0x1E8 u16 unk1E8  // select window edge x (0xF8 closed, 0xFFF8 fully across)
+// 0x1EA s16 unk1EA  // select window edge y
+// 0x1EE u8 unk1EE  // UpdateSelectWindow step (0: closed)
+// 0x1F4 u8 unk1F4  // DrawStatusIcon: which icon
+// 0x1F5 u8 unk1F5
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
@@ -197,7 +213,8 @@ struct GameState
     /*0x030*/ u16 unk030;
     /*0x032*/ s16 unk032;                     // title sprite x
     /*0x034*/ s16 unk034;                     // title sprite y
-    /*0x036*/ u8 filler036[0x03A - 0x036];
+    /*0x036*/ s16 unk036;
+    /*0x038*/ s16 unk038;
     /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
     /*0x03C*/ u8 switchNo;                    // 0xFF: none
     /*0x03D*/ u8 switchStageNo;
@@ -254,8 +271,13 @@ struct GameState
     /*0x122*/ u8 unk122;
     /*0x123*/ u8 unk123;
     /*0x124*/ u8 unk124;
-    /*0x125*/ u8 filler125[0x12B - 0x125];
-    /*0x12B*/ u8 unk12B;
+    /*0x125*/ u8 filler125[0x126 - 0x125];
+    /*0x126*/ u8 unk126;
+    /*0x127*/ u8 filler127[0x128 - 0x127];
+    /*0x128*/ u8 unk128;
+    /*0x129*/ u8 filler129[0x12A - 0x129];
+    /*0x12A*/ u8 unk12A;
+    /*0x12B*/ u8 unk12B;                      // item effect step (Effect5, Effect8, Effect12)
     /*0x12C*/ u8 unk12C;
     /*0x12D*/ u8 unk12D;
     /*0x12E*/ u8 unk12E;
@@ -264,7 +286,8 @@ struct GameState
     /*0x131*/ u8 unk131;
     /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
-    /*0x134*/ u8 filler134[0x136 - 0x134];
+    /*0x134*/ u8 unk134;
+    /*0x135*/ u8 filler135[0x136 - 0x135];
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
     /*0x138*/ u8 unk138_0:2;                  // sent as GbaFlg.unk2
@@ -279,10 +302,16 @@ struct GameState
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
     /*0x142*/ s16 unk142;
-    /*0x144*/ u8 filler144[0x14A - 0x144];
+    /*0x144*/ const u8 * unk144;              // US: a message in the message data (MSG_DATA)
+    /*0x148*/ u8 filler148[0x14A - 0x148];
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
-    /*0x14C*/ u8 filler14C[0x156 - 0x14C];
+    /*0x14C*/ u8 filler14C[0x14E - 0x14C];
+    /*0x14E*/ u8 unk14E;
+    /*0x14F*/ u8 unk14F;
+    /*0x150*/ u8 unk150;
+    /*0x151*/ u8 unk151;
+    /*0x152*/ u8 filler152[0x156 - 0x152];
     /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 filler158[0x15A - 0x158];
@@ -305,7 +334,7 @@ struct GameState
     /*0x1DF*/ u8 unk1DF;
     /*0x1E0*/ u8 unk1E0;
     /*0x1E1*/ u8 unk1E1;                      // chest bits that changed
-    /*0x1E2*/ u8 filler1E2[0x1E3 - 0x1E2];
+    /*0x1E2*/ u8 unk1E2;                      // item effect step (Effect7, Effect11)
     /*0x1E3*/ u8 unk1E3;                      // chests opened
     /*0x1E4*/ u8 unk1E4;
     /*0x1E5*/ u8 unk1E5_0:1;
@@ -314,9 +343,15 @@ struct GameState
               u8 unk1E5_3:1;
               u8 unk1E5_4:1;
               u8 unk1E5_5:3;
-    /*0x1E6*/ u8 filler1E6[0x1EE - 0x1E6];
-    /*0x1EE*/ u8 unk1EE;
-    /*0x1EF*/ u8 filler1EF[0x1F8 - 0x1EF];
+    /*0x1E6*/ u8 filler1E6[0x1E8 - 0x1E6];
+    /*0x1E8*/ u16 unk1E8;                     // select window edge x (0xF8 closed, 0xFFF8 fully across)
+    /*0x1EA*/ s16 unk1EA;                     // select window edge y
+    /*0x1EC*/ u8 filler1EC[0x1EE - 0x1EC];
+    /*0x1EE*/ u8 unk1EE;                      // UpdateSelectWindow step (0: closed)
+    /*0x1EF*/ u8 filler1EF[0x1F4 - 0x1EF];
+    /*0x1F4*/ u8 unk1F4;                      // DrawStatusIcon: which icon
+    /*0x1F5*/ u8 unk1F5;
+    /*0x1F6*/ u8 filler1F6[0x1F8 - 0x1F6];
     /*0x1F8*/ s16 unk1F8;
     /*0x1FA*/ u8 unk1FA;                      // MainLoop tests 0x1FA-0x1FB as one u16
     /*0x1FB*/ u8 unk1FB;
@@ -392,28 +427,36 @@ void GamePlaySound(s16 id, u8 arg);
 bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
-void Func_020209E0(void);
+void UpdateSelectWindow(void);
 // Callers see s16 x and y (DrawTimerCount sign-extends them).
-void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, s16 a7, s16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
 bool32 LoadMapImage(void);  // returns nothing (falls off the end)
 bool32 ItemMenuInit(void);
-void Func_02020BEC(void);
+void ResetSelectWindow(void);
 bool32 Func_0201D8AC(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).
 struct Obj
 {
-    /*0x00*/ u32 unk00;
-    /*0x04*/ u32 unk04;
-    /*0x08*/ u32 unk08;
-    /*0x0C*/ u16 unk0C[9];
+    /*0x00*/ s32 x;        // 8.8
+    /*0x04*/ s32 y;        // 8.8
+    /*0x08*/ s32 z;        // 8.8 height, <= 0; drawn at y + z
+    /*0x0C*/ s16 vx;
+    /*0x0E*/ s16 vy;
+    /*0x10*/ s16 vz;
+    /*0x12*/ u16 unk12;
+    /*0x14*/ u16 unk14;
+    /*0x16*/ u16 unk16;
+    /*0x18*/ s16 unk18;
+    /*0x1A*/ s16 unk1A;
+    /*0x1C*/ u16 unk1C;
     /*0x1E*/ u8 unk1E;
-    /*0x1F*/ u8 active;
-    /*0x20*/ u8 unk20;
+    /*0x1F*/ u8 active;    // 0: free, else 1 + index into the type's state table
+    /*0x20*/ u8 type;      // index into gObjFuncs
 };
 
 extern struct Obj gObjs[16];
@@ -458,7 +501,7 @@ void Func_0201B0F4(void);
 void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
 void ItemMenuUpdate(void);
-void Func_02020C10(void);
+void DrawStatusIcon(void);
 u8 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
@@ -472,7 +515,7 @@ void Func_0201F274(void);
 void Func_0201F2C4(void);
 void Func_0201F420(void);
 void Func_02020150(void);
-void Func_02020298(void);
+void UpdateItemEffect(void);
 extern const u8 gSprite_0202CA08[];
 extern const u8 gSprite_0202CA40[];
 
@@ -511,7 +554,6 @@ void InitTargetIcon(void);
 void InitCursorIcon(void);
 void MapIconCursor(struct MapIcon *icon);
 void UpdateMapIcons(void);
-u32 MarkerDistance(u8 arg);
 extern void (*const gMapIconFuncs[])(struct MapIcon *icon);
 extern const u8 *const gMapIconSprites[];
 extern const s16 gSinTable[];
@@ -558,7 +600,6 @@ void Func_0201EC10(void);
 void Func_0201ECC4(void);
 void Func_0201ED08(void);
 void Func_0201EDF8(s16 x, s16 y, u8 kind);
-void DrawTimerCount(s16 x, s16 y);
 void Func_0201F2A8(void);
 void Func_0201DCEC(u8 arg);
 // The definition takes a u16; callers see s16 (they sign-extend).
@@ -569,13 +610,65 @@ void Func_0201DDA0(void);
 u8 Func_02018A90(u8 *timer);  // counts *timer down to 0 and returns it
 extern const s16 gChestRowIds[5];
 extern const u16 gHudPanelTiles[3];
-u32 Func_0201A8AC(u8 arg);
+u32 MarkerDistance(u8 arg);
 void Func_0201FCA0(void);
 void Func_0201F878(void);
-void Func_020205F8(u8 arg);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
-void Func_020190A8(const u8 *sprite, s16 x, s16 y, u8 a3, u8 a4);
 
 // ---- game.c part F (GZLJ01 0201F308-02020E28) ----
+
+extern void (*const gMode2StateFuncs[])(void);
+// Per object type: its function, called every frame while the object is active.
+extern void (*const gObjFuncs[])(struct Obj *obj);
+
+void ObjDecelX(struct Obj *obj, s16 decel);
+void ObjDecelY(struct Obj *obj, s16 decel);
+void ObjFall(struct Obj *obj, s16 gravity);
+void ObjUpdateAll(void);
+s32 ObjFindFree(void);
+bool32 ObjSpawn(u8 type);
+extern const u8 gSprite_0202BD78[];
+extern const u8 gSprite_0202C848[];
+void Mode2State0(void);
+void Mode2State1(void);
+// The message data (slot 0, msg_LZ.bin), unpacked to the start of EWRAM by Mode0State1.
+#define MSG_DATA ((const u8 *)0x02000000)
+// Object type 0 (ObjBurst): five pieces, per piece (unk1C) an offset and a velocity.
+extern const s16 gObjBurstOfsX[5];
+extern const s16 gObjBurstOfsY[5];
+extern const s16 gObjBurstVelX[5];
+extern const s16 gObjBurstVelY[5];
+extern void (*const gObjBurstStateFuncs[])(struct Obj *obj);
+extern const u8 gSprite_0202C150[];
+void ObjBurstInit(struct Obj *obj);
+void ObjBurstFly(struct Obj *obj);
+void ObjBurst(struct Obj *obj);
+void Func_0201BAD8(void);
+#ifndef VERSION_GZLJ01
+extern const u8 gMode2UsString[];
+#endif
+// Per item effect (GameState.effect[0], slot 7), run every frame by UpdateItemEffect.
+extern void (*const gItemEffectFuncs[18])(void);
+void SelectWindowWipe(u8 open);
+#define GBACOM_BUF_SHOP     ((u8 *)(PROG_BASE - 0x570))
+#define GBACOM_BUF_ITEM_BUY ((u8 *)(PROG_BASE - 0x560))
+// Shop purchase requests (slot 12), 3 bytes each.
+extern const u8 gShopRequests[9];
+extern const s16 gBobOffsets_020244DA[4];
+extern const u8 gSprite_0202C490[];
+// The definition narrows x and y to u16; callers see s16 (they sign-extend).
+void Func_0201F8C4(s16 x, s16 y, u8 kind);
+void Func_0201FEEC(void);
+void DrawTimerCount(s16 x, s16 y);
+// The definition narrows x and y to u16; callers see s16 (they sign-extend).
+void Func_020190A8(const void *sprite, s16 x, s16 y, u8 a3, u8 a4);
+extern const u8 gSprite_0202CC50[];
+extern const u8 gSprite_0202C420[];
+extern const u8 gSprite_0202C428[];
+extern const u8 gSprite_0202C430[];
+extern const u8 gSprite_0202C440[];
+extern const u8 gSprite_0202C448[];
+extern const u8 gSprite_0202C498[];
+extern const u8 gSprite_0202C4A8[];
 
 #endif // GUARD_GAME_H
