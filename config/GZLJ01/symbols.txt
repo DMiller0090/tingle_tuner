@@ -115,6 +115,10 @@ gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
 gSoundBankHeader = 0x0202CD20; // data
 
+// ---- .data load image (end of the program) ----
+__data_lma_start = 0x0202D290; // data
+__data_lma_end = 0x0202E37D; // data
+
 // ---- IWRAM (.data is copied from the end of the image to 0x03000000 by InitSystem) ----
 _impure_ptr = 0x030002EC; // data
 gIntrTable = 0x03002F70; // data

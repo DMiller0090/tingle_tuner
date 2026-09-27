@@ -15,4 +15,16 @@ void CpuFastSet(const void *src, void *dest, u32 control);
 #define CpuCopy16(src, dest, size) CpuSet(src, dest, CPU_SET_16BIT | (((size) / 2) & 0x1FFFFF))
 #define CpuCopy32(src, dest, size) CpuSet(src, dest, CPU_SET_32BIT | (((size) / 4) & 0x1FFFFF))
 
+#define CpuFill16(value, dest, size)                                                          \
+{                                                                                             \
+    vu16 _tmp = (vu16)(value);                                                                \
+    CpuSet((void *)&_tmp, dest, CPU_SET_16BIT | CPU_SET_SRC_FIXED | (((size) / 2) & 0x1FFFFF)); \
+}
+
+#define CpuFill32(value, dest, size)                                                          \
+{                                                                                             \
+    vu32 _tmp = (vu32)(value);                                                                \
+    CpuSet((void *)&_tmp, dest, CPU_SET_32BIT | CPU_SET_SRC_FIXED | (((size) / 4) & 0x1FFFFF)); \
+}
+
 #endif // GUARD_GBA_SYSCALL_H

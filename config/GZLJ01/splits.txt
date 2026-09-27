@@ -1,4 +1,4 @@
 # C source ranges: file start end (end = next function start)
-src/main.c 0x02014A0C 0x02014A2C
+src/main.c 0x02014A0C 0x02015054
 src/gba_com.c 0x02017190 0x020173B8
 src/libc/rand.c 0x02023DB8 0x02023DEC
