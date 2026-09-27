@@ -546,7 +546,87 @@ void Func_0201EF98(s16 x, s16 y)
     DrawSprite(gSpriteTable[10], 0, x + 8, y, 0, mosaic, 0, 0, 0, digit + 1, 0);
 }
 
-INCLUDE_ASM(Func_0201F068);
+void Func_0201F068(void)
+{
+    struct Main *main = &gMain;
+    u8 notType3 = gGameState.effect[0] != 3;
+    u8 price;
+    u16 x;
+    u16 y;
+
+    if (gGameState.unk12B != 6)
+        Func_0201ED08();
+    if (gGameState.unk12B == 2)
+    {
+        if (gGameState.unk1FA == 0)
+        {
+            if (gGameState.unk132 == 0)
+            {
+                if (gGameState.effect[0] == 13)
+                    price = gGameState.items[5].price;
+                else
+                    price = gGameState.items[gGameState.effect[0]].price;
+                SendItemUse(gGameState.effect[0], price);
+                gGameState.unk12B = 5;
+            }
+            else
+            {
+                gGameState.unk132--;
+            }
+        }
+    }
+    else if (gGameState.unk12B == 5)
+    {
+        if (gGameState.flags.timer != 0)
+        {
+            gGameState.unk120 = 0;
+            gGameState.unk12B = 6;
+        }
+    }
+    else if (gGameState.unk12B == 6)
+    {
+        u8 i = FindMarker(1);
+
+        Func_0201EDF8(gGameState.markers[i].x, gGameState.markers[i].y, notType3);
+        if (gGameState.flags.timer == 0)
+        {
+            gGameState.unk120 = 1;
+            gGameState.unk1C8 = 120;
+            gGameState.unk12B = 7;
+            gGameState.unk032 = gGameState.markers[i].x - main->bgOfs[3][0];
+            gGameState.unk034 = gGameState.markers[i].y - main->bgOfs[3][1];
+            if (gGameState.unk1DE == 5)
+                GamePlaySound(0x30, 1);
+            else if (!notType3)
+                GamePlaySound(0x2E, 1);
+            else
+                GamePlaySound(0x2F, 1);
+        }
+        else
+        {
+            if (!notType3)
+            {
+                x = gGameState.markers[i].x - main->bgOfs[3][0] + 4;
+                y = gGameState.markers[i].y - main->bgOfs[3][1] - 36;
+            }
+            else
+            {
+                x = gGameState.markers[i].x - main->bgOfs[3][0] + 4;
+                y = gGameState.markers[i].y - main->bgOfs[3][1] - 16;
+            }
+            Func_0201EF98(x, y);
+        }
+    }
+    else if (gGameState.unk12B == 7)
+    {
+        if (gGameState.unk1C8 == 0)
+        {
+            gGameState.unk120 = 0;
+            gGameState.unk12B = 0;
+            Func_0201EBAC();
+        }
+    }
+}
 
 void Func_0201F240(void)
 {
