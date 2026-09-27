@@ -323,9 +323,13 @@ gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
 gSprite_0202C438 = 0x0202C438; // data
+gSprite_0202C928 = 0x0202C928; // data
 gSprite_0202C938 = 0x0202C938; // data
+gSprite_0202C940 = 0x0202C940; // data
+gSprite_0202C950 = 0x0202C950; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
+gSprite_0202CC60 = 0x0202CC60; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

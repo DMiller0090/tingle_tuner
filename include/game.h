@@ -69,6 +69,13 @@ struct MapMarker
 // 0x123 u8 unk123
 // 0x124 u8 unk124
 // 0x12B u8 unk12B
+// 0x12C u8 unk12C
+// 0x12D u8 unk12D
+// 0x12E u8 unk12E
+// 0x12F u8 unk12F
+// 0x130 u8 unk130
+// 0x131 u8 unk131
+// 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
@@ -200,7 +207,13 @@ struct GameState
     /*0x124*/ u8 unk124;
     /*0x125*/ u8 filler125[0x12B - 0x125];
     /*0x12B*/ u8 unk12B;
-    /*0x12C*/ u8 filler12C[0x133 - 0x12C];
+    /*0x12C*/ u8 unk12C;
+    /*0x12D*/ u8 unk12D;
+    /*0x12E*/ u8 unk12E;
+    /*0x12F*/ u8 unk12F;
+    /*0x130*/ u8 unk130;
+    /*0x131*/ u8 unk131;
+    /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
     /*0x134*/ u8 filler134[0x136 - 0x134];
     /*0x136*/ u8 unk136;
@@ -405,6 +418,33 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
+
+#define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
+
+// One frame of a sprite animation: the sprite data and how many frames it shows.
+struct SpriteAnimFrame
+{
+    /*0x0*/ const void *sprite;
+    /*0x4*/ u8 duration;
+};
+
+// Animations (they overlap: each starts somewhere in one frame table).
+extern const struct SpriteAnimFrame gSprite_0202C928[];
+extern const struct SpriteAnimFrame gSprite_0202C940[];
+extern const struct SpriteAnimFrame gSprite_0202C950[];
+extern const u8 gSprite_0202CC60[];
+
+bool32 SendItemUse(u8 item, u8 arg);
+void Func_0201E2FC(void);
+void Func_0201E584(void);
+void Func_0201EC10(void);
+void Func_0201ECC4(void);
+void Func_0201ED08(void);
+void Func_0201F2A8(void);
+void Func_0201DCEC(u8 arg);
+void Func_020205F8(u8 arg);
+// The definition takes u16 x and y; callers see s16 (they sign-extend).
+void Func_020190A8(const u8 *sprite, s16 x, s16 y, u8 a3, u8 a4);
 
 // ---- game.c part F (GZLJ01 0201F308-02020E28) ----
 

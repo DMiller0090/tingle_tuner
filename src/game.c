@@ -197,25 +197,125 @@ INCLUDE_ASM(Func_0201E190);
 
 INCLUDE_ASM(Func_0201E2FC);
 
-INCLUDE_ASM(SendItemUse);
+bool32 SendItemUse(u8 item, u8 arg)
+{
+    GBACOM_BUF_ITEM[0] = item;
+    GBACOM_BUF_ITEM[1] = arg;
+    if (GbaComSendDataSet(GBACOM_BUF_ITEM, 2, GBACOM_SLOT_ITEM, *(u32 *)GBACOM_BUF_ITEM))
+        return TRUE;
+    return FALSE;
+}
 
 INCLUDE_ASM(Func_0201E384);
 
-INCLUDE_ASM(Func_0201E584);
+void Func_0201E584(void)
+{
+    if (gGameState.unk21E == 0)
+    {
+        if (gGameState.unk0FD == 0)
+        {
+            Func_0201DCEC(gGameState.unk1DE);
+        }
+        else
+        {
+            u16 tile = 0xB080;
+            u16 *map = (u16 *)0x06006464;
+            s32 i;
+
+            for (i = 0; i < 4; i++)
+            {
+                map[0] = tile;
+                map[0x20] = tile + 0x10;
+                tile++;
+                map++;
+            }
+        }
+    }
+}
 
 INCLUDE_ASM(Func_0201E5E0);
 
-INCLUDE_ASM(Func_0201EBAC);
+void Func_0201EBAC(void)
+{
+    gGameState.unk1E5_1 = 1;
+    gGameState.unk1E5_2 = 0;
+    gGameState.unk120 = 0;
+}
 
-INCLUDE_ASM(Func_0201EBD4);
+void Func_0201EBD4(void)
+{
+    gGameState.unk1C8 = 180;
+    gGameState.unk228 = 0;
+    gGameState.unk226 = 5;
+    gGameState.unk227 = 0;
+    Func_020205F8(0);
+}
 
-INCLUDE_ASM(Func_0201EC10);
+void Func_0201EC10(void)
+{
+    u8 mosaic = gMain.mosaic != 0;
+    u8 i;
+    u8 unk;
 
-INCLUDE_ASM(Func_0201ECC4);
+    if (gGameState.flags.busy & 1)
+        gGameState.unk1C8++;
+    if (gGameState.unk1C8 == 0)
+    {
+        Func_0201EBAC();
+        return;
+    }
+    i = FindMarker(3);
+    gGameState.shake = gGameState.unk1C8;
+    unk = gGameState.unk1EE;
+    if (unk == 0)
+        Func_020190A8(gSprite_0202CC60, gGameState.markers[i].x - gMain.bgOfs[3][0],
+                      gGameState.markers[i].y - gMain.bgOfs[3][1], mosaic, unk);
+}
 
-INCLUDE_ASM(Func_0201ED08);
+void Func_0201ECC4(void)
+{
+    gGameState.unk12D = 0;
+    gGameState.unk120 = 1;
+    gGameState.unk034 = gGameState.unk032 = 0x44;
+    gGameState.unk12C = gSprite_0202C950[0].duration;
+    gGameState.unk12B = 1;
+}
 
-INCLUDE_ASM(Func_0201EDC4);
+void Func_0201ED08(void)
+{
+    u32 mosaic = gMain.mosaic != 0;
+    const struct SpriteAnimFrame *anim;
+
+    if (gGameState.unk12C == 0)
+    {
+        if (gGameState.unk12D < 22)
+        {
+            gGameState.unk12D++;
+        }
+        else if (gGameState.unk12B < 2)
+        {
+            gGameState.unk12B = 2;
+            gGameState.unk132 = 10;
+            gGameState.unk13E = 300;
+        }
+        gGameState.unk12C = gSprite_0202C950[gGameState.unk12D].duration;
+        anim = gSprite_0202C950;
+    }
+    else
+    {
+        gGameState.unk12C--;
+        anim = gSprite_0202C950;
+    }
+    DrawSpriteAt(anim, gGameState.unk12D, gGameState.unk032, gGameState.unk034, mosaic, 0, 1);
+}
+
+void Func_0201EDC4(void)
+{
+    Func_0201ECC4();
+    gGameState.unk12E = gSprite_0202C928[0].duration;
+    gGameState.unk12F = 0;
+    GamePlaySound(0x23, 1);
+}
 
 INCLUDE_ASM(Func_0201EDF8);
 
@@ -223,13 +323,45 @@ INCLUDE_ASM(Func_0201EF98);
 
 INCLUDE_ASM(Func_0201F068);
 
-INCLUDE_ASM(Func_0201F240);
+void Func_0201F240(void)
+{
+    Func_0201ECC4();
+    gGameState.unk130 = gSprite_0202C940[0].duration;
+    gGameState.unk131 = 0;
+    GamePlaySound(0x25, 1);
+}
 
-INCLUDE_ASM(Func_0201F274);
+void Func_0201F274(void)
+{
+    gGameState.unk1C8 = 120;
+    gGameState.unk228 = 0;
+    gGameState.unk226 = 5;
+    gGameState.unk227 = 0;
+}
 
-INCLUDE_ASM(Func_0201F2A8);
+void Func_0201F2A8(void)
+{
+    if (gGameState.unk1C8 == 0)
+        Func_0201EBAC();
+}
 
-INCLUDE_ASM(Func_0201F2C4);
+void Func_0201F2C4(void)
+{
+    Func_0201ECC4();
+    if (gGameState.effect[1] == 13)
+    {
+        gGameState.effect[0] = gGameState.effect[1];
+        GamePlaySound(0x29, 1);
+    }
+    else if (gGameState.effect[1] == 12)
+    {
+        GamePlaySound(0x2A, 1);
+    }
+    else
+    {
+        GamePlaySound(0x2B, 1);
+    }
+}
 
 INCLUDE_ASM(Func_0201F308);
 
