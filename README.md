@@ -83,6 +83,11 @@ from the extracted binary on every build.
    misalign it. Branch and literal-pool offsets differ whenever sizes do, so look past those;
    `asmdiff.py -u` masks them and aligns the two listings with difflib, which is easier to
    read once an instruction is added or dropped.
+5. To try variants quickly, `python tools/scratch.py <ver> <function> file.c` compiles one C
+   file, links it with the function at its original address against the last build's
+   symbols, and prints MATCH or the masked diff (about 3 s, against 20 s for `build.py all`).
+   `--comment` takes the near-miss comment above `INCLUDE_ASM(<function>)` and writes it
+   uncommented into a copy of its source file under `build/<ver>/scratch/`.
 
 Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `build/<ver>/asm/funcs/`, written for every function in a C range). A second line
