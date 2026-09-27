@@ -1,10 +1,125 @@
 // GZLJ01 symbols: name = 0xADDR; // arm|thumb|data
-// crt0 is the stock AGB SDK crt0.s (identical in all versions).
+// This file is the source of truth for names; port to the other versions with
+//   python tools/port_symbols.py GZLJ01 <ver> --write
+// See docs/layout.md for the module map.
+
+// ---- crt0.s (stock AGB SDK, ARM) ----
 _start = 0x02014800; // arm
 RomHeaderLogo = 0x02014804; // data
 start_vector = 0x020148C0; // arm
 intr_main = 0x020148FC; // arm
+
+// ---- main.c ----
 AgbMain = 0x02014A0C; // thumb
+VBlankIntr = 0x02014A2C; // thumb
+DummyCallback_02014CA0 = 0x02014CA0; // thumb
+DummyCallback_02014CA4 = 0x02014CA4; // thumb
+IntrDummy = 0x02014CA8; // thumb
+ReadKeys = 0x02014CAC; // thumb
 InitSystem = 0x02014CE4; // thumb
+InitOamBuffer = 0x02014E00; // thumb
 MainLoop = 0x02014E50; // thumb
+InitDisplayIntr = 0x02015054; // thumb
+SeedRandom = 0x02015080; // thumb
+UpdateRandom = 0x0201508C; // thumb
+
+// ---- gba_com.c: app-side wrapper over JoyCom (GBA mirror of m_Do_gba_com.cpp) ----
+GbaComInit = 0x02017190; // thumb
+GbaComStop = 0x020171B8; // thumb
+GbaComMain = 0x020171C4; // thumb
+GbaComGetDataStatus = 0x02017224; // thumb
+GbaComCheckDataStatus = 0x02017234; // thumb
+GbaComSendStatusCheck = 0x02017258; // thumb
+GbaComRecvStatusCheck = 0x0201727C; // thumb
+GbaComDataStatusReset = 0x0201729C; // thumb
+GbaComClearDataStatus = 0x020172C0; // thumb
+GbaComRequestData = 0x020172DC; // thumb
+GbaComStatusIs5 = 0x02017310; // thumb
+GbaComSendDataSet = 0x02017330; // thumb
+GbaComRecvDataGet = 0x0201735C; // thumb
+GbaComIsClosed = 0x020173A4; // thumb
+
+// ---- multi_sio.c: Nintendo MultiSio library ("MultiSioSync010316"), linked but unused ----
+MultiSioInit = 0x020173B8; // thumb
+MultiSioStart = 0x0201745C; // thumb
+MultiSioStop = 0x02017474; // thumb
+MultiSioMain = 0x020174D0; // thumb
+MultiSioSendDataSet = 0x020175BC; // thumb
+MultiSioRecvDataCheck = 0x02017608; // thumb
+MultiSioVSync = 0x020176C4; // thumb
+MultiSioIntr = 0x02017728; // thumb
+
+// ---- joy_com.c: JOY bus link to the GameCube (peer of m_Do_gba_com.cpp) ----
+JoyComInit = 0x02017824; // thumb
+JoyComStop = 0x02017928; // thumb
+JoyComIntr = 0x020179B0; // thumb
+JoyComMain = 0x02017EEC; // thumb
+JoyComSendDataSet = 0x0201804C; // thumb
+JoyComStatusSendSet = 0x020180E4; // thumb
+
+// ---- heap.c: small first-fit heap (gMain.heap) ----
+HeapInit = 0x02018658; // thumb
+HeapAlloc = 0x02018690; // thumb
+HeapFree = 0x020187C8; // thumb
+
+// ---- sound: custom PCM driver (not m4a); sound bank is the packer's raw tail ----
+SoundInit = 0x02020E28; // thumb
+SoundDriverInit = 0x020213C0; // thumb
+// ARM, copied to IWRAM by SoundDriverInit and called through pointers
+PcmClipS16ToS8 = 0x020237CC; // arm
+PcmMixChannel = 0x020238EC; // arm
+PcmEchoMix = 0x020239E4; // arm
+
+// ---- libagbsyscall (alphabetical, as in the SDK archive) ----
+ArcTan2 = 0x02023A84; // thumb
+CpuFastSet = 0x02023A88; // thumb
+CpuSet = 0x02023A8C; // thumb
+Div = 0x02023A90; // thumb
+LZ77UnCompVram = 0x02023A94; // thumb
+LZ77UnCompWram = 0x02023A98; // thumb
+Sqrt = 0x02023A9C; // thumb
+// HardReset (SWI 0x26) when no cartridge is inserted and RCNT is in JOY bus mode
+JoyHardReset = 0x02023AA0; // thumb
+
+// ---- libgcc (lib1thumb.asm) ----
+_call_via_r0 = 0x02023AC0; // thumb
+_call_via_r1 = 0x02023AC4; // thumb
+_call_via_r2 = 0x02023AC8; // thumb
+_call_via_r3 = 0x02023ACC; // thumb
+_call_via_r4 = 0x02023AD0; // thumb
+_call_via_r5 = 0x02023AD4; // thumb
+_call_via_r6 = 0x02023AD8; // thumb
+_call_via_r7 = 0x02023ADC; // thumb
+_call_via_r8 = 0x02023AE0; // thumb
+_call_via_r9 = 0x02023AE4; // thumb
+_call_via_sl = 0x02023AE8; // thumb
+_call_via_fp = 0x02023AEC; // thumb
+_call_via_ip = 0x02023AF0; // thumb
+_call_via_sp = 0x02023AF4; // thumb
+_call_via_lr = 0x02023AF8; // thumb
+__divsi3 = 0x02023AFC; // thumb
+__div0 = 0x02023B90; // thumb
+__modsi3 = 0x02023B94; // thumb
+__udivsi3 = 0x02023C64; // thumb
+__umodsi3 = 0x02023CDC; // thumb
+
+// ---- newlib ----
+bzero = 0x02023D9C; // thumb
+srand = 0x02023DB8; // thumb
+rand = 0x02023DC4; // thumb
+
+// ---- .rodata (starts at the end of .text) ----
+gIntrTableInit = 0x02023DEC; // data
+gOamHiddenEntry = 0x02023E24; // data
+gGbaComBuffers = 0x02023E90; // data
+MultiSioLibVer = 0x02023ED0; // data
+gSoundBankHeader = 0x0202CD20; // data
+
+// ---- IWRAM (.data is copied from the end of the image to 0x03000000 by InitSystem) ----
+_impure_ptr = 0x030002EC; // data
+gIntrTable = 0x03002F70; // data
 gMain = 0x03003080; // data
+gOamBuffer = 0x03004CE0; // data
+gGbaComDataStatus = 0x03005320; // data
+gMultiSioArea = 0x03005390; // data
+gJoyCom = 0x03005510; // data

@@ -2,7 +2,9 @@
 
 The original encoder (verified against every LZ stream in res/Gba/) is plain greedy:
 at each position take the longest match (3..18 bytes) in the previous 4096 bytes,
-preferring the nearest distance on ties; distance 1 is allowed (WRAM decompress).
+preferring the nearest distance on ties. The client program uses distance 1 (fine for
+LZ77UnCompWram); msg_LZ.bin was packed VRAM-safe (min_dist=2, as LZ77UnCompVram needs
+because it writes 16 bits at a time), then zero-padded to 4 bytes.
 """
 import struct
 
@@ -39,8 +41,8 @@ def decompress(src, offset=0):
     return bytes(out), o
 
 
-def compress(data):
-    """Compress `data`; output is the raw stream (not padded)."""
+def compress(data, min_dist=1):
+    """Compress `data`; output is the raw stream (not padded). min_dist=2 is VRAM-safe."""
     n = len(data)
     out = bytearray(struct.pack('<I', 0x10 | n << 8))
     chains = {}  # 3-byte key -> list of positions (ascending)
@@ -60,6 +62,8 @@ def compress(data):
                     dist = pos - cand
                     if dist > WINDOW:
                         break
+                    if dist < min_dist:
+                        continue
                     length = MIN_LEN
                     while length < limit and data[pos + length] == data[pos + length - dist]:
                         length += 1
