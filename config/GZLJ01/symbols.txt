@@ -433,6 +433,10 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+// update function per GameState.icons type (entry 0 unused), called by Func_0201AF48
+gMapIconFuncs = 0x02024244; // data
+// sprite per GameState.icons type
+gMapIconSprites = 0x02024254; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data

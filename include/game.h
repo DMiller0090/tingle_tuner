@@ -16,10 +16,23 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
+// A sprite drawn over the map image (GameState.icons); type picks its update function and
+// sprite (1: follows the player marker, 2: cursor, 3: blinking).
+struct MapIcon
+{
+    /*0x0*/ s16 x;      // 12.4 map pixels
+    /*0x2*/ s16 y;
+    /*0x4*/ u8 type;    // 0: none
+    /*0x5*/ u8 frame;
+    /*0x6*/ u8 timer;
+    /*0x7*/ u8 unk7;
+};
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
+// 0x00C struct MapImage* mapImage  // the slot 2 map image (Func_0201A69C)
 // 0x010 u32 unk010
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
@@ -33,9 +46,7 @@ struct MapMarker
 // 0x03F u8 switchType  // the GC switches on type - 1
 // 0x040 u8 switchNo2
 // 0x042 u8 unk042
-// 0x054 u16 unk054
-// 0x056 u16 unk056
-// 0x058 u8 unk058
+// 0x044 struct MapIcon icons[4] size=0x20  // drawn over the map by Func_0201AF48
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0E5 u8 unk0E5
@@ -132,7 +143,7 @@ struct MapMarker
 struct GameState
 {
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
-    /*0x00C*/ u8 filler00C[0x010 - 0x00C];
+    /*0x00C*/ struct MapImage* mapImage;      // the slot 2 map image (Func_0201A69C)
     /*0x010*/ u32 unk010;
     /*0x014*/ u8 filler014[0x019 - 0x014];
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
@@ -151,11 +162,8 @@ struct GameState
     /*0x040*/ u8 switchNo2;
     /*0x041*/ u8 filler041[0x042 - 0x041];
     /*0x042*/ u8 unk042;
-    /*0x043*/ u8 filler043[0x054 - 0x043];
-    /*0x054*/ u16 unk054;
-    /*0x056*/ u16 unk056;
-    /*0x058*/ u8 unk058;
-    /*0x059*/ u8 filler059[0x064 - 0x059];
+    /*0x043*/ u8 filler043[0x044 - 0x043];
+    /*0x044*/ struct MapIcon icons[4];        // drawn over the map by Func_0201AF48
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 unk0E5;
@@ -324,11 +332,12 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+// The definition takes u16 x and y; callers pass them unnarrowed.
+void DrawSprite(const void *sprite, u8 frame, s32 x, s32 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
-void Func_0201A69C(void);
+bool32 Func_0201A69C(void);  // returns nothing (falls off the end)
 void Func_0201E190(void);
 void Func_02020BEC(void);
 bool32 Func_0201D8AC(void);
@@ -399,6 +408,41 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part A (GZLJ01 02018884-0201A224) ----
 
 // ---- game.c part B (GZLJ01 0201A224-0201AFCC) ----
+
+// The map image the GC sends in slot 2, in the message buffer (gGbaComMessageBuf). Its two
+// data pointers arrive as offsets from the header; Func_0201A69C turns them into addresses.
+struct MapImage
+{
+    /*0x00*/ u16 width;       // pixels
+    /*0x02*/ u16 height;
+    /*0x04*/ u8 filler4[2];
+    /*0x06*/ s8 floor;        // dungeon floor (< 0: basement); 0: none
+    /*0x07*/ u8 filler7;
+    /*0x08*/ u8 *tiles;
+    /*0x0C*/ s32 tilesSize;   // bytes
+    /*0x10*/ u8 filler10[0x20];
+    /*0x30*/ u8 mapWidth;     // tiles per map row
+    /*0x31*/ u8 filler31[3];
+    /*0x34*/ u16 *map;
+};
+
+#define GBACOM_BUF_MESSAGE ((u8 *)(PROG_BASE - 0xA800))
+
+u16 Sqrt(u32 x);
+void Func_02019F5C(void);
+void Func_0201A0A8(void);
+void Func_02019350(struct GameState *state);
+void Func_020192D8(s16 y, s16 x, u16 *map);
+void Func_0201AC94(struct MapIcon *icon);
+void Func_0201ACD0(void);
+void Func_0201ACF8(struct MapIcon *icon);
+void Func_0201AD24(void);
+void Func_0201AD4C(void);
+void Func_0201AD90(struct MapIcon *icon);
+void Func_0201AF48(void);
+u16 Func_0201A8AC(u8 arg);
+extern void (*const gMapIconFuncs[])(struct MapIcon *icon);
+extern const u8 *const gMapIconSprites[];
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
 

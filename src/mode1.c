@@ -549,9 +549,9 @@ void Mode1State2(void)
                     {
                         u8 i = FindMarker(3);
 
-                        gGameState.unk058 = 3;
-                        gGameState.unk054 = gGameState.markers[i].x;
-                        gGameState.unk056 = gGameState.markers[i].y;
+                        gGameState.icons[2].type = 3;
+                        gGameState.icons[2].x = gGameState.markers[i].x;
+                        gGameState.icons[2].y = gGameState.markers[i].y;
                         SoundPlay(0xB - SOUND_ID_SHIFT, 0);
                         gGameState.unk11E = 0;
                     }

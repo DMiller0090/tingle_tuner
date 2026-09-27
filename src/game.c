@@ -1,4 +1,5 @@
 #include "global.h"
+#include "gba/syscall.h"
 #include "main.h"
 #include "game.h"
 #include "sound.h"
@@ -43,35 +44,207 @@ INCLUDE_ASM(Func_0201A0A8);
 
 INCLUDE_ASM(Func_0201A224);
 
-INCLUDE_ASM(Func_0201A540);
+void Func_0201A540(void)
+{
+    if (gMain.unk457 == 0)
+    {
+        Func_02019F5C();
+    }
+    else
+    {
+        Func_0201A0A8();
+        Func_02019350(&gGameState);
+    }
+}
 
-INCLUDE_ASM(Func_0201A570);
+// Tile of the floor number box's edge.
+#ifdef VERSION_GZLJ01
+#define FLOOR_EDGE_TILE 0x6D
+#else
+#define FLOOR_EDGE_TILE 0x01
+#endif
 
-INCLUDE_ASM(Func_0201A69C);
+// Draw the dungeon floor number next to the map (blank outside dungeons or with no floor).
+void Func_0201A570(void)
+{
+    u16 *map = (u16 *)0x06006074;
+    u8 floor;
+
+    if (gGameState.mapImage->floor == 0 || gGameState.flags.dungeonNo == 0)
+    {
+        CpuFill16(0xE05B, map, 6);
+        map += 0x20;
+        CpuFill16(0xE05B, map, 6);
+        map += 0x20;
+        CpuFill16(0xE05B, map, 6);
+        map += 0x20;
+        CpuFill16(0xE05B, map, 6);
+    }
+    else
+    {
+        map[0] = 0xE458;
+        map[1] = 0xE800 + FLOOR_EDGE_TILE;
+        map[2] = 0xE800 + FLOOR_EDGE_TILE;
+        map[0x20] = 0xE458;
+        map[0x40] = 0xE458;
+        map[0x60] = 0xE458;
+        map[0x61] = 0xE000 + FLOOR_EDGE_TILE;
+        map[0x62] = 0xE000 + FLOOR_EDGE_TILE;
+        floor = gGameState.mapImage->floor;
+        if ((s8)floor < 0)
+        {
+            u8 n = ~floor * 2 + 2;  // -floor * 2
+
+            map[0x21] = 0xE05C;
+            map[0x41] = 0xE05D;
+            map[0x22] = n + 0xE030;
+            map[0x42] = n + 0xE031;
+        }
+        else
+        {
+            map[0x21] = gGameState.mapImage->floor * 2 + (s16)0xE030;
+            map[0x41] = gGameState.mapImage->floor * 2 + (s16)0xE031;
+            map[0x22] = 0xE05E;
+            map[0x42] = 0xE05F;
+        }
+    }
+}
+
+// Point gGameState.mapImage at the received map image and relocate its data offsets (unless
+// they are already addresses).
+bool32 Func_0201A69C(void)
+{
+    gGameState.mapImage = (struct MapImage *)GBACOM_BUF_MESSAGE;
+    if (*(u32 *)(GBACOM_BUF_MESSAGE + 8) <= 0x01FFFFFF)
+    {
+        gGameState.mapImage->tiles = (u8 *)((u32)gGameState.mapImage->tiles + (u32)gGameState.mapImage);
+        gGameState.mapImage->map = (u16 *)((u32)gGameState.mapImage->map + (u32)gGameState.mapImage);
+    }
+    GbaComDataStatusReset(2);
+}
 
 INCLUDE_ASM(Func_0201A6D4);
 
-INCLUDE_ASM(FindMarker);
+u8 FindMarker(u8 type)
+{
+    s32 i;
 
-INCLUDE_ASM(Func_0201A8AC);
+    for (i = 0; i < 16; i++)
+    {
+        if (type == gGameState.markers[i].type)
+            return i;
+    }
+    return 0xFF;
+}
+
+// Distance from the type 1 marker to icons[2] (arg 0) or to the type 3 marker.
+u16 Func_0201A8AC(u8 arg)
+{
+    u8 i = FindMarker(1);
+    s32 dx, dy;
+
+    if (arg == 0)
+    {
+        dx = gGameState.icons[2].x - gGameState.markers[i].x;
+        dy = gGameState.icons[2].y - gGameState.markers[i].y;
+    }
+    else
+    {
+        u8 j = FindMarker(3);
+
+        dx = gGameState.markers[j].x - gGameState.markers[i].x;
+        dy = gGameState.markers[j].y - gGameState.markers[i].y;
+    }
+    dx *= dx;
+    dy *= dy;
+    dx += dy;
+    return Sqrt(dx);
+}
 
 INCLUDE_ASM(Func_0201A944);
 
 INCLUDE_ASM(Mode1VBlank);
 
-INCLUDE_ASM(Func_0201AC94);
+// Icon type 1: follow the player's marker (type 3, else type 1).
+void Func_0201AC94(struct MapIcon *icon)
+{
+    u8 i = FindMarker(3);
 
-INCLUDE_ASM(Func_0201ACD0);
+    if (i == 0xFF)
+        i = FindMarker(1);
+    icon->x = gGameState.markers[i].x;
+    icon->y = gGameState.markers[i].y;
+}
 
-INCLUDE_ASM(Func_0201ACF8);
+void Func_0201ACD0(void)
+{
+    gGameState.icons[0].type = 1;
+    gGameState.icons[0].frame = 0;
+    gGameState.icons[0].timer = 0;
+    Func_0201AC94(&gGameState.icons[0]);
+}
 
-INCLUDE_ASM(Func_0201AD24);
+// Icon type 3: blink between frames 0 and 1.
+void Func_0201ACF8(struct MapIcon *icon)
+{
+    if (icon->timer != 0)
+    {
+        icon->timer--;
+    }
+    else
+    {
+        const u8 *const *sprites;
+        s32 offset;
 
-INCLUDE_ASM(Func_0201AD4C);
+        icon->frame ^= 1;
+        sprites = gMapIconSprites;
+        offset = icon->frame * 8;  // 8 bytes per frame; byte 4 is its duration
+        icon->timer = (sprites[3] + offset)[4];
+    }
+}
+
+void Func_0201AD24(void)
+{
+    gGameState.icons[2].type = 3;
+    gGameState.icons[2].frame = 1;
+    gGameState.icons[2].timer = 0;
+    Func_0201ACF8(&gGameState.icons[2]);
+}
+
+void Func_0201AD4C(void)
+{
+    gGameState.icons[1].type = 2;
+    if (gGameState.icons[2].type != 0)
+    {
+        gGameState.icons[1].x = gGameState.icons[2].x;
+        gGameState.icons[1].y = gGameState.icons[2].y;
+    }
+    else
+    {
+        gGameState.icons[1].x = gGameState.icons[0].x;
+        gGameState.icons[1].y = gGameState.icons[0].y;
+    }
+}
 
 INCLUDE_ASM(Func_0201AD90);
 
-INCLUDE_ASM(Func_0201AF48);
+// Update and draw the map icons.
+void Func_0201AF48(void)
+{
+    u8 mosaic = gMain.mosaic != 0;
+    s32 i;
+
+    for (i = 0; i < 4; i++)
+    {
+        if (gGameState.icons[i].type != 0)
+        {
+            gMapIconFuncs[gGameState.icons[i].type](&gGameState.icons[i]);
+            DrawSprite(gMapIconSprites[gGameState.icons[i].type], gGameState.icons[i].frame,
+                       (gGameState.icons[i].x >> 4) + 12, (gGameState.icons[i].y >> 4) + 12, 0,
+                       mosaic, 0, 0, 0, 0, 0);
+        }
+    }
+}
 
 INCLUDE_ASM(Func_0201AFCC);
 
