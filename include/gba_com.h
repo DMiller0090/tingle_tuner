@@ -62,8 +62,8 @@ struct GbaComFlags
     /*0x8*/ u8 unk8;
     /*0x9*/ u8 unk9;
     /*0xA*/ u8 unkA_0:1;        // field_0xa_7
-            u8 menuOpen:1;      // field_0xa_6: dMenu_flag()
-            u8 eventRunning:1;  // field_0xa_5: dComIfGp_event_runCheck()
+            u8 busy:2;          // bit 0: field_0xa_6 dMenu_flag(), bit 1: field_0xa_5
+            //                     dComIfGp_event_runCheck() (the GBA reads them as one field)
             u8 unkA_3:1;        // field_0xa_4
             u8 unkA_4:1;        // field_0xa_3
             u8 unkA_5:1;        // field_0xa_2

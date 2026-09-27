@@ -61,6 +61,10 @@ Func_0201A540 = 0x0201A540; // thumb
 // move *pos toward target by speed; TRUE once there
 StepToward = 0x020189E0; // thumb
 Func_020209E0 = 0x020209E0; // thumb
+// adds one sprite (sprite data, frame, x, y, ...) to gOamBuffer at gMain.unk450
+DrawSprite = 0x02018AB8; // thumb
+Func_0201A69C = 0x0201A69C; // thumb
+Func_0201E190 = 0x0201E190; // thumb
 ObjResetActive = 0x02020644; // thumb
 Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb
@@ -182,6 +186,7 @@ gMode1SeaMap = 0x020270B8; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+gSprite_0202C438 = 0x0202C438; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

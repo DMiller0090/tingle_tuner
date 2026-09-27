@@ -161,6 +161,7 @@ extern const u8 gMode1SeaMap[];
 extern const u8 gMode2BgMap[];
 extern const u8 gMode1ObjTiles[];
 extern const u16 gMode1ObjPalette[0x100];
+extern const u8 gSprite_0202C438[];
 
 void Mode1VBlank(void);
 void Func_0201A570(void);
@@ -170,6 +171,10 @@ void Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
+void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+                u8 a9, u8 a10);
+void Func_0201A69C(void);
+void Func_0201E190(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).

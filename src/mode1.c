@@ -1,6 +1,7 @@
 #include "global.h"
 #include "game.h"
 #include "gba/syscall.h"
+#include "gba_com.h"
 #include "main.h"
 #include "sound.h"
 
@@ -331,7 +332,93 @@ void Mode1Func_02016350(void)
 }
 */
 INCLUDE_ASM(Mode1Func_02016350);
-INCLUDE_ASM(Mode1State4);
+// Wait for the GC to switch maps (slots 1-3), then load the new one and fade in (state 5).
+void Mode1State4(void)
+{
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE))
+    {
+        gGameState.unk10E = 1;
+        gGameState.unk237 = 20;
+        Func_0201A69C();
+    }
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
+    {
+        GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
+        if (gGameState.unk10E)
+            gGameState.unk10E = 0;
+        gGameState.unk237 = 20;
+    }
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
+        GbaComDataStatusReset(GBACOM_SLOT_MAIL);
+    if (!gGameState.flags.unkA_0)
+    {
+        if (gMain.newKeys)
+            SoundPlay(SE_KEY_BLOCKED, 0);
+        if (gGameState.flags.unkA_3)
+        {
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                Mode1Func_020160C8();
+        }
+        else if (!(gGameState.flags.busy & 2))  // no event running
+        {
+            if (!gMain.inDungeon)
+            {
+                if (GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_IDLE)
+                 || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVED))
+                {
+                    if (gGameState.unk237 != 0)
+                    {
+                        if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                            Mode1Func_020160C8();
+                        gGameState.unk237--;
+                    }
+                    else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                    {
+                        if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE))
+                            GbaComDataStatusReset(GBACOM_SLOT_MAP_IMAGE);
+                        if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
+                            GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
+                        gMain.unk457 = gMain.inDungeon;
+                        Func_0201E190();
+                        Mode1Func_0201521C();
+                        Mode1Func_020160C8();
+                        Mode1Func_02016350();
+                        gMain.bgcnt[2] |= 0x40;
+                        gMain.bgcnt[3] |= 0x40;
+                        gMain.mosaic = 0xFFFF;
+                        gMain.dispcnt = 0x1F00;
+                        gGameState.fadeTimer = 2;
+                        gMain.modeState = 5;
+                    }
+                }
+            }
+            else if (gGameState.unk10E)
+            {
+                if (gGameState.unk237 != 0)
+                {
+                    if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                        Mode1Func_020160C8();
+                    gGameState.unk237--;
+                }
+                else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                {
+                    Mode1Func_020160C8();
+                    gMain.unk457 = gMain.inDungeon;
+                    Func_0201E190();
+                    Mode1Func_0201521C();
+                    Mode1Func_02016350();
+                    gMain.bgcnt[3] |= 0x40;
+                    gMain.mosaic = 0xFFFF;
+                    gMain.dispcnt = 0x1B00;
+                    gGameState.fadeTimer = 2;
+                    gMain.modeState = 5;
+                }
+            }
+        }
+    }
+    DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
+    Func_0201CFE8();
+}
 void Mode1StartFadeOut(void)
 {
     ObjResetActive();
