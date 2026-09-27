@@ -91,6 +91,8 @@ struct MapMarker
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
 // 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
+// 0x1E8 u16 unk1E8
+// 0x1EA u16 unk1EA
 // 0x1EE u8 unk1EE
 // 0x1F8 s16 unk1F8
 // 0x1FB u8 unk1FB
@@ -245,7 +247,10 @@ struct GameState
               u8 unk1E5_3:1;
               u8 unk1E5_4:1;
               u8 unk1E5_5:3;
-    /*0x1E6*/ u8 filler1E6[0x1EE - 0x1E6];
+    /*0x1E6*/ u8 filler1E6[0x1E8 - 0x1E6];
+    /*0x1E8*/ u16 unk1E8;
+    /*0x1EA*/ u16 unk1EA;
+    /*0x1EC*/ u8 filler1EC[0x1EE - 0x1EC];
     /*0x1EE*/ u8 unk1EE;
     /*0x1EF*/ u8 filler1EF[0x1F8 - 0x1EF];
     /*0x1F8*/ s16 unk1F8;
@@ -337,13 +342,21 @@ void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 // 16 objects in IWRAM (0x03005650).
 struct Obj
 {
-    /*0x00*/ u32 unk00;
-    /*0x04*/ u32 unk04;
-    /*0x08*/ u32 unk08;
-    /*0x0C*/ u16 unk0C[9];
+    /*0x00*/ s32 x;        // 8.8
+    /*0x04*/ s32 y;        // 8.8
+    /*0x08*/ s32 z;        // 8.8 height, <= 0; drawn at y + z
+    /*0x0C*/ s16 vx;
+    /*0x0E*/ s16 vy;
+    /*0x10*/ s16 vz;
+    /*0x12*/ u16 unk12;
+    /*0x14*/ u16 unk14;
+    /*0x16*/ u16 unk16;
+    /*0x18*/ s16 unk18;
+    /*0x1A*/ s16 unk1A;
+    /*0x1C*/ u16 unk1C;
     /*0x1E*/ u8 unk1E;
-    /*0x1F*/ u8 active;
-    /*0x20*/ u8 unk20;
+    /*0x1F*/ u8 active;    // 0: free, else 1 + index into the type's state table
+    /*0x20*/ u8 type;      // index into gObjFuncs
 };
 
 extern struct Obj gObjs[16];
@@ -407,5 +420,17 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
 
 // ---- game.c part F (GZLJ01 0201F308-02020E28) ----
+
+extern const s16 gSinTable[];
+extern void (*const gMode2StateFuncs[])(void);
+// Per object type: its function, called every frame while the object is active.
+extern void (*const gObjFuncs[])(struct Obj *obj);
+
+void ObjDecelX(struct Obj *obj, s16 decel);
+void ObjDecelY(struct Obj *obj, s16 decel);
+void ObjFall(struct Obj *obj, s16 gravity);
+void ObjUpdateAll(void);
+s32 ObjFindFree(void);
+bool32 ObjSpawn(u8 type);
 
 #endif // GUARD_GAME_H

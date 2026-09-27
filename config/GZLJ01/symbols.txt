@@ -188,12 +188,12 @@ Func_0201FF14 = 0x0201FF14; // thumb
 Func_02020190 = 0x02020190; // thumb
 Func_020202E8 = 0x020202E8; // thumb
 Func_020203EC = 0x020203EC; // thumb
-Func_020204D0 = 0x020204D0; // thumb
-Func_02020504 = 0x02020504; // thumb
-Func_02020538 = 0x02020538; // thumb
-Func_02020598 = 0x02020598; // thumb
-Func_020205D4 = 0x020205D4; // thumb
-Func_020205F8 = 0x020205F8; // thumb
+ObjDecelX = 0x020204D0; // thumb
+ObjDecelY = 0x02020504; // thumb
+ObjFall = 0x02020538; // thumb
+ObjUpdateAll = 0x02020598; // thumb
+ObjFindFree = 0x020205D4; // thumb
+ObjSpawn = 0x020205F8; // thumb
 Func_02020668 = 0x02020668; // thumb
 Func_020207D4 = 0x020207D4; // thumb
 Func_0202081C = 0x0202081C; // thumb
@@ -327,6 +327,8 @@ gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data
 gSprite_0202CA40 = 0x0202CA40; // data
 gSoundBankHeader = 0x0202CD20; // data
+gObjFuncs = 0x02024534; // data
+gMode2StateFuncs = 0x0202452C; // data
 
 // ---- .data load image (end of the program) ----
 __data_lma_start = 0x0202D290; // data

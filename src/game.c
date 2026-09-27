@@ -261,23 +261,115 @@ INCLUDE_ASM(Func_020202E8);
 
 INCLUDE_ASM(Func_020203EC);
 
-INCLUDE_ASM(MainMode2);
+void MainMode2(void)
+{
+    gMode2StateFuncs[gMain.modeState]();
+}
 
-INCLUDE_ASM(Func_020204D0);
+// Slow vx toward 0 by decel (it can overshoot) and move x.
+void ObjDecelX(struct Obj *obj, s16 decel)
+{
+    if (obj->vx >= 0)
+        decel = -decel;
+    if (obj->vx != 0)
+        obj->vx += decel;
+    obj->x += obj->vx;
+}
 
-INCLUDE_ASM(Func_02020504);
+// Slow vy toward 0 by decel (it can overshoot) and move y.
+void ObjDecelY(struct Obj *obj, s16 decel)
+{
+    if (obj->vy >= 0)
+        decel = -decel;
+    if (obj->vy != 0)
+        obj->vy += decel;
+    obj->y += obj->vy;
+}
 
-INCLUDE_ASM(Func_02020538);
+// While in the air (z < 0 or moving), accelerate vz by gravity and land at z = 0.
+void ObjFall(struct Obj *obj, s16 gravity)
+{
+    if (obj->vz | obj->z)
+    {
+        obj->vz += gravity;
+        obj->z += obj->vz;
+        if (obj->z >= 0)
+        {
+            obj->vz = 0;
+            obj->z = 0;
+        }
+    }
+}
 
-INCLUDE_ASM(ObjReset);
+void ObjReset(struct Obj *obj)
+{
+    obj->x = 0;
+    obj->y = 0;
+    obj->z = 0;
+    obj->vx = 0;
+    obj->vy = 0;
+    obj->vz = 0;
+    obj->unk12 = 0;
+    obj->unk14 = 0;
+    obj->unk16 = 0;
+    obj->unk18 = 0;
+    obj->unk1A = 0;
+    obj->unk1C = 0;
+    obj->unk1E = 0;
+    obj->active = 0;
+    obj->type = 0;
+}
 
-INCLUDE_ASM(Func_02020598);
+// Run every active object's type function.
+void ObjUpdateAll(void)
+{
+    s32 i;
 
-INCLUDE_ASM(Func_020205D4);
+    for (i = 0; i < 16; i++)
+    {
+        if (gObjs[i].active)
+            gObjFuncs[gObjs[i].type](&gObjs[i]);
+    }
+}
 
-INCLUDE_ASM(Func_020205F8);
+// Index of the first free object, or -1.
+s32 ObjFindFree(void)
+{
+    s32 i;
 
-INCLUDE_ASM(ObjResetActive);
+    for (i = 0; i < 16; i++)
+    {
+        if (!gObjs[i].active)
+            return i;
+    }
+    return -1;
+}
+
+// Start a free object of the given type (its function sees active = 1 and sets it up).
+bool32 ObjSpawn(u8 type)
+{
+    s32 i = ObjFindFree();
+
+    if (i != -1)
+    {
+        gObjs[i].type = type;
+        gObjs[i].active = 1;
+        gObjFuncs[gObjs[i].type](&gObjs[i]);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ObjResetActive(void)
+{
+    s32 i;
+
+    for (i = 0; i < 16; i++)
+    {
+        if (gObjs[i].active)
+            ObjReset(&gObjs[i]);
+    }
+}
 
 INCLUDE_ASM(Func_02020668);
 
@@ -285,7 +377,24 @@ INCLUDE_ASM(Func_020207D4);
 
 INCLUDE_ASM(Func_0202081C);
 
-INCLUDE_ASM(BuildWaveScrollTable);
+// Fill a per-line BG0HOFS table: BG0's scroll plus a sine wave of the given amplitude (8.8),
+// advancing the phase by 4 per line.
+void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude)
+{
+    s32 i;
+    const s16 *sin;
+    u16 hofs;
+
+    i = 160;
+    sin = gSinTable;
+    hofs = *gMain.bgOfs[0];
+    for (; i != 0; i--)
+    {
+        *table = hofs + ((sin[phase] * amplitude) >> 8);
+        phase += 4;
+        table++;
+    }
+}
 
 INCLUDE_ASM(Func_020208FC);
 
@@ -293,6 +402,11 @@ INCLUDE_ASM(Func_020209A0);
 
 INCLUDE_ASM(Func_020209E0);
 
-INCLUDE_ASM(Func_02020BEC);
+void Func_02020BEC(void)
+{
+    gGameState.unk1E8 = 0xF8;
+    gGameState.unk1EA = 0x50;
+    gGameState.unk1EE = 0;
+}
 
 INCLUDE_ASM(Func_02020C10);
