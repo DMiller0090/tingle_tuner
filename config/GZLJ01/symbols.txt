@@ -314,6 +314,11 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
+// game.c part C tables
+// u32 per text colour, ANDed with the glyph's 4bpp rows
+gTextColorMasks = 0x0202429C; // data
+gSoundIds_0202430E = 0x0202430E; // data
+gTable_02024424 = 0x02024424; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data
@@ -322,6 +327,7 @@ gMode1SeaMap = 0x020270B8; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+gSprite_0202C130 = 0x0202C130; // data
 gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data

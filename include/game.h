@@ -74,12 +74,18 @@ struct MapMarker
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C
 // 0x13E u16 unk13E
-// 0x140 s16 unk140
+// 0x140 u16 unk140  // id passed to Func_02021284 (Func_0201C484)
 // 0x142 s16 unk142
+// 0x144 const u8 * unk144  // text read pointer (0xF9 is a control code)
 // 0x148 u8 unk148
 // 0x149 u8 unk149
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
+// 0x14D u8 unk14D
+// 0x14F u8 unk14F
+// 0x150 u8 unk150
+// 0x152 u8 unk152
+// 0x153 u8 unk153
 // 0x156 u8 unk156
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
@@ -112,6 +118,10 @@ struct MapMarker
 // 0x221 u8 fadeTimer  // frames to the next mosaic/brightness step
 // 0x222 u8 unk222
 // 0x223 u8 unk223
+// 0x202 u16 unk202
+// 0x208 u16 unk208
+// 0x22A u8 unk22A
+// 0x22C u8 unk22C
 // 0x224 u8 unk224
 // 0x225 u8 shake  // bit 1 shakes the BGs by a line in VBlankIntr
 // 0x226 u8 unk226
@@ -217,14 +227,22 @@ struct GameState
     /*0x13C*/ u8 unk13C;
     /*0x13D*/ u8 filler13D[0x13E - 0x13D];
     /*0x13E*/ u16 unk13E;
-    /*0x140*/ s16 unk140;
+    /*0x140*/ u16 unk140;                     // id passed to Func_02021284 (Func_0201C484)
     /*0x142*/ s16 unk142;
-    /*0x144*/ u8 filler144[0x148 - 0x144];
+    /*0x144*/ const u8 * unk144;              // text read pointer (0xF9 is a control code)
     /*0x148*/ u8 unk148;
     /*0x149*/ u8 unk149;
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
-    /*0x14C*/ u8 filler14C[0x156 - 0x14C];
+    /*0x14C*/ u8 filler14C[0x14D - 0x14C];
+    /*0x14D*/ u8 unk14D;
+    /*0x14E*/ u8 filler14E[0x14F - 0x14E];
+    /*0x14F*/ u8 unk14F;
+    /*0x150*/ u8 unk150;
+    /*0x151*/ u8 filler151[0x152 - 0x151];
+    /*0x152*/ u8 unk152;
+    /*0x153*/ u8 unk153;
+    /*0x154*/ u8 filler154[0x156 - 0x154];
     /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
     /*0x158*/ u8 filler158[0x15A - 0x158];
@@ -257,9 +275,11 @@ struct GameState
     /*0x1FB*/ u8 unk1FB;
     /*0x1FC*/ s16 rupees;                     // shown on screen; counts toward flags.rupees
     /*0x1FE*/ s16 rupeeDelta;                 // flags.rupees - rupees
-    /*0x200*/ u8 filler200[0x206 - 0x200];
+    /*0x200*/ u8 filler200[0x202 - 0x200];
+    /*0x202*/ u16 unk202;
+    /*0x204*/ u8 filler204[0x206 - 0x204];
     /*0x206*/ u16 unk206;
-    /*0x208*/ u8 filler208[0x20A - 0x208];
+    /*0x208*/ u16 unk208;
     /*0x20A*/ u16 waveAmplitude;              // intro wave (Mode1State1), counts down to 0
     /*0x20C*/ u8 filler20C[0x20E - 0x20C];
     /*0x20E*/ u16 wavePhase;                  // 8.8; the high byte indexes gSinTable
@@ -279,7 +299,10 @@ struct GameState
     /*0x226*/ u8 unk226;
     /*0x227*/ u8 unk227;
     /*0x228*/ u8 unk228;
-    /*0x229*/ u8 filler229[0x22D - 0x229];
+    /*0x229*/ u8 filler229[0x22A - 0x229];
+    /*0x22A*/ u8 unk22A;
+    /*0x22B*/ u8 filler22B[0x22C - 0x22B];
+    /*0x22C*/ u8 unk22C;
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
     /*0x22F*/ u8 filler22F[0x230 - 0x22F];
@@ -410,6 +433,18 @@ void Func_0201BA9C(s8 row);
 void Func_0201BAD8(void);
 void Func_0201C0E8(u8 playSound);
 bool32 Func_0201C60C(void);
+void Func_0201BAF8(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst);
+void Func_0201BC0C(s32 count, const u8 *src);
+void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch);
+void Func_0201C164(void);
+// EWRAM below the program, after the link buffers: a 16x8 glyph scaled up by Func_0201BC0C.
+#define TEXT_GLYPH_BUF ((u16 *)(PROG_BASE - 0x540))
+// A 4bpp pixel pair doubled horizontally: 0xAB -> 0xAABB.
+#define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))
+extern const u32 gTextColorMasks[];
+extern const u16 gSoundIds_0202430E[];
+extern const u8 *const *const gTable_02024424[];
+extern const u8 gSprite_0202C130[];
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 

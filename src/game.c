@@ -124,13 +124,146 @@ void Func_0201BAD8(void)
         *p++ = fill;
 }
 
+// Blit a glyph's 4bpp rows (src, one word per 8-pixel row) into the text canvas at dst,
+// x pixels into the tile: n rows into this tile row, the rest (rows - n) into the next one
+// (0x180 bytes on, 12 tiles per row). Pixels that spill past the tile go to the next tile.
+// Near-miss: same code shape, but the original keeps src in its stack slot and mask2 in r9
+// (and dst's incremented copy in r0 across the inner loop); agbcc gives src a register here.
+/*
+void Func_0201BAF8(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
+{
+    s32 shift, n, m, i;
+    u32 mask, mask2, w, *prev;
+
+    x &= 7;
+    shift = 8 - x;
+    shift &= 7;
+    y &= 7;
+    n = 8 - y;
+    m = rows - n;
+    mask = gTextColorMasks[color];
+    if (gGameState.unk157 == 8)
+        mask2 = -1;
+    else
+        mask2 = 0x11FFFFFF;
+    for (; n > 0; n--)
+    {
+        prev = dst;
+        w = *src++ & mask & mask2;
+        if (shift)
+        {
+            *dst++ |= w << ((8 - shift) * 4);
+            for (i = shift; i > 0; i--)
+                w = (w >> 4) | 0x10000000;
+            prev[8] = w;
+        }
+        else
+        {
+            *dst++ = w;
+        }
+    }
+    dst += 0x58;
+    for (; m > 0; m--)
+    {
+        prev = dst;
+        w = *src++ & mask;
+        if (shift)
+        {
+            *dst++ |= w << ((8 - shift) * 4);
+            for (i = shift; i > 0; i--)
+                w = (w >> 4) | 0x10000000;
+            prev[8] = w;
+        }
+        else
+        {
+            *dst++ = w;
+        }
+    }
+}
+*/
 INCLUDE_ASM(Func_0201BAF8);
 
-INCLUDE_ASM(Func_0201BC0C);
+// Scale a glyph (4 bytes = 8 pixels a row, count bytes) up 2x into TEXT_GLYPH_BUF: the left
+// half of each row goes to the first 8x8 4bpp tile, the right half to the second. The US
+// glyphs are 6 pixels wide: each tile gets three (doubled) and a column of colour 1.
+void Func_0201BC0C(s32 count, const u8 *src)
+{
+    s32 i;
+    u16 *dst;
+    u8 b;
+#ifndef VERSION_GZLJ01
+    u32 b1;
+    u32 b2;
+#endif
+
+    for (i = 0; i < count; i += 4)
+    {
+        dst = (u16 *)((u8 *)TEXT_GLYPH_BUF + (i & 0x10) * 4 + (i & 0xC) * 2);
+#ifdef VERSION_GZLJ01
+        b = *src;
+        dst[2] = dst[0] = EXPAND_NIBBLES(b);
+        src++;
+        b = *src;
+        dst[3] = dst[1] = EXPAND_NIBBLES(b);
+        src++;
+        b = *src;
+        dst[0x12] = dst[0x10] = EXPAND_NIBBLES(b);
+        src++;
+        b = *src;
+        dst[0x13] = dst[0x11] = EXPAND_NIBBLES(b);
+        src++;
+#else
+        b = *src;
+        dst[2] = dst[0] = EXPAND_NIBBLES(b);
+        src++;
+        b1 = *src;
+        dst[3] = dst[1] = ((b1 & 0x0F) + ((b1 & 0x0F) << 4)) + 0x1100;
+        src++;
+        b2 = *src;
+        b = (b1 >> 4) | (b2 << 4);
+        dst[0x12] = dst[0x10] = EXPAND_NIBBLES(b);
+        dst[0x13] = dst[0x11] = (((b2 >> 4) & 0x0F) + (((b2 >> 4) & 0x0F) << 4)) + 0x1100;
+        src += 2;
+#endif
+    }
+}
 
 INCLUDE_ASM(Func_0201BCC0);
 
-INCLUDE_ASM(Func_0201BDE4);
+void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch)
+{
+    u32 *glyph = (u32 *)0x0600A010 + ch * 8;
+    u32 *dst;
+    u32 row;
+    u32 col;
+#ifndef VERSION_GZLJ01
+    u32 col2;
+    s32 x2;
+#endif
+
+    y -= 4;
+    row = (y >> 3) * 0x180 + (y & 7) * 4;
+    col = (x >> 3) * 32 + 0x0600F100;
+    dst = (u32 *)(row + col);
+    if (gGameState.unk15A)
+    {
+        Func_0201BC0C(16, (u8 *)glyph);
+        Func_0201BAF8(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+#ifdef VERSION_GZLJ01
+        Func_0201BAF8(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+#else
+        // The right half goes where x + unk157 falls, not simply the next tile.
+        x2 = x + gGameState.unk157;
+        col2 = (x2 >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col2);
+        Func_0201BAF8(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
+#endif
+    }
+    else
+    {
+        Func_0201BAF8(x, y, color, 4, glyph, dst);
+    }
+}
 
 INCLUDE_ASM(Func_0201BEA0);
 
@@ -158,13 +291,92 @@ void Func_0201C0E8(u8 playSound)
     }
 }
 
-INCLUDE_ASM(Func_0201C164);
+void Func_0201C164(void)
+{
+    u32 mosaic;
+    const u8 *sprite;
+    u8 y;
+    u8 timer;
+
+    mosaic = (gMain.bgcnt[0] >> 6) & 1;
+    timer = --gGameState.unk152;
+    sprite = gSprite_0202C130;
+    if (timer == 0)
+    {
+        gGameState.unk153 ^= 1;
+        gGameState.unk152 = (sprite + gGameState.unk153 * 8)[4];
+    }
+    y = gGameState.unk150 + gGameState.unk14F * 12;
+    y += 0x34;
+    DrawSprite(sprite, gGameState.unk153, 0x8C, y, 0, mosaic, 0, 0, 0, 0, 0);
+}
 
 INCLUDE_ASM(Func_0201C204);
 
-INCLUDE_ASM(Func_0201C484);
+void Func_0201C484(u8 id)
+{
+    u32 params[2];
+    u32 mask;
 
-INCLUDE_ASM(Func_0201C568);
+    if ((u8)(id - 12) <= 3)
+    {
+        id = gMain.random % 3 + 12;
+        mask = 0xFFFF0000;
+        params[0] = 0;
+        if (id == 12)
+            params[1] = params[1] & mask;
+        else if (id == 13)
+            params[1] = (params[1] & mask) | 1;
+        else
+            params[1] = (params[1] & mask) | 2;
+        SoundPlay(gSoundIds_0202430E[id], params);
+    }
+    else if ((u8)(id - 0x20) <= 2)
+    {
+        gGameState.unk140 = gSoundIds_0202430E[id];
+        Func_02021284(gGameState.unk140, gGameState.unk140, 0);
+        if (gGameState.unk144[1] == 0xF9)
+        {
+            gGameState.unk144++;
+            gGameState.unk14D = *++gGameState.unk144;
+        }
+    }
+    else if (id != 0x16)
+    {
+        SoundPlay(gSoundIds_0202430E[id], 0);
+    }
+}
+
+void Func_0201C568(void)
+{
+    u8 i;
+    const u8 *const *const *entry;
+
+    gGameState.unk22A = 0;
+    if (gGameState.unk226 == 2)
+    {
+        gGameState.unk206 = 0x300;
+    }
+    else if (gGameState.unk226 == 3)
+    {
+        gGameState.unk206 = 0x100;
+    }
+    else if (gGameState.unk226 == 11)
+    {
+        gGameState.unk206 = 0;
+        gGameState.unk22C = 0;
+        gGameState.unk208 = 0x100;
+    }
+    else
+    {
+        gGameState.unk206 = 0;
+    }
+    gGameState.unk228 = 0;
+    gGameState.unk227 = 0;
+    i = gGameState.unk226;
+    entry = gTable_02024424 + i;
+    gGameState.unk202 = (**entry)[4];
+}
 
 bool32 Func_0201C60C(void)
 {
