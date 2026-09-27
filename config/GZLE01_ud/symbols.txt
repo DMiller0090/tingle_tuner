@@ -266,6 +266,7 @@ gMode0BobOffsets = 0x0202AD80; // data
 gMode0StateFuncs = 0x0202AD88; // data
 gSinTable = 0x0202AD98; // data
 gSpriteTable = 0x0202B018; // data
+gShopItemsInit = 0x0202B350; // data
 gMode1BgTiles = 0x0202B458; // data
 gMode1BgPalette = 0x0202D684; // data
 gMode1BgMap = 0x0202D884; // data

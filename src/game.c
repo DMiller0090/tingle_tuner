@@ -1,6 +1,7 @@
 #include "global.h"
 #include "main.h"
 #include "game.h"
+#include "gba/syscall.h"
 #include "sound.h"
 #include "gba_com.h"
 
@@ -193,7 +194,68 @@ INCLUDE_ASM(Func_0201DDA0);
 
 INCLUDE_ASM(Func_0201DEAC);
 
-INCLUDE_ASM(Func_0201E190);
+// Set up the item menu: reset the item table, adjust prices and the dungeon item, and draw
+// the ten slots.
+bool32 Func_0201E190(void)
+{
+    s32 i;
+
+    CpuSet(gShopItemsInit, gGameState.items, 0x30);
+    if (gGameState.unk138_4)
+    {
+        gGameState.items[3].price = 20;
+        gGameState.items[4].price = 30;
+        gGameState.items[5].price = 30;
+    }
+    if (gGameState.unk138_5)
+    {
+        gGameState.items[8].price = 10;
+        gGameState.items[9].price = 20;
+        gGameState.items[10].price = 40;
+    }
+    if (gGameState.flags.dungeonNo == 0)
+    {
+        gGameState.items[11].tile = (gGameState.items[11].tile & 0xFFF) | 0x1000;
+        gGameState.items[11].unk7 = 9;
+        gGameState.items[11].unk4 = 7;
+        gGameState.unk1E5_3 = 1;
+    }
+    else
+    {
+        gGameState.items[11].tile = (gGameState.items[11].tile & 0xFFF) | 0x8000;
+        gGameState.items[11].unk7 = 8;
+        gGameState.items[11].unk4 = 6;
+        gGameState.unk1E5_3 = 0;
+    }
+    i = 0;
+    do
+    {
+        if (i == 6 && !gGameState.unk138_3)
+        {
+            Func_0201DD20(6, 11);
+            i = 7;
+        }
+        else if (!gGameState.flags.unkB_7 && (i == 4 || i > 7))
+        {
+            Func_0201DD20(i, 0);
+            i++;
+        }
+        else
+        {
+            Func_0201DD20(i, i + 1);
+            i++;
+        }
+    } while (i <= 9);
+    if (gGameState.unk1DE == 0)
+        gGameState.unk1DE = 2;
+    Func_0201DCEC(gGameState.unk1DE);
+    Func_0201E5E0();
+    Func_0201E2FC();
+    gGameState.unk1CC = 0;
+    gGameState.unk1CD = 0;
+    gGameState.unk1E5_0 = 0;
+    return TRUE;
+}
 
 INCLUDE_ASM(Func_0201E2FC);
 

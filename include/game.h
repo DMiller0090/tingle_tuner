@@ -16,6 +16,16 @@ struct MapMarker
     /*0x7*/ u8 unk7;
 };
 
+// One entry of the item menu (12 of them, copied from gShopItemsInit by Func_0201E190).
+struct ShopItem
+{
+    /*0x0*/ u16 tile;        // BG map entry of the icon (palette in the top 4 bits)
+    /*0x2*/ u16 unk2;
+    /*0x4*/ u16 unk4;
+    /*0x6*/ u8 price;        // rupees? (0, 10-80)
+    /*0x7*/ u8 unk7;
+};
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
@@ -89,9 +99,11 @@ struct MapMarker
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
+// 0x160 struct ShopItem items[12] size=0x60
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
+// 0x1CD u8 unk1CD
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
 // 0x1E1 u8 unk1E1  // chest bits that changed
@@ -240,11 +252,13 @@ struct GameState
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
-    /*0x160*/ u8 filler160[0x1C8 - 0x160];
+    /*0x160*/ struct ShopItem items[12];
+    /*0x1C0*/ u8 filler1C0[0x1C8 - 0x1C0];
     /*0x1C8*/ u16 unk1C8;
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
-    /*0x1CD*/ u8 filler1CD[0x1DE - 0x1CD];
+    /*0x1CD*/ u8 unk1CD;
+    /*0x1CE*/ u8 filler1CE[0x1DE - 0x1CE];
     /*0x1DE*/ u8 unk1DE;
     /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
     /*0x1E0*/ u8 unk1E0;
@@ -342,7 +356,7 @@ void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
 void Func_0201A69C(void);
-void Func_0201E190(void);
+bool32 Func_0201E190(void);
 void Func_02020BEC(void);
 bool32 Func_0201D8AC(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
@@ -418,6 +432,8 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
+
+extern const struct ShopItem gShopItemsInit[12];
 
 #define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
 
