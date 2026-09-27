@@ -28,14 +28,15 @@ struct MapIcon
     /*0x7*/ u8 unk7;
 };
 
-// One entry of the item menu (12 of them, copied from gShopItemsInit by ItemMenuInit).
-struct ShopItem
+// One item (gGameState.items, indexed by item number; 0 is none). ItemMenuInit copies all
+// twelve from gShopItemsInit.
+struct ItemSlot
 {
-    /*0x0*/ u16 tile;        // BG map entry of the icon (palette in the top 4 bits)
-    /*0x2*/ u16 unk2;
-    /*0x4*/ s16 unk4;        // passed to Func_0201DA24
-    /*0x6*/ u8 price;        // rupees? (0, 10-80)
-    /*0x7*/ u8 unk7;
+    /*0x0*/ u16 tile;        // BG map entry of the icon's top-left tile (2x2 tiles, palette on top)
+    /*0x2*/ u16 objTile;     // OBJ tile of the icon as a sprite (DrawItemSprite)
+    /*0x4*/ s16 unk4;        // passed to MsgStartSilent
+    /*0x6*/ u8 price;        // rupees (0, 10-80); DrawItemCount shows it
+    /*0x7*/ u8 objPalette;
 };
 
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
@@ -74,6 +75,8 @@ struct ShopItem
 // 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
+// 0x0FF u8 unk0FF  // frames left in the frame of gSprite_0202C400
+// 0x100 u8 unk100  // its frame (0-3)
 // 0x101 u8 targetBlinkOn
 // 0x102 u8 targetDir  // direction (0-7) last announced by UpdateTargetCompass; 0xFF: none
 // 0x103 u8 targetBlinkTimer
@@ -120,22 +123,31 @@ struct ShopItem
 // 0x134 u8 unk134
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
-// 0x13C u8 unk13C
+// 0x13C u8 unk13C  // a sound is playing (GamePlaySound)
+// 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while unk13C is set, else 0
 // 0x13E u16 unk13E
 // 0x140 s16 unk140
-// 0x142 s16 unk142
-// 0x144 const u8 * unk144  // US: a message in the message data (MSG_DATA)
+// 0x142 s16 unk142  // message id (MsgStart)
+// 0x144 const u8* msgPtr  // message text (in the EWRAM message block at 0x02000000); US Mode2State0 sets it too
+// 0x148 u8 textX  // text cursor, pixels
+// 0x149 u8 textY
 // 0x14A u8 unk14A
 // 0x14B u8 unk14B
+// 0x14C u8 unk14C
+// 0x14D u8 unk14D
 // 0x14E u8 unk14E
 // 0x14F u8 unk14F
 // 0x150 u8 unk150
 // 0x151 u8 unk151
+// 0x152 u8 unk152
+// 0x153 u8 unk153
 // 0x156 u8 unk156
 // 0x157 u8 unk157
+// 0x158 u8 unk158
+// 0x159 u8 unk159
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
-// 0x160 struct ShopItem items[12] size=0x60
+// 0x160 struct ItemSlot items[12] size=0x60
 // 0x1C0 u16 menuCursorX  // item menu cursor position (8.8), moving toward the slot
 // 0x1C2 u16 menuCursorY
 // 0x1C4 u16 menuCursorDX
@@ -145,7 +157,7 @@ struct ShopItem
 // 0x1CC u8 unk1CC
 // 0x1CD u8 menuCursor  // item menu slot (5 x 3; row 2 is the dungeon chest row)
 // 0x1CE u8 menuKeyRepeat  // frames to the next d-pad repeat
-// 0x1CF u8 menuSlots[10] size=10  // item in each slot of rows 0-1 (index into items)
+// 0x1CF u8 slotItems[13] size=13  // item shown in each menu slot (SetSlotItem); rows 0-1 index items
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
 // 0x1DF u8 unk1DF
@@ -164,11 +176,15 @@ struct ShopItem
 // 0x1FA u8 unk1FA  // MainLoop tests 0x1FA-0x1FB as one u16
 // 0x1FC s16 rupees  // shown on screen; counts toward flags.rupees
 // 0x1FE s16 rupeeDelta  // flags.rupees - rupees
+// 0x202 u16 unk202  // Tingle animation: frames left in the current frame
+// 0x204 u16 unk204
 // 0x206 u16 unk206
+// 0x208 u16 unk208
 // 0x20A u16 waveAmplitude  // intro wave (Mode1State1), counts down to 0
 // 0x20E u16 wavePhase  // 8.8; the high byte indexes gSinTable
 // 0x210 u16 timer  // flags.timer
 // 0x212 u8 playerName[8]  // slot 10
+// 0x21A u8 playerNameIndex  // next letter of playerName for message code 0xFB
 // 0x21C u8 unk21C
 // 0x21D u8 unk21D
 // 0x21E u8 unk21E
@@ -182,6 +198,10 @@ struct ShopItem
 // 0x226 u8 unk226
 // 0x227 u8 unk227
 // 0x228 u8 unk228
+// 0x229 u8 unk229
+// 0x22A u8 unk22A
+// 0x22B u8 unk22B
+// 0x22C u8 unk22C
 // 0x22D u8 scrollTableNext
 // 0x22E u8 scrollTable  // which per-line scroll table the HBlank DMA reads
 // 0x230 u8 life  // flags.life as last seen
@@ -235,7 +255,9 @@ struct GameState
     /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
-    /*0x0FE*/ u8 filler0FE[0x101 - 0x0FE];
+    /*0x0FE*/ u8 filler0FE[0x0FF - 0x0FE];
+    /*0x0FF*/ u8 unk0FF;                      // frames left in the frame of gSprite_0202C400
+    /*0x100*/ u8 unk100;                      // its frame (0-3)
     /*0x101*/ u8 targetBlinkOn;
     /*0x102*/ u8 targetDir;                   // direction (0-7) last announced by UpdateTargetCompass; 0xFF: none
     /*0x103*/ u8 targetBlinkTimer;
@@ -297,28 +319,33 @@ struct GameState
               u8 unk138_5:1;
               u8 unk138_6:2;
     /*0x139*/ u8 filler139[0x13C - 0x139];
-    /*0x13C*/ u8 unk13C;
-    /*0x13D*/ u8 filler13D[0x13E - 0x13D];
+    /*0x13C*/ u8 unk13C;                      // a sound is playing (GamePlaySound)
+    /*0x13D*/ s8 msgBoxPos;                   // message box slide, steps toward 10 while unk13C is set, else 0
     /*0x13E*/ u16 unk13E;
     /*0x140*/ s16 unk140;
-    /*0x142*/ s16 unk142;
-    /*0x144*/ const u8 * unk144;              // US: a message in the message data (MSG_DATA)
-    /*0x148*/ u8 filler148[0x14A - 0x148];
+    /*0x142*/ s16 unk142;                     // message id (MsgStart)
+    /*0x144*/ const u8* msgPtr;               // message text (in the EWRAM message block at 0x02000000); US Mode2State0 sets it too
+    /*0x148*/ u8 textX;                       // text cursor, pixels
+    /*0x149*/ u8 textY;
     /*0x14A*/ u8 unk14A;
     /*0x14B*/ u8 unk14B;
-    /*0x14C*/ u8 filler14C[0x14E - 0x14C];
+    /*0x14C*/ u8 unk14C;
+    /*0x14D*/ u8 unk14D;
     /*0x14E*/ u8 unk14E;
     /*0x14F*/ u8 unk14F;
     /*0x150*/ u8 unk150;
     /*0x151*/ u8 unk151;
-    /*0x152*/ u8 filler152[0x156 - 0x152];
+    /*0x152*/ u8 unk152;
+    /*0x153*/ u8 unk153;
+    /*0x154*/ u8 filler154[0x156 - 0x154];
     /*0x156*/ u8 unk156;
     /*0x157*/ u8 unk157;
-    /*0x158*/ u8 filler158[0x15A - 0x158];
+    /*0x158*/ u8 unk158;
+    /*0x159*/ u8 unk159;
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
-    /*0x160*/ struct ShopItem items[12];
+    /*0x160*/ struct ItemSlot items[12];
     /*0x1C0*/ u16 menuCursorX;                // item menu cursor position (8.8), moving toward the slot
     /*0x1C2*/ u16 menuCursorY;
     /*0x1C4*/ u16 menuCursorDX;
@@ -328,8 +355,8 @@ struct GameState
     /*0x1CC*/ u8 unk1CC;
     /*0x1CD*/ u8 menuCursor;                  // item menu slot (5 x 3; row 2 is the dungeon chest row)
     /*0x1CE*/ u8 menuKeyRepeat;               // frames to the next d-pad repeat
-    /*0x1CF*/ u8 menuSlots[10];               // item in each slot of rows 0-1 (index into items)
-    /*0x1D9*/ u8 filler1D9[0x1DE - 0x1D9];
+    /*0x1CF*/ u8 slotItems[13];               // item shown in each menu slot (SetSlotItem); rows 0-1 index items
+    /*0x1DC*/ u8 filler1DC[0x1DE - 0x1DC];
     /*0x1DE*/ u8 unk1DE;
     /*0x1DF*/ u8 unk1DF;
     /*0x1E0*/ u8 unk1E0;
@@ -357,15 +384,18 @@ struct GameState
     /*0x1FB*/ u8 unk1FB;
     /*0x1FC*/ s16 rupees;                     // shown on screen; counts toward flags.rupees
     /*0x1FE*/ s16 rupeeDelta;                 // flags.rupees - rupees
-    /*0x200*/ u8 filler200[0x206 - 0x200];
+    /*0x200*/ u8 filler200[0x202 - 0x200];
+    /*0x202*/ u16 unk202;                     // Tingle animation: frames left in the current frame
+    /*0x204*/ u16 unk204;
     /*0x206*/ u16 unk206;
-    /*0x208*/ u8 filler208[0x20A - 0x208];
+    /*0x208*/ u16 unk208;
     /*0x20A*/ u16 waveAmplitude;              // intro wave (Mode1State1), counts down to 0
     /*0x20C*/ u8 filler20C[0x20E - 0x20C];
     /*0x20E*/ u16 wavePhase;                  // 8.8; the high byte indexes gSinTable
     /*0x210*/ u16 timer;                      // flags.timer
     /*0x212*/ u8 playerName[8];               // slot 10
-    /*0x21A*/ u8 filler21A[0x21C - 0x21A];
+    /*0x21A*/ u8 playerNameIndex;             // next letter of playerName for message code 0xFB
+    /*0x21B*/ u8 filler21B[0x21C - 0x21B];
     /*0x21C*/ u8 unk21C;
     /*0x21D*/ u8 unk21D;
     /*0x21E*/ u8 unk21E;
@@ -379,7 +409,10 @@ struct GameState
     /*0x226*/ u8 unk226;
     /*0x227*/ u8 unk227;
     /*0x228*/ u8 unk228;
-    /*0x229*/ u8 filler229[0x22D - 0x229];
+    /*0x229*/ u8 unk229;
+    /*0x22A*/ u8 unk22A;
+    /*0x22B*/ u8 unk22B;
+    /*0x22C*/ u8 unk22C;
     /*0x22D*/ u8 scrollTableNext;
     /*0x22E*/ u8 scrollTable;                 // which per-line scroll table the HBlank DMA reads
     /*0x22F*/ u8 filler22F[0x230 - 0x22F];
@@ -422,8 +455,9 @@ extern const u8 *const gSpriteTable[];
 
 void Mode1VBlank(void);
 void DrawFloorNumber(void);
+// Shows message id (0-0x437) with Tingle's voice; arg goes to gGameState.unk226 (his animation).
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
-void GamePlaySound(s16 id, u8 arg);
+bool32 GamePlaySound(s16 id, u8 arg);
 bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
@@ -436,7 +470,7 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a
 bool32 LoadMapImage(void);  // returns nothing (falls off the end)
 bool32 ItemMenuInit(void);
 void ResetSelectWindow(void);
-bool32 Func_0201D8AC(void);
+bool32 MsgReset(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).
@@ -495,7 +529,7 @@ void ObjResetActive(void);  // ObjReset on every active entry
 void UpdateMap(void);
 void Func_0201CFE8(void);
 void Func_0201B7D4(void);
-void Func_0201DA50(void);
+void MsgClose(void);
 bool32 UseItem(u8 item);
 void Func_0201B0F4(void);
 void Func_0201B8C8(void);
@@ -505,7 +539,7 @@ void DrawStatusIcon(void);
 u8 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
-void Func_0201DD20(u8 a, u8 b);
+void SetSlotItem(u8 a, u8 b);
 void UpdateHudPanels(void);
 void Func_0201EBAC(void);
 void Func_0201EBD4(void);
@@ -573,10 +607,87 @@ u16 ArcTan2(s32 x, s32 y);
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
 
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
+// Text: glyphs are drawn at gGameState.textX/textY (pixels) in a window 0x60 wide and 0x50
+// high; unk157 is the glyph width (6 or 8) and unk15A doubles the size.
+bool32 Func_0201C60C(void);  // wraps the cursor to the next line; FALSE when the window is full
+void Func_0201BCC0(u8 x, u8 y, u8 a2, u16 ch);
+void Func_0201BDE4(u8 x, u8 y, u8 a2, u16 ch);
+void Func_0201C0E8(u8 arg);
+s32 Func_0201C204(void);
+void DrawChestRow(void);
+bool32 SendItemUse(u8 a, u8 b);
+void DrawGlyphRun(u8 id);
+bool32 DrawChar(u8 ch);
+#ifdef VERSION_GZLJ01
+#define GLYPH_DIGIT_0 0x76
+#define DRAW_CHAR DrawChar
+#else
+#define GLYPH_DIGIT_0 0x35
+bool32 UsDrawChar(u8 ch);
+#define DRAW_CHAR UsDrawChar  // the US callers go through this wrapper
+#endif
+s32 MsgStep(void);
+void MsgStart(s16 id);
+void DrawItemIcon(u8 item, u16 *map);
+void DrawItemCount(u8 item, u16 *map);
+void SetSelectedItem(u8 item);
+
+// One OAM entry (the hardware attribute layout), as DrawItemSprite fills gOamBuffer.
+struct OamData
+{
+    /*0x0*/ u32 y:8;
+            u32 affineMode:2;
+            u32 objMode:2;
+            u32 mosaic:1;
+            u32 bpp:1;
+            u32 shape:2;
+    /*0x2*/ u32 x:9;
+            u32 matrixNum:3;
+            u32 hFlip:1;
+            u32 vFlip:1;
+            u32 size:2;
+    /*0x4*/ u16 tileNum:10;
+            u16 priority:2;
+            u16 paletteNum:4;
+    /*0x6*/ u16 affineParam;
+};
+
+// gGameState.items ... slotItems (0x160-0x1DB) seen as one block: SetSlotItem addresses
+// slotItems through a pointer to it (base + 0x6F), which is how the original loads it.
+struct ItemMenu
+{
+    /*0x00*/ struct ItemSlot items[13];
+    /*0x68*/ u16 unk68;  // gGameState.unk1C8
+    /*0x6A*/ u16 unk6A;  // gGameState.unk1CA
+    /*0x6C*/ u8 unk6C;   // gGameState.unk1CC
+    /*0x6D*/ u8 filler6D[2];
+    /*0x6F*/ u8 slotItems[13];
+};
+
+extern const u16 gMsgTingleAnims[];  // message code 0xF5: argument -> gGameState.unk226
+extern const u16 gGlyphRunStart[];   // DrawGlyphRun: first glyph of each run
+extern const u8 gGlyphRunLength[];
+extern const u8 gGlyphTable_0202438E[];  // DrawChar: glyphs for codes 0xE0-0xE5 and 0xEB-
+extern const u8 gDayNameChars[7 * 2];    // two glyphs per weekday (flags.dayOfWeek), JP only
+extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: MsgCmd00 ... MsgCmd12
+extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
+extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
+extern const u8 gSprite_0202C130[];
+
+void Mode1StartFadeOut(void);
+void Func_02018988(s8 *pos, u8 target, s8 speed);  // steps *pos toward target
+void Func_0201BA2C(s8 pos);
+void Func_0201BA9C(s8 pos);
+void Func_0201BEA0(s8 pos);
+// Tingle's animations (gGameState.unk226), each a list of sprites (gGameState.unk227 picks one).
+extern const u8 *const *const gTingleAnims[21];
+extern const u8 gSprite_0202C400[];
+extern const u8 gSprite_0202C650[];
+extern const u8 gSprite_0202C740[];
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
 
-extern const struct ShopItem gShopItemsInit[12];
+extern const struct ItemSlot gShopItemsInit[12];
 
 #define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
 
@@ -593,20 +704,17 @@ extern const struct SpriteAnimFrame gSprite_0202C940[];
 extern const struct SpriteAnimFrame gSprite_0202C950[];
 extern const u8 gSprite_0202CC60[];
 
-bool32 SendItemUse(u8 item, u8 arg);
-void DrawChestRow(void);
 void Func_0201E584(void);
 void Func_0201EC10(void);
 void Func_0201ECC4(void);
 void Func_0201ED08(void);
 void Func_0201EDF8(s16 x, s16 y, u8 kind);
 void Func_0201F2A8(void);
-void Func_0201DCEC(u8 arg);
 // The definition takes a u16; callers see s16 (they sign-extend).
-bool32 Func_0201DA24(s16 id);
-void Func_0201DA78(u8 cursor);
-void Func_0201DB50(u8 item, u8 x, u8 y, u8 mosaic);
-void Func_0201DDA0(void);
+bool32 MsgStartSilent(s16 id);
+void DrawSlotCursor(u8 cursor);
+void DrawItemSprite(u8 item, u8 x, u8 y, u8 mosaic);
+void ChestCounterMain(void);
 u8 Func_02018A90(u8 *timer);  // counts *timer down to 0 and returns it
 extern const s16 gChestRowIds[5];
 extern const u16 gHudPanelTiles[3];

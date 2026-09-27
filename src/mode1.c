@@ -243,7 +243,7 @@ void Mode1State0(void)
     {
         UpdateMap();
     }
-    Func_0201D8AC();
+    MsgReset();
     gGameState.switchSound = 0xFFFF;
     gGameState.unk21C = 0;
     gGameState.unk206 = 0x300;
@@ -463,7 +463,7 @@ void Mode1State2(void)
                                 gGameState.unk026 |= 1 << gGameState.markers[gGameState.unk119].unk6;
                             gGameState.unk11A = 1;
                         }
-                        Func_0201DA50();
+                        MsgClose();
                     }
                 }
             }
@@ -916,9 +916,9 @@ void MainMode1(void)
     {
         gGameState.unk239 = 0;
         GamePlaySound(0x10, 1);
-        Func_0201DD20(4, 5);
-        Func_0201DD20(8, 9);
-        Func_0201DD20(9, 10);
+        SetSlotItem(4, 5);
+        SetSlotItem(8, 9);
+        SetSlotItem(9, 10);
     }
 
     if (gMain.modeState == 2)
@@ -1036,7 +1036,7 @@ void MainMode1(void)
             gGameState.unk235 = gMain.unk457;
             if (gGameState.unk1CC || gGameState.unk1FA)
             {
-                Func_0201DA50();
+                MsgClose();
                 gGameState.unk142 = 0xFFFF;
                 if (gGameState.unk1FA)
                     gGameState.unk21C = 0;
