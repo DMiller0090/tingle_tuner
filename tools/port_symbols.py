@@ -108,6 +108,9 @@ def port_data(src, dst, pairs, addr, outside=False):
             delta = addr - w
             if 0 <= delta < 0x100 and (not outside or delta == 0) and off in dwords:
                 cand = dwords[off] + delta
+                # A reshaped function can hold anything at the same pool offset.
+                if not outside and not dst.base <= cand < dst.end:
+                    continue
                 bucket = votes.setdefault(delta, {})
                 bucket[cand] = bucket.get(cand, 0) + 1
     if not votes:

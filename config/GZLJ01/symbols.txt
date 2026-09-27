@@ -27,6 +27,19 @@ UpdateRandom = 0x0201508C; // thumb
 MainMode0 = 0x02018630; // thumb
 MainMode1 = 0x020166FC; // thumb
 MainMode2 = 0x020204A8; // thumb
+// MainMode0 and MainMode1 dispatch on gMain.modeState through these tables
+Mode0State0 = 0x02018158; // thumb
+Mode0Func_020182B0 = 0x020182B0; // thumb
+Mode0Func_02018324 = 0x02018324; // thumb
+Mode0State1 = 0x02018390; // thumb
+Mode0State2 = 0x02018418; // thumb
+Mode0State3 = 0x0201850C; // thumb
+Mode1State0 = 0x020152FC; // thumb
+Mode1State1 = 0x02015640; // thumb
+Mode1State2 = 0x020158E0; // thumb
+Mode1State3 = 0x02015F68; // thumb
+Mode1State4 = 0x0201643C; // thumb
+Mode1State5 = 0x02015744; // thumb
 // VBlankIntr calls it in mode 1 unless gMain.unk457 is set
 Mode1VBlank = 0x0201ABDC; // thumb
 
@@ -125,8 +138,13 @@ rand = 0x02023DC4; // thumb
 gIntrTableInit = 0x02023DEC; // data
 gOamHiddenEntry = 0x02023E24; // data
 gMainModeFuncs = 0x02023E2C; // data
+gMode1StateFuncs = 0x02023E68; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
+gMode0Unk_02023EE4 = 0x02023EE4; // data
+gMode0StateFuncs = 0x02023EEC; // data
+// sin(i * 2pi / 256) in 8.8 fixed point; 320 entries so cos(i) = gSinTable[i + 64]
+gSinTable = 0x02023EFC; // data
 gSoundBankHeader = 0x0202CD20; // data
 
 // ---- .data load image (end of the program) ----

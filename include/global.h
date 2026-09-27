@@ -105,6 +105,8 @@ typedef u32 bool32;
 
 // Keep a not-yet-decompiled function as asm inside a C file: it is taken from
 // build/<ver>/asm/funcs/<name>.s, which disasm.py writes for every function in a C range.
-#define INCLUDE_ASM(name) asm(".include \"funcs/" #name ".s\"")
+// It is wrapped in .pushsection so that it lands in .text even where agbcc has just
+// emitted .rodata (e.g. right after a const table).
+#define INCLUDE_ASM(name) asm(".pushsection .text\n.include \"funcs/" #name ".s\"\n.popsection")
 
 #endif // GUARD_GLOBAL_H

@@ -33,8 +33,9 @@ IWRAM layout (identical in all three versions):
 | Address | Name | Notes |
 |---------|------|-------|
 | `03002F70` | `gIntrTable` | 14 handlers, copied from `gIntrTableInit` |
-| `03003080` | `gMain` | +0x000: IWRAM copy of `intr_main` (0x400); +0x400: game code (`*(u32 *)0x020000AC`, from the packer's header); +0x416/0x418: held/new keys; +0x45C: heap (0x1800) |
+| `03003080` | `gMain` | +0x000: IWRAM copy of `intr_main` (0x400); +0x400: game code (`*(u32 *)0x020000AC`, from the packer's header); +0x414: VBlank flag; +0x416/0x418: held/new keys; +0x41A-0x447: shadow display registers (DISPCNT ... BLDY, copied by `VBlankIntr`); +0x44C-0x459: frame/mode/link bytes (`mode` indexes `gMainModeFuncs`, `modeState` the mode's state table); +0x45C: heap (0x1800) |
 | `03004CE0` | `gOamBuffer` | 0x400 bytes, reset to `{0xA0, 0}` pairs (y = 160, hidden) |
+| `030050E0` | `gGameState` | 0x240, game state; starts with the GC's `daAgb_Flags` (slot 9, see `include/gba_com.h`) |
 | `03005320` | `gGbaComDataStatus` | `u8[16]` per-slot link status |
 | `03005390` | `gMultiSioArea` | 0x180, MultiSio work area (unused) |
 | `03005510` | `gJoyCom` | 0x130, JOY bus work area, see [protocol.md](protocol.md) |
@@ -43,29 +44,36 @@ IWRAM layout (identical in all three versions):
 EWRAM below the program holds the link receive buffers (`gGbaComBuffers`, one per slot,
 named `gGbaComBuf*` in symbols.txt): `prog_base - 0xA800` (`gGbaComMessageBuf`, 0xA000
 bytes, slots 0 and 2: message data and map image) and small buffers from `prog_base - 0x800`.
+Right after them, at `prog_base - 0x4C0`, are `gBgScrollTables` (`u16[160]` per table), which
+`VBlankIntr` feeds to BG0HOFS by HBlank DMA while `gMain.hblankScroll` is set.
 They keep their offset from `prog_base` in every version, and `port_symbols.py` relies on that.
 
 ## `.text` modules
 
-Link order is roughly: crt0, game code, MultiSio, JoyCom, more game code, sound driver, ARM
-mixer, libagbsyscall, libgcc, newlib. Object boundaries marked "?" are guesses; the
+Link order is roughly: crt0, main, mode 1 game code, GbaCom, MultiSio, JoyCom, mode 0, heap,
+more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object boundaries marked "?" are guesses; the
 `.rodata` order (one block per object, in link order) is the best evidence for the rest.
 
 | GZLJ01 | GZLE01 | Module | Contents |
 |--------|--------|--------|----------|
 | `02014800` | `0201B000` | `crt0.s` | stock AGB SDK: `_start`, header, `start_vector`, `intr_main` |
 | `02014A0C` | `0201B20C` | `main.c` | `AgbMain` ... `MainLoop` (ends `02015054`); `.rodata` `02023DEC–02023E38` |
-| `02015xxx` | | game code | not yet mapped |
+| `02015054` | `0201B854` | game code (mode 1) | `InitDisplayIntr`, `SeedRandom`, `UpdateRandom`, `Mode1State0-5`, `MainMode1` (ends `02017190`); `.rodata` `02023E38–02023E90` (u16 tables, then `gMode1StateFuncs` at `02023E68`). One object or several: not known yet |
 | `02017190` | `0201D980` | `gba_com.c` | app-side link API over JoyCom (status per slot, send/recv) |
 | `020173B8` | `0201DBA8` | `multi_sio.c` | Nintendo MultiSio (`"MultiSioSync010316"` is its `.rodata`); nothing calls it |
-| `02017824` | `0201E014` | `joy_com.c` | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue |
+| `02017824` | `0201E014` | `joy_com.c` | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue (ends `02018158`) |
+| `02018158` | `0201E948` | `mode0.c` | `Mode0State0-3`, two helpers, `MainMode0 = gMode0StateFuncs[gMain.modeState]()`; `.rodata` `02023EE4–02023EFC` (US: `0202AB40–0202AB64`, which adds a 12-byte `0xFF`-terminated string for `Mode0State0`) |
 | `02018658` | `0201EE3C` | `heap.c` | `HeapInit`/`HeapAlloc`/`HeapFree`/`HeapCompact` (the JOY IRQ copy lives in this heap) |
-| `02018xxx` | | game code | not yet mapped |
+| `02018884` | `0201F068` | game code | `Mode1VBlank` (`0201ABDC`), `MainMode2` (`020204A8`), ~140 functions; `.rodata` starts with `gSinTable` (`02023EFC–0202417C`, 320 × s16 8.8 sine, so `cos(i) = gSinTable[i + 64]`), then small tables up to `02024568`, referenced roughly in code order |
 | `02020E28` | `02027A84` | sound | `SoundInit` -> `SoundDriverInit(gSoundBankHeader)`; custom PCM driver, not m4a |
 | `020237CC` | `0202A428` | ARM mixer | `PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix` (run from IWRAM) |
 | `02023A84` | `0202A6E0` | libagbsyscall | `ArcTan2 CpuFastSet CpuSet Div LZ77UnCompVram LZ77UnCompWram Sqrt`, then `JoyHardReset` |
 | `02023AC0` | `0202A71C` | libgcc | `_call_via_*`, `__divsi3 __div0 __modsi3 __udivsi3 __umodsi3` |
 | `02023D9C` | `0202A9F8` | newlib | `bzero`, `srand`, `rand` |
+
+`.rodata` `02024568–0202CD20` is large data (graphics and tables, not yet split) referenced from
+all the game-code ranges, so it is probably separate data objects linked after the code's
+own `.rodata`. `gSoundBankHeader` (`0202CD20`) follows it.
 
 Interrupts: `gIntrTableInit` puts `JoyComIntr` in the serial slot and `VBlankIntr` in
 VBlank. The rest are `IntrDummy`. `JoyComInit` then points the serial slot at the IWRAM copy.

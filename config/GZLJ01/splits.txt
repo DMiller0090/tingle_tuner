@@ -8,3 +8,5 @@ src/heap.c 0x02018658 0x02018884
 src/multi_sio.c 0x020173B8 0x02017824
 src/multi_sio.c .rodata 0x02023ED0 0x02023EE4
 src/gba_com.c .rodata 0x02023E90 0x02023ED0
+src/mode0.c 0x02018158 0x02018658
+src/mode0.c .rodata 0x02023EE4 0x02023EFC

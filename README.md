@@ -68,7 +68,8 @@ from the extracted binary on every build.
    `build/<ver>/asm/seg_*.s`.
 2. Name it and its callees/globals in `config/GZLJ01/symbols.txt`
    (`Name = 0xADDR; // thumb|arm|data`), then `python tools/port_symbols.py GZLJ01 GZLE01 --write`
-   (and `GZLE01_ud`) to carry the names over; check what it prints. Addresses outside the image (IWRAM/EWRAM variables,
+   (and `GZLE01_ud`) to carry the names over; check what it prints. A symbol only one US
+   build has goes at the end of that version's file; porting keeps it. Addresses outside the image (IWRAM/EWRAM variables,
    I/O) become absolute symbols. Shared C uses these names so one source serves all versions;
    `VERSION_GZLJ01` etc. are defined for version differences.
 3. Write the C in `src/`, add `src/file.c 0xSTART 0xEND` to each version's `splits.txt` (END =
@@ -86,9 +87,10 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `.rodata` block (see `main.c`).
 
 In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but
-`VBlankIntr`/`MainLoop`), `src/gba_com.c`, `src/joy_com.c`,
+`VBlankIntr`/`MainLoop`), `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c` (`MainMode0` and
+its `.rodata`),
 `src/multi_sio.c` (all but `MultiSioMain`/`MultiSioRecvDataCheck`), `src/heap.c`
-(`HeapCompact`) and `src/libc/rand.c`. main.c, gba_com.c and multi_sio.c own their `.rodata`.
+(`HeapCompact`) and `src/libc/rand.c`. main.c, gba_com.c, multi_sio.c and mode0.c own their `.rodata`.
 Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
 doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
 and old_agbcc at least matches its leaf-function prologue.
