@@ -232,7 +232,55 @@ INCLUDE_ASM(Func_0201F2A8);
 
 INCLUDE_ASM(Func_0201F2C4);
 
-INCLUDE_ASM(Func_0201F308);
+void Func_0201F308(void)
+{
+    Func_0201ED08();
+    if (gGameState.unk12B == 2)
+    {
+        if (gGameState.unk1FA == 0)
+        {
+            if (gGameState.unk132 == 0)
+            {
+                if (gGameState.effect[1] == 10)
+                {
+                    GamePlaySound(0x2C, 1);
+                    gGameState.effect[0] = gGameState.effect[1];
+                    gGameState.unk120 = 0;
+                    gGameState.unk132 = 8;
+                    gGameState.unk12B = 3;
+                }
+                else if (gGameState.effect[1] == 0x13)
+                {
+                    SendItemUse(0x13, gGameState.unk18E);
+                    gGameState.unk12B = 5;
+                }
+                else
+                {
+                    gGameState.effect[0] = gGameState.effect[1];
+                    Func_0201FEEC();
+                    gGameState.unk12B = 3;
+                }
+            }
+            else
+            {
+                gGameState.unk132--;
+            }
+        }
+    }
+    else if (gGameState.unk12B == 5)
+    {
+    }
+    else if (gGameState.unk12B == 6)
+    {
+        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        {
+            gMain.newKeys &= ~(gMain.newKeys & 0x30F);
+            gGameState.unk120 = 0;
+            GamePlaySound(0x30, 1);
+            Func_0201EBAC();
+        }
+    }
+}
 
 void Func_0201F420(void)
 {

@@ -86,6 +86,7 @@ struct MapMarker
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
+// 0x18E u8 unk18E
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
@@ -239,7 +240,9 @@ struct GameState
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
-    /*0x160*/ u8 filler160[0x1C8 - 0x160];
+    /*0x160*/ u8 filler160[0x18E - 0x160];
+    /*0x18E*/ u8 unk18E;
+    /*0x18F*/ u8 filler18F[0x1C8 - 0x18F];
     /*0x1C8*/ u16 unk1C8;
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
@@ -470,5 +473,7 @@ void UpdateItemEffect(void);
 void Func_0201F878(void);
 void Func_0201FCA0(void);
 void Func_020208FC(u8 open);
+void Func_0201ED08(void);
+void SendItemUse(u8 item, u8 arg);
 
 #endif // GUARD_GAME_H
