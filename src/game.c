@@ -5388,68 +5388,72 @@ void SelectWindowDrawEdge(void)
 // Select (in mode 1 state 2, when nothing else is up) wipes a window across the screen
 // (SelectWindowWipe), flips BG0 to its other half behind it and wipes it back; Select again (or
 // leaving state 2) reverses it. gGameState.unk1EE is the step.
-// Doesn't match: in states 3 and 4 the registers for three offset constants differ.
-//     void UpdateSelectWindow(void)
-//     {
-//         switch (gGameState.unk1EE)
-//         {
-//         case 0:
-//             if (gMain.modeState == 2 && gGameState.unk1FA == 0 && gGameState.unk1CC == 0
-//              && !gGameState.unk1E5_4 && (gMain.newKeys & 4))
-//             {
-//                 gGameState.unk1FB = 1;
-//                 SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
-//                 gGameState.unk1EE++;
-//             }
-//             break;
-//         case 1:
-//             SelectWindowWipe(0);
-//             if (gGameState.unk1E8 == 0xFFF8)
-//             {
-//                 gGameState.unk1EE++;
-//                 gMain.bgOfs[0][0] = 0x100;
-//             }
-//             SelectWindowDrawEdge();
-//             break;
-//         case 2:
-//             SelectWindowWipe(1);
-//             if (gGameState.unk1E8 == 0xF8)
-//             {
-//                 gGameState.unk1EE++;
-//                 gMain.dispcnt ^= 0x2000;
-//             }
-//             SelectWindowDrawEdge();
-//             break;
-//         case 3:
-//             if (gMain.modeState != 2 || (gMain.newKeys & 4))
-//             {
-//                 SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
-//                 gGameState.unk1EE++;
-//             }
-//             break;
-//         case 4:
-//             SelectWindowWipe(0);
-//             if (gGameState.unk1E8 == 0xFFF8)
-//             {
-//                 gGameState.unk1EE++;
-//                 gMain.bgOfs[0][0] = 0;
-//             }
-//             SelectWindowDrawEdge();
-//             break;
-//         case 5:
-//             SelectWindowWipe(1);
-//             if (gGameState.unk1E8 == 0xF8)
-//             {
-//                 gGameState.unk1EE = 0;
-//                 gGameState.unk1FB = 0;
-//                 gGameState.unk104 = 1;
-//                 gMain.dispcnt &= 0xDFFF;
-//             }
-//             SelectWindowDrawEdge();
-//             break;
-//         }
-//     }
-INCLUDE_ASM(UpdateSelectWindow);
+void UpdateSelectWindow(void)
+{
+    switch (gGameState.unk1EE)
+    {
+    case 0:
+        if (gMain.modeState == 2 && gGameState.unk1FA == 0 && gGameState.unk1CC == 0
+         && !gGameState.unk1E5_4 && (gMain.newKeys & 4))
+        {
+            gGameState.unk1FB = 1;
+            SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
+            gGameState.unk1EE++;
+        }
+        break;
+    case 1:
+        SelectWindowWipe(0);
+        if (gGameState.unk1E8 == 0xFFF8)
+        {
+            gGameState.unk1EE++;
+            gMain.bgOfs[0][0] = 0x100;
+        }
+        SelectWindowDrawEdge();
+        break;
+    case 2:
+        SelectWindowWipe(1);
+        if (gGameState.unk1E8 == 0xF8)
+        {
+            gGameState.unk1EE++;
+            gMain.dispcnt ^= 0x2000;
+        }
+        SelectWindowDrawEdge();
+        break;
+    case 3:
+        // Two branches with the same body (cross-jumped), not one ||.
+        if (gMain.modeState != 2)
+        {
+            SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
+            gGameState.unk1EE++;
+        }
+        else if (gMain.newKeys & 4)
+        {
+            SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
+            gGameState.unk1EE++;
+        }
+        break;
+    case 4:
+        SelectWindowWipe(0);
+        if (gGameState.unk1E8 == 0xFFF8)
+        {
+            gGameState.unk1EE++;
+            gMain.bgOfs[0][0] = 0;
+        }
+        SelectWindowDrawEdge();
+        break;
+    case 5:
+        SelectWindowWipe(1);
+        if (gGameState.unk1E8 == 0xF8)
+        {
+            gGameState.unk1EE = 0;
+            gGameState.unk1FB = 0;
+            gGameState.unk104 = 1;
+            gMain.dispcnt &= 0xDFFF;
+        }
+        SelectWindowDrawEdge();
+        break;
+    }
+}
 
 void ResetSelectWindow(void)
 {
