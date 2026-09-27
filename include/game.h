@@ -60,7 +60,7 @@ struct MapMarker
 // 0x12B u8 unk12B
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
-// 0x138 u8 unk138  // sent as GbaFlg.unk2
+// 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x140 s16 unk140
 // 0x14A u8 unk14A
 // 0x157 u8 unk157
@@ -77,6 +77,7 @@ struct MapMarker
 // 0x20A u16 waveAmplitude  // intro wave (Mode1State1), counts down to 0
 // 0x20E u16 wavePhase  // 8.8; the high byte indexes gSinTable
 // 0x210 u16 timer  // flags.timer
+// 0x212 u8 playerName[8]  // slot 10
 // 0x21C u8 unk21C
 // 0x21D u8 unk21D
 // 0x21E u8 unk21E
@@ -159,7 +160,12 @@ struct GameState
     /*0x134*/ u8 filler134[0x136 - 0x134];
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
-    /*0x138*/ u8 unk138;                      // sent as GbaFlg.unk2
+    /*0x138*/ u8 unk138_0:2;                  // sent as GbaFlg.unk2
+              u8 unk138_2:1;
+              u8 unk138_3:1;
+              u8 unk138_4:1;
+              u8 unk138_5:1;
+              u8 unk138_6:2;
     /*0x139*/ u8 filler139[0x140 - 0x139];
     /*0x140*/ s16 unk140;
     /*0x142*/ u8 filler142[0x14A - 0x142];
@@ -190,7 +196,8 @@ struct GameState
     /*0x20C*/ u8 filler20C[0x20E - 0x20C];
     /*0x20E*/ u16 wavePhase;                  // 8.8; the high byte indexes gSinTable
     /*0x210*/ u16 timer;                      // flags.timer
-    /*0x212*/ u8 filler212[0x21C - 0x212];
+    /*0x212*/ u8 playerName[8];               // slot 10
+    /*0x21A*/ u8 filler21A[0x21C - 0x21A];
     /*0x21C*/ u8 unk21C;
     /*0x21D*/ u8 unk21D;
     /*0x21E*/ u8 unk21E;
@@ -275,11 +282,14 @@ struct Mode0Work
     /*0x0*/ u8 blend;      // BLDALPHA EVA (EVB = 16 - blend)
     /*0x1*/ u8 timer;      // frames to the next step
     /*0x2*/ u8 fadingOut;  // 0: blend counts up to 16, 1: down to 1
-    /*0x3*/ u8 unk3;
+    /*0x3*/ u8 linkTimeout;  // frames left to receive the message (slot 0)
     /*0x4*/ u8 filler4[0xC];
 };
 
 extern struct Mode0Work gMode0Work;
+
+// Slot 14 data (IWRAM 0x03002FB0), received once at boot by Mode0State3.
+extern u8 gSlot14Data[0xC4];
 
 #ifndef VERSION_GZLJ01
 void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);

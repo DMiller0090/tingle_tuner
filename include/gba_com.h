@@ -58,7 +58,9 @@ struct GbaComFlags
     /*0x4*/ u8 timer;           // field_0x4: (field_0x65c + 29) / 30
     /*0x5*/ u8 unk5;
     /*0x6*/ u8 unk6;
-    /*0x7*/ u8 unk7;
+    /*0x7*/ u8 unk7_0:6;
+            u8 unk7_6:1;        // copied to GameState.unk138 bit 4 (Mode0State3)
+            u8 unk7_7:1;        // copied to GameState.unk138 bit 5
     /*0x8*/ u8 unk8;
     /*0x9*/ u8 unk9;
     /*0xA*/ u8 unkA_0:1;        // field_0xa_7
@@ -67,7 +69,7 @@ struct GbaComFlags
             u8 unkA_3:1;        // field_0xa_4
             u8 unkA_4:1;        // field_0xa_3
             u8 unkA_5:1;        // field_0xa_2
-            u8 unkA_6:1;        // field_0xa_1
+            u8 unkA_6:1;        // field_0xa_1; copied to GameState.unk138 bit 3
             u8 isFree:1;        // field_0xa_0: daAgb_c::mIsFree
     /*0xB*/ u8 followTarget:1;  // field_0xb_7
             u8 unkB_1:1;        // field_0xb_6

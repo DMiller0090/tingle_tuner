@@ -124,6 +124,7 @@ SoundDmaStop = 0x020215D0; // thumb
 SoundDriverInit = 0x020213C0; // thumb
 // play sound `id` (index into gSoundBankHeader+0x1C) unless a higher-priority one is playing
 SoundPlay = 0x02021070; // thumb
+Func_02021284 = 0x02021284; // thumb
 // ARM, copied to IWRAM by SoundDriverInit and called through pointers
 PcmClipS16ToS8 = 0x020237CC; // arm
 PcmMixChannel = 0x020238EC; // arm
@@ -211,6 +212,8 @@ gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
+// slot 14 payload (0xC4 bytes), copied by Mode0State3; read by sub_02019CAC, sub_0201AD90, sub_0201B3A4
+gSlot14Data = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 
 // ---- EWRAM below the program: link receive buffers (gGbaComBuffers) ----

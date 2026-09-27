@@ -3,13 +3,17 @@
 #include "game.h"
 #include "sound.h"
 #include "gba/syscall.h"
+#include "gba_com.h"
 
-// Game mode 0 (gMain.mode starts at 0). MainMode0 runs one state per frame.
+// Game mode 0, the title screen while the GC sends the boot data: the message (state 1), the
+// name, slot 14 and in a dungeon the map image (state 2), then the markers (state 3), after
+// which the game switches to mode 1. MainMode0 runs one state per frame.
 
 void Mode0State0(void);
 void Mode0State1(void);
 void Mode0State2(void);
 void Mode0State3(void);
+void Mode1RecvMarkers(void);
 
 #ifndef VERSION_GZLJ01
 // 0xFF-terminated byte string used by Mode0State0; not in the Japanese build.
@@ -72,7 +76,7 @@ void Mode0State0(void)
     gMain.bldalpha = ((16 - blend) << 8) | blend;
     gMode0Work.timer = 1;
     gMode0Work.fadingOut = 0;
-    gMode0Work.unk3 = 120;
+    gMode0Work.linkTimeout = 120;
     gGameState.unk034 = 0x20;
     gGameState.unk032 = -24;
     SoundPlay(SE_TITLE, 0);
@@ -115,9 +119,106 @@ void Mode0UpdateBlend(void)
     }
     Mode0DrawTitleSprite();
 }
-INCLUDE_ASM(Mode0State1);
-INCLUDE_ASM(Mode0State2);
-INCLUDE_ASM(Mode0State3);
+// Wait for the message data (slot 0, msg_LZ.bin) and unpack it to the start of EWRAM; give
+// up (mode 2) if the slot stays idle for 120 frames.
+void Mode0State1(void)
+{
+    Mode0UpdateBlend();
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_MESSAGE))
+    {
+        LZ77UnCompWram(gGbaComMessageBuf, (void *)0x02000000);
+        GbaComDataStatusReset(GBACOM_SLOT_MESSAGE);
+        gMode0Work.linkTimeout = 120;
+        gMain.modeState++;
+    }
+    if (GbaComCheckDataStatus(GBACOM_SLOT_MESSAGE, GBACOM_STATUS_IDLE))
+    {
+        if (--gMode0Work.linkTimeout == 0)
+        {
+            GbaComStop();
+            gMain.mode = 2;
+            gMain.modeState = 0;
+        }
+    }
+    Func_02021284(5, 5, 0);
+}
+// Wait for the name (slot 10) and slot 14, and in a dungeon for the map image (slot 2).
+void Mode0State2(void)
+{
+    Mode0UpdateBlend();
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
+    {
+        gGameState.unk10E = 0;
+        GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
+    }
+    if (!gGameState.flags.unkA_0)
+    {
+        if (gGameState.flags.dungeonNo == 0)
+        {
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_NAME) && GbaComRecvStatusCheck(GBACOM_SLOT_14))
+                gMain.modeState++;
+        }
+        else
+        {
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE) && GbaComRecvStatusCheck(GBACOM_SLOT_NAME)
+             && GbaComRecvStatusCheck(GBACOM_SLOT_14))
+            {
+                gGameState.unk10E = 1;
+                Func_0201A69C();
+                gMode0Work.linkTimeout = 120;
+                gMain.modeState++;
+            }
+            if (GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_IDLE))
+            {
+                if (--gMode0Work.linkTimeout == 0)
+                {
+                    GbaComStop();
+                    gMain.mode = 2;
+                    gMain.modeState = 0;
+                }
+            }
+        }
+    }
+    Func_02021284(5, 5, 0);
+}
+// Wait for the markers (slot 3), take the name and slot 14, and start mode 1.
+void Mode0State3(void)
+{
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
+    {
+        gGameState.unk10E = 0;
+        GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
+    }
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+    {
+        Mode1RecvMarkers();
+        GbaComRecvDataGet(gGameState.playerName, GBACOM_SLOT_NAME, sizeof(gGameState.playerName));
+        GbaComRecvDataGet(gSlot14Data, GBACOM_SLOT_14, sizeof(gSlot14Data));
+        gMain.mode = 1;
+        gMain.modeState = 0;
+        gGameState.unk10E = 1;
+        gGameState.rupees = gGameState.flags.rupees;
+        gGameState.rupeeDelta = 0;
+        gGameState.unk138_2 = 1;
+        gGameState.unk138_3 = gGameState.flags.unkA_6;
+        gGameState.unk138_4 = gGameState.flags.unk7_6;
+        gGameState.unk138_5 = gGameState.flags.unk7_7;
+        SoundPlay(SE_LINKED, 0);
+    }
+    else
+    {
+        Func_02021284(5, 5, 0);
+    }
+    if (GbaComCheckDataStatus(GBACOM_SLOT_3, GBACOM_STATUS_IDLE))
+    {
+        if (--gMode0Work.linkTimeout == 0)
+        {
+            GbaComStop();
+            gMain.mode = 2;
+            gMain.modeState = 0;
+        }
+    }
+}
 
 void MainMode0(void)
 {
