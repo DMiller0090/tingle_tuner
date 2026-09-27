@@ -34,6 +34,8 @@ struct MapIcon
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
 // 0x00C struct MapImage* mapImage  // the slot 2 map image (Func_0201A69C)
 // 0x010 u32 unk010
+// 0x014 s16 mapX  // top left of the map view in the map image (pixels)
+// 0x016 s16 mapY
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
 // 0x030 u16 unk030
@@ -145,7 +147,9 @@ struct GameState
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
     /*0x00C*/ struct MapImage* mapImage;      // the slot 2 map image (Func_0201A69C)
     /*0x010*/ u32 unk010;
-    /*0x014*/ u8 filler014[0x019 - 0x014];
+    /*0x014*/ s16 mapX;                       // top left of the map view in the map image (pixels)
+    /*0x016*/ s16 mapY;
+    /*0x018*/ u8 filler018[0x019 - 0x018];
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
     /*0x01A*/ u8 filler01A[0x026 - 0x01A];
     /*0x026*/ u16 unk026;
@@ -328,7 +332,7 @@ void Mode1VBlank(void);
 void Func_0201A570(void);
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
 void GamePlaySound(s16 id, u8 arg);
-void Func_0201A6D4(void);
+bool32 Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);

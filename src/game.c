@@ -123,7 +123,64 @@ bool32 Func_0201A69C(void)
     GbaComDataStatusReset(2);
 }
 
-INCLUDE_ASM(Func_0201A6D4);
+// Set up the map view on the player's marker: in map mode, load the map image's tiles and
+// draw the visible part of its map; otherwise just centre the view.
+bool32 Func_0201A6D4(void)
+{
+    u8 i = FindMarker(3);
+    u16 maxX, maxY;
+    s16 x, y;
+    s16 yEnd;
+    u16 *map;
+
+    if (i == 0xFF)
+        i = FindMarker(1);
+    if (gMain.unk457 != 0)
+    {
+        if (gGameState.unk10E == 0)
+        {
+            CpuFill16(0, GBACOM_BUF_MESSAGE, 0xA000);
+            gGameState.mapX = gMain.bgOfs[3][0];
+            gGameState.mapY = gMain.bgOfs[3][1];
+        }
+        else
+        {
+            CpuCopy16(gGameState.mapImage->tiles, (void *)0x06000000, gGameState.mapImage->tilesSize);
+            maxX = gGameState.mapImage->width - 120;
+            maxY = gGameState.mapImage->height - 120;
+            gGameState.mapX = gGameState.markers[i].x - 60;
+            gGameState.mapY = gGameState.markers[i].y - 60;
+            if (gGameState.mapX < 0)
+                gGameState.mapX = 0;
+            if (gGameState.mapX > (s16)maxX)
+                gGameState.mapX = maxX;
+            if (gGameState.mapY < 0)
+                gGameState.mapY = 0;
+            if (gGameState.mapY > (s16)maxY)
+                gGameState.mapY = maxY;
+            gMain.bgOfs[3][0] = gGameState.mapX - 8;
+            gMain.bgOfs[3][1] = gGameState.mapY - 8;
+            Func_0201A570();
+            x = gGameState.mapX;
+            y = gGameState.mapY;
+            yEnd = y + 120;
+            map = gGameState.mapImage->map + ((y >> 3) * gGameState.mapImage->mapWidth + (x >> 3));
+            CpuFill16(0x2000, (void *)0x06005800, 0x800);
+            do
+            {
+                Func_020192D8(y, x, map);
+                map += gGameState.mapImage->mapWidth;
+                y += 8;
+            } while (y <= yEnd);
+        }
+    }
+    else
+    {
+        gGameState.mapX = gGameState.markers[i].x - 68;
+        gGameState.mapY = gGameState.markers[i].y - 68;
+    }
+    return TRUE;
+}
 
 u8 FindMarker(u8 type)
 {
