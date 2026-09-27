@@ -418,7 +418,77 @@ end:
 
 INCLUDE_ASM(Func_02019510);
 
-INCLUDE_ASM(Func_02019CAC);
+// Highlight the rooms on the four BG map blocks at 0x0600C000 (one room each, gGameState.unk0F0):
+// clear the palette bits of the block showing marker 1's room, then set palette bit 1 (|= 0x2000)
+// on a 2x2 or 4x4 tile square around every gSlot14Data entry in each block's room. Room 0x19's
+// entries only show once flags.unkA_4 is set.
+// Near-miss: the original keeps (y >> 8) * 7 narrowed to u16 before adding it to room, and
+// allocates registers differently from there on (the unrolled loop's 0x1FFF lands in r2, not r4).
+/*
+#define CLEAR_PAL(p) (*(p) &= 0x1FFF, (p)++)
+#define CLEAR_PAL_4(p) CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p)
+#define CLEAR_PAL_32(p) CLEAR_PAL_4(p); CLEAR_PAL_4(p); CLEAR_PAL_4(p); CLEAR_PAL_4(p); \
+    CLEAR_PAL_4(p); CLEAR_PAL_4(p); CLEAR_PAL_4(p); CLEAR_PAL_4(p)
+
+void HighlightMapRooms(void)
+{
+    u8 m = FindMarker(1);
+    u16 room;
+    s32 i, j, k;
+    u16 *map;
+
+    room = gGameState.markers[m].x >> 8;
+    room += (u16)((gGameState.markers[m].y >> 8) * 7);
+    for (i = 0; i <= 3; i++)
+    {
+        if (gGameState.unk0F0[i] == room)
+        {
+            map = (u16 *)(0x0600C000 + ((((gGameState.markers[m].x >> 8) & 1) | (((gGameState.markers[m].y >> 8) & 1) << 1)) << 11));
+            for (j = 0; j < 32; j++)
+            {
+                CLEAR_PAL_32(map);
+            }
+            break;
+        }
+    }
+    for (i = 0; i <= 3; i++)
+    {
+        if (gGameState.unk0F0[i] == 0x19 && !gGameState.flags.unkA_4)
+            continue;
+        for (j = 0; j <= 0x30; j++)
+        {
+            u8 *e = &gSlot14Data[j * 4];
+
+            if (gGameState.unk0F0[i] == e[3])
+            {
+                u16 x, y;
+                s32 size;
+                s32 row;
+
+                if (e[2])
+                {
+                    x = (e[0] >> 3) - 2;
+                    y = (e[1] >> 3) - 2;
+                    size = 4;
+                }
+                else
+                {
+                    x = (e[0] >> 3) - 1;
+                    y = (e[1] >> 3) - 1;
+                    size = 2;
+                }
+                map = (u16 *)(0x0600C000 + (i << 11)) + (y * 32 + x);
+                for (row = 0; row < size * 32; row += 32)
+                {
+                    for (k = 0; k < size; k++)
+                        map[row + k] |= 0x2000;
+                }
+            }
+        }
+    }
+}
+*/
+INCLUDE_ASM(HighlightMapRooms);
 
 void FollowMarkerFixedMap(void)
 {

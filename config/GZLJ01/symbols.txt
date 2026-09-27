@@ -122,7 +122,8 @@ CopyMapRow = 0x020192D8; // thumb
 // stream map columns/rows into BG3 as gGameState.scrollX/Y move, then set BG3's scroll to them - 8
 ScrollMap = 0x02019350; // thumb
 Func_02019510 = 0x02019510; // thumb
-Func_02019CAC = 0x02019CAC; // thumb
+// on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gSlot14Data spots
+HighlightMapRooms = 0x02019CAC; // thumb
 // move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
 FollowMarkerFixedMap = 0x02019F5C; // thumb
 // the same for the streamed map (gMain.unk457 set): gGameState.scrollX/Y, clamped to the map; ScrollMap follows
@@ -354,7 +355,7 @@ gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
-// slot 14 payload (0xC4 bytes), copied by Mode0State3; read by sub_02019CAC, sub_0201AD90, sub_0201B3A4
+// slot 14 payload (0xC4 bytes: 49 x {x, y, big, room}), copied by Mode0State3; read by HighlightMapRooms, sub_0201AD90, sub_0201B3A4
 gSlot14Data = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 

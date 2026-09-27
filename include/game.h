@@ -47,6 +47,7 @@ struct GameData;
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0E5 u8 unk0E5
+// 0x0F0 u8 unk0F0[4] size=4  // room shown in each of the four BG map blocks at 0x0600C000
 // 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
@@ -173,7 +174,8 @@ struct GameState
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 unk0E5;
-    /*0x0E6*/ u8 filler0E6[0x0F4 - 0x0E6];
+    /*0x0E6*/ u8 filler0E6[0x0F0 - 0x0E6];
+    /*0x0F0*/ u8 unk0F0[4];                   // room shown in each of the four BG map blocks at 0x0600C000
     /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
