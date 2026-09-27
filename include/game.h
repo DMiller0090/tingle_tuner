@@ -440,14 +440,15 @@ extern const u8 gSprite_0202CA40[];
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
 void Func_0201BA2C(s8 row);
 void Func_0201BA9C(s8 row);
-void Func_0201BAD8(void);
+void TextClearCanvas(void);
 void Func_0201C0E8(u8 playSound);
 bool32 Func_0201C60C(void);
-void Func_0201BAF8(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst);
-void Func_0201BC0C(s32 count, const u8 *src);
-void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch);
+void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst);
+void TextScaleGlyph(s32 count, const u8 *src);
+void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch);
+void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch);
 void DrawChoiceCursor(void);
-// EWRAM below the program, after the link buffers: a 16x8 glyph scaled up by Func_0201BC0C.
+// EWRAM below the program, after the link buffers: a 16x8 glyph scaled up by TextScaleGlyph.
 #define TEXT_GLYPH_BUF ((u16 *)(PROG_BASE - 0x540))
 // A 4bpp pixel pair doubled horizontally: 0xAB -> 0xAABB.
 #define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))

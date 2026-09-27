@@ -130,11 +130,16 @@ DrawQuestMarkers = 0x0201AFCC; // thumb
 Func_0201B2C0 = 0x0201B2C0; // thumb
 Func_0201BA2C = 0x0201BA2C; // thumb
 Func_0201BA9C = 0x0201BA9C; // thumb
-Func_0201BAD8 = 0x0201BAD8; // thumb
-Func_0201BAF8 = 0x0201BAF8; // thumb
-Func_0201BC0C = 0x0201BC0C; // thumb
-Func_0201BCC0 = 0x0201BCC0; // thumb
-Func_0201BDE4 = 0x0201BDE4; // thumb
+// fill the text canvas (VRAM 0x0600F100, 12 tiles a row) with colour 1
+TextClearCanvas = 0x0201BAD8; // thumb
+// OR a glyph's 4bpp rows into the text canvas at a pixel offset
+TextBlitGlyph = 0x0201BAF8; // thumb
+// scale a glyph 2x into the EWRAM buffer below the program (PROG_BASE - 0x540)
+TextScaleGlyph = 0x0201BC0C; // thumb
+// draw an 8x8 glyph (VRAM 0x0600A000) on the text canvas, 2x when unk15A
+TextDrawGlyph = 0x0201BCC0; // thumb
+// draw an 8x4 glyph (VRAM 0x0600A010) on the text canvas, 2x when unk15A
+TextDrawSmallGlyph = 0x0201BDE4; // thumb
 Func_0201BEA0 = 0x0201BEA0; // thumb
 Func_0201C0E8 = 0x0201C0E8; // thumb
 // the choice menu's animated cursor (gSprite_0202C130), at y = unk14F * 12 + unk150 + 52

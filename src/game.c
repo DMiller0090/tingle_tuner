@@ -366,7 +366,7 @@ void Func_0201BA9C(s8 row)
     CpuSet(src, (u16 *)0x060061E0 + off, 14);
 }
 
-void Func_0201BAD8(void)
+void TextClearCanvas(void)
 {
     u32 *p = (u32 *)0x0600F100;
     u32 fill = 0x11111111;
@@ -382,7 +382,7 @@ void Func_0201BAD8(void)
 // Near-miss: same code shape, but the original keeps src in its stack slot and mask2 in r9
 // (and dst's incremented copy in r0 across the inner loop); agbcc gives src a register here.
 /*
-void Func_0201BAF8(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
+void TextBlitGlyph(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
 {
     s32 shift, n, m, i;
     u32 mask, mask2, w, *prev;
@@ -433,12 +433,12 @@ void Func_0201BAF8(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
     }
 }
 */
-INCLUDE_ASM(Func_0201BAF8);
+INCLUDE_ASM(TextBlitGlyph);
 
 // Scale a glyph (4 bytes = 8 pixels a row, count bytes) up 2x into TEXT_GLYPH_BUF: the left
 // half of each row goes to the first 8x8 4bpp tile, the right half to the second. The US
 // glyphs are 6 pixels wide: each tile gets three (doubled) and a column of colour 1.
-void Func_0201BC0C(s32 count, const u8 *src)
+void TextScaleGlyph(s32 count, const u8 *src)
 {
     s32 i;
     u16 *dst;
@@ -480,9 +480,85 @@ void Func_0201BC0C(s32 count, const u8 *src)
     }
 }
 
-INCLUDE_ASM(Func_0201BCC0);
+// Draw an 8x8 glyph (from 0x0600A000) at pixel (x, y) of the text canvas; with unk15A set,
+// scaled 2x into four tiles. TextDrawSmallGlyph is the same for the 4-row glyphs at 0x0600A010.
+#ifdef VERSION_GZLJ01
+void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
+{
+    u32 *glyph = (u32 *)0x0600A000 + ch * 8;
+    u32 *dst;
+    u32 row;
+    u32 col;
+    u8 y2;
 
-void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch)
+    if (gGameState.unk15A)
+    {
+        TextScaleGlyph(32, (u8 *)glyph);
+        y += 4;
+        row = (y >> 3) * 0x180 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+        TextBlitGlyph(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+        y2 = y + 8;
+        TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
+        TextBlitGlyph(x + gGameState.unk157, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x68);
+    }
+    else
+    {
+        row = (y >> 3) * 0x180 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, glyph, dst);
+    }
+}
+#else
+// US near-miss: the right halves go where x + unk157 falls (as in TextDrawSmallGlyph), and the
+// link-lost screen (mode 2) has a 30-tile-wide canvas. Same code shape, but the original
+// spills gGameState's address to the stack and allocates the other registers differently.
+/*
+void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
+{
+    u32 *glyph = (u32 *)0x0600A000 + ch * 8;
+    u32 *dst;
+    u32 row;
+    u32 col;
+    u8 y2;
+    u32 col2;
+    s32 x2;
+
+    if (gGameState.unk15A)
+    {
+        TextScaleGlyph(32, (u8 *)glyph);
+        y += 4;
+        row = (y >> 3) * 0x180 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+        y2 = y + 8;
+        TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
+        x2 = x + gGameState.unk157;
+        col2 = (x2 >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col2);
+        TextBlitGlyph(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
+        TextBlitGlyph(x + gGameState.unk157, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x60);
+    }
+    else
+    {
+        if (gMain.mode != 2)
+            row = (y >> 3) * 0x180 + (y & 7) * 4;
+        else
+            row = (y >> 3) * 0x3C0 + (y & 7) * 4;
+        col = (x >> 3) * 32 + 0x0600F100;
+        dst = (u32 *)(row + col);
+        TextBlitGlyph(x, y, color, 8, glyph, dst);
+    }
+}
+*/
+INCLUDE_ASM(TextDrawGlyph);
+#endif
+
+void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
 {
     u32 *glyph = (u32 *)0x0600A010 + ch * 8;
     u32 *dst;
@@ -499,21 +575,21 @@ void Func_0201BDE4(u8 x, u8 y, u8 color, u16 ch)
     dst = (u32 *)(row + col);
     if (gGameState.unk15A)
     {
-        Func_0201BC0C(16, (u8 *)glyph);
-        Func_0201BAF8(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
+        TextScaleGlyph(16, (u8 *)glyph);
+        TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
 #ifdef VERSION_GZLJ01
-        Func_0201BAF8(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+        TextBlitGlyph(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
 #else
         // The right half goes where x + unk157 falls, not simply the next tile.
         x2 = x + gGameState.unk157;
         col2 = (x2 >> 3) * 32 + 0x0600F100;
         dst = (u32 *)(row + col2);
-        Func_0201BAF8(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
+        TextBlitGlyph(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
 #endif
     }
     else
     {
-        Func_0201BAF8(x, y, color, 4, glyph, dst);
+        TextBlitGlyph(x, y, color, 4, glyph, dst);
     }
 }
 
@@ -555,7 +631,7 @@ void Func_0201C0E8(u8 playSound)
     u32 mask;
     s32 r;
 
-    Func_0201BAD8();
+    TextClearCanvas();
     gGameState.unk148 = 0;
     gGameState.unk149 = 8;
     if (playSound)
