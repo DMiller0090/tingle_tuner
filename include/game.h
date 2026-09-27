@@ -39,6 +39,10 @@ struct GameState
 
 extern struct GameState gGameState;
 
+// EWRAM below the program: per-line BG0HOFS tables that VBlankIntr's HBlank DMA reads
+// (gGameState.scrollTable picks one).
+extern u16 gBgScrollTables[][160];
+
 void Mode1VBlank(void);
 
 #endif // GUARD_GAME_H

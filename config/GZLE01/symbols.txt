@@ -124,3 +124,4 @@ gGbaComBuf14 = 0x0201A990; // data
 gGbaComBufShop = 0x0201AA90; // data
 gGbaComBufItemBuy = 0x0201AAA0; // data
 gGbaComBufSE = 0x0201AAB0; // data
+gBgScrollTables = 0x0201AB40; // data

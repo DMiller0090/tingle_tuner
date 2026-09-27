@@ -160,3 +160,5 @@ gGbaComBuf14 = 0x02014190; // data
 gGbaComBufShop = 0x02014290; // data
 gGbaComBufItemBuy = 0x020142A0; // data
 gGbaComBufSE = 0x020142B0; // data
+// per-line BG0HOFS tables (u16[160] each), DMAed at HBlank when gMain.hblankScroll is set
+gBgScrollTables = 0x02014340; // data

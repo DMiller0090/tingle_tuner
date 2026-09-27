@@ -1,6 +1,7 @@
 #include "global.h"
 #include "crt0.h"
 #include "game.h"
+#include "gba/dma.h"
 #include "gba/syscall.h"
 #include "gba_com.h"
 #include "heap.h"
@@ -42,6 +43,74 @@ void AgbMain(void)
     MainLoop();
 }
 
+// Near-miss: everything matches except that the original picks r2, not r1, for the
+// gMain.intrCheck offset in the last statement.
+/*
+void VBlankIntr(void)
+{
+    s32 shake = 0;
+    u16 vofs = 0;
+
+    DmaStop(0);
+    SoundVSync();
+    if (gMain.soundDmaStop)
+    {
+        SoundDmaStop();
+        gMain.soundDmaStop = FALSE;
+    }
+    if (!gMain.dispCopied)
+    {
+        gMain.dispCopied = TRUE;
+        gMain.frameCount++;
+        if (gGameState.shake)
+            shake = (gGameState.shake >> 1) & 1;
+        if (gMain.mode == 1 && !gMain.unk457)
+            Mode1VBlank();
+        CpuFastCopy(gOamBuffer, (void *)OAM, sizeof(gOamBuffer));
+        REG_DISPCNT = gMain.dispcnt;
+        REG_BG0CNT = gMain.bgcnt[0];
+        REG_BG1CNT = gMain.bgcnt[1];
+        REG_BG2CNT = gMain.bgcnt[2];
+        REG_BG3CNT = gMain.bgcnt[3];
+        REG_MOSAIC = gMain.mosaic;
+        REG_BG0HOFS = gMain.bgOfs[0][0];
+        vofs = gMain.bgOfs[0][1] + shake;
+        REG_BG0VOFS = vofs;
+        REG_BG1HOFS = gMain.bgOfs[1][0];
+        vofs = gMain.bgOfs[1][1] + shake;
+        REG_BG1VOFS = vofs;
+        REG_BG2HOFS = gMain.bgOfs[2][0];
+        vofs = gMain.bgOfs[2][1] + shake;
+        REG_BG2VOFS = vofs;
+        REG_BG3HOFS = gMain.bgOfs[3][0];
+        vofs = gMain.bgOfs[3][1] + shake;
+        REG_BG3VOFS = vofs;
+        REG_WIN0H = gMain.win0h;
+        REG_WIN1H = gMain.win1h;
+        REG_WIN0V = gMain.win0v;
+        REG_WIN1V = gMain.win1v;
+        REG_WININ = gMain.winin;
+        REG_WINOUT = gMain.winout;
+        REG_BLDCNT = gMain.bldcnt;
+        REG_BLDALPHA = gMain.bldalpha;
+        REG_BLDY = gMain.bldy;
+        gGameState.scrollTable = gGameState.scrollTableNext;
+    }
+    if (gMain.hblankScroll)
+    {
+        // One BG0HOFS value per line, starting with line 1.
+        DmaSet(0, &gBgScrollTables[gGameState.scrollTable][1], &REG_BG0HOFS,
+               DMA_ENABLE | DMA_START_HBLANK | DMA_REPEAT | DMA_DEST_RELOAD | DMA_16BIT | 1);
+    }
+    else
+    {
+        REG_DMA0CNT = 0;
+    }
+    SoundVSyncProc();
+    REG_IF |= INTR_FLAG_VBLANK;
+    gMain.intrCheck = INTR_FLAG_VBLANK;
+}
+*/
 INCLUDE_ASM(VBlankIntr);
 
 void DummyCallback_02014CA0(void)
