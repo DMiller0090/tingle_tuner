@@ -28,6 +28,16 @@ struct MapIcon
     /*0x7*/ u8 unk7;
 };
 
+// One entry of the item menu (12 of them, copied from gShopItemsInit by ItemMenuInit).
+struct ShopItem
+{
+    /*0x0*/ u16 tile;        // BG map entry of the icon (palette in the top 4 bits)
+    /*0x2*/ u16 unk2;
+    /*0x4*/ s16 unk4;        // passed to Func_0201DA24
+    /*0x6*/ u8 price;        // rupees? (0, 10-80)
+    /*0x7*/ u8 unk7;
+};
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
@@ -94,6 +104,13 @@ struct MapIcon
 // 0x123 u8 unk123
 // 0x124 u8 unk124
 // 0x12B u8 unk12B
+// 0x12C u8 unk12C
+// 0x12D u8 unk12D
+// 0x12E u8 unk12E
+// 0x12F u8 unk12F
+// 0x130 u8 unk130
+// 0x131 u8 unk131
+// 0x132 u8 unk132
 // 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
@@ -107,11 +124,20 @@ struct MapIcon
 // 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x15C u8 effect[4] size=4  // slot 7: item use result
+// 0x160 struct ShopItem items[12] size=0x60
+// 0x1C0 u16 menuCursorX  // item menu cursor position (8.8), moving toward the slot
+// 0x1C2 u16 menuCursorY
+// 0x1C4 u16 menuCursorDX
+// 0x1C6 u16 menuCursorDY
 // 0x1C8 u16 unk1C8
 // 0x1CA u16 unk1CA
 // 0x1CC u8 unk1CC
+// 0x1CD u8 menuCursor  // item menu slot (5 x 3; row 2 is the dungeon chest row)
+// 0x1CE u8 menuKeyRepeat  // frames to the next d-pad repeat
+// 0x1CF u8 menuSlots[10] size=10  // item in each slot of rows 0-1 (index into items)
 // 0x1E0 u8 unk1E0
 // 0x1DE u8 unk1DE
+// 0x1DF u8 unk1DF
 // 0x1E1 u8 unk1E1  // chest bits that changed
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
@@ -230,7 +256,13 @@ struct GameState
     /*0x124*/ u8 unk124;
     /*0x125*/ u8 filler125[0x12B - 0x125];
     /*0x12B*/ u8 unk12B;
-    /*0x12C*/ u8 filler12C[0x133 - 0x12C];
+    /*0x12C*/ u8 unk12C;
+    /*0x12D*/ u8 unk12D;
+    /*0x12E*/ u8 unk12E;
+    /*0x12F*/ u8 unk12F;
+    /*0x130*/ u8 unk130;
+    /*0x131*/ u8 unk131;
+    /*0x132*/ u8 unk132;
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
     /*0x134*/ u8 filler134[0x136 - 0x134];
     /*0x136*/ u8 unk136;
@@ -257,13 +289,20 @@ struct GameState
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x15C - 0x15B];
     /*0x15C*/ u8 effect[4];                   // slot 7: item use result
-    /*0x160*/ u8 filler160[0x1C8 - 0x160];
+    /*0x160*/ struct ShopItem items[12];
+    /*0x1C0*/ u16 menuCursorX;                // item menu cursor position (8.8), moving toward the slot
+    /*0x1C2*/ u16 menuCursorY;
+    /*0x1C4*/ u16 menuCursorDX;
+    /*0x1C6*/ u16 menuCursorDY;
     /*0x1C8*/ u16 unk1C8;
     /*0x1CA*/ u16 unk1CA;
     /*0x1CC*/ u8 unk1CC;
-    /*0x1CD*/ u8 filler1CD[0x1DE - 0x1CD];
+    /*0x1CD*/ u8 menuCursor;                  // item menu slot (5 x 3; row 2 is the dungeon chest row)
+    /*0x1CE*/ u8 menuKeyRepeat;               // frames to the next d-pad repeat
+    /*0x1CF*/ u8 menuSlots[10];               // item in each slot of rows 0-1 (index into items)
+    /*0x1D9*/ u8 filler1D9[0x1DE - 0x1D9];
     /*0x1DE*/ u8 unk1DE;
-    /*0x1DF*/ u8 filler1DF[0x1E0 - 0x1DF];
+    /*0x1DF*/ u8 unk1DF;
     /*0x1E0*/ u8 unk1E0;
     /*0x1E1*/ u8 unk1E1;                      // chest bits that changed
     /*0x1E2*/ u8 filler1E2[0x1E3 - 0x1E2];
@@ -354,13 +393,13 @@ bool32 InitMapView(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-// The definition takes u16 x and y; callers see s16 (they sign-extend).
+// Callers see s16 x and y (DrawTimerCount sign-extends them).
 void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
 bool32 LoadMapImage(void);  // returns nothing (falls off the end)
-void Func_0201E190(void);
+bool32 ItemMenuInit(void);
 void Func_02020BEC(void);
 bool32 Func_0201D8AC(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
@@ -414,17 +453,17 @@ void UpdateMap(void);
 void Func_0201CFE8(void);
 void Func_0201B7D4(void);
 void Func_0201DA50(void);
-void Func_0201E384(u8 arg);
+bool32 UseItem(u8 item);
 void Func_0201B0F4(void);
 void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
-void Func_0201DEAC(void);
+void ItemMenuUpdate(void);
 void Func_02020C10(void);
 u8 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
 void Func_0201DD20(u8 a, u8 b);
-void Func_0201E5E0(void);
+void UpdateHudPanels(void);
 void Func_0201EBAC(void);
 void Func_0201EBD4(void);
 void Func_0201EDC4(void);
@@ -494,6 +533,48 @@ u16 ArcTan2(s32 x, s32 y);
 // ---- game.c part D (GZLJ01 0201C660-0201DEAC) ----
 
 // ---- game.c part E (GZLJ01 0201DEAC-0201F308) ----
+
+extern const struct ShopItem gShopItemsInit[12];
+
+#define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
+
+// One frame of a sprite animation: the sprite data and how many frames it shows.
+struct SpriteAnimFrame
+{
+    /*0x0*/ const void *sprite;
+    /*0x4*/ u8 duration;
+};
+
+// Animations (they overlap: each starts somewhere in one frame table).
+extern const struct SpriteAnimFrame gSprite_0202C928[];
+extern const struct SpriteAnimFrame gSprite_0202C940[];
+extern const struct SpriteAnimFrame gSprite_0202C950[];
+extern const u8 gSprite_0202CC60[];
+
+bool32 SendItemUse(u8 item, u8 arg);
+void DrawChestRow(void);
+void Func_0201E584(void);
+void Func_0201EC10(void);
+void Func_0201ECC4(void);
+void Func_0201ED08(void);
+void Func_0201EDF8(s16 x, s16 y, u8 kind);
+void DrawTimerCount(s16 x, s16 y);
+void Func_0201F2A8(void);
+void Func_0201DCEC(u8 arg);
+// The definition takes a u16; callers see s16 (they sign-extend).
+bool32 Func_0201DA24(s16 id);
+void Func_0201DA78(u8 cursor);
+void Func_0201DB50(u8 item, u8 x, u8 y, u8 mosaic);
+void Func_0201DDA0(void);
+u8 Func_02018A90(u8 *timer);  // counts *timer down to 0 and returns it
+extern const s16 gChestRowIds[5];
+extern const u16 gHudPanelTiles[3];
+u32 Func_0201A8AC(u8 arg);
+void Func_0201FCA0(void);
+void Func_0201F878(void);
+void Func_020205F8(u8 arg);
+// The definition takes u16 x and y; callers see s16 (they sign-extend).
+void Func_020190A8(const u8 *sprite, s16 x, s16 y, u8 a3, u8 a4);
 
 // ---- game.c part F (GZLJ01 0201F308-02020E28) ----
 

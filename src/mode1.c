@@ -247,7 +247,7 @@ void Mode1State0(void)
     gGameState.switchSound = 0xFFFF;
     gGameState.unk21C = 0;
     gGameState.unk206 = 0x300;
-    Func_0201E190();
+    ItemMenuInit();
     gGameState.unk1E5_1 = 1;
     gGameState.unk12B = 0;
     gGameState.unk1FA = 0;
@@ -523,7 +523,7 @@ void Mode1State2(void)
                 keys = gMain.newKeys;
                 if ((keys & 2) && gGameState.unk1E5_1 && gGameState.unk104
                  && gGameState.unk220 == 0 && gGameState.unk121 == 0)
-                    Func_0201E384(gGameState.unk1DE);
+                    UseItem(gGameState.unk1DE);
                 if (!gMain.unk457)
                     Func_0201B0F4();
                 if (gGameState.unk224 == 0)
@@ -537,7 +537,7 @@ void Mode1State2(void)
                                 if (gGameState.unk0FC == 0)
                                     Func_0201B8C8();
                                 else if (gGameState.unk0FC == 1)
-                                    Func_0201E384(0x10);
+                                    UseItem(0x10);
                             }
                         }
                         else if (gGameState.unk1FA == 0)
@@ -566,7 +566,7 @@ void Mode1State2(void)
             }
             else
             {
-                Func_0201DEAC();
+                ItemMenuUpdate();
                 Func_0201A540();
             }
         }
@@ -815,7 +815,7 @@ void Mode1State4(void)
                         if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
                             GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
                         gMain.unk457 = gMain.inDungeon;
-                        Func_0201E190();
+                        ItemMenuInit();
                         Mode1Func_0201521C();
                         Mode1RecvMarkers();
                         Mode1Func_02016350();
@@ -840,7 +840,7 @@ void Mode1State4(void)
                 {
                     Mode1RecvMarkers();
                     gMain.unk457 = gMain.inDungeon;
-                    Func_0201E190();
+                    ItemMenuInit();
                     Mode1Func_0201521C();
                     Mode1Func_02016350();
                     gMain.bgcnt[3] |= 0x40;
@@ -1245,7 +1245,7 @@ void MainMode1(void)
     }
 
     gMode1StateFuncs[gMain.modeState]();
-    Func_0201E5E0();
+    UpdateHudPanels();
     if (gMain.modeState != 0)
     {
         u16 *map;
