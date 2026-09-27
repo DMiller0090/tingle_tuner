@@ -11,6 +11,7 @@ counted in the total too.
 """
 import argparse
 import re
+from pathlib import Path
 
 from common import BUILD, CONFIG, ROOT, versions
 
@@ -41,8 +42,15 @@ def progress(ver):
         funcs.append((a, min(int(size, 16), end - a), name))
     asm_names = {}
     for src, _, _ in c_ranges(ver):
-        text = (ROOT / src).read_text(encoding='utf-8')
-        asm_names[src] = set(re.findall(r'^INCLUDE_ASM\((\w+)\);', text, re.M))
+        # agbcc's output for this version: INCLUDE_ASM inside #ifdef VERSION_* counts only
+        # where it survives the preprocessor.
+        built = BUILD / ver / Path(src).with_suffix('.s')
+        if built.exists():
+            text = built.read_text(encoding='utf-8', errors='replace')
+            asm_names[src] = set(re.findall(r'\.include \\?"funcs/(\w+)\.s', text))
+        else:
+            text = (ROOT / src).read_text(encoding='utf-8')
+            asm_names[src] = set(re.findall(r'^INCLUDE_ASM\((\w+)\);', text, re.M))
     total = sum(size for _, size, _ in funcs)
     c_bytes = c_funcs = 0
     for addr, size, name in funcs:

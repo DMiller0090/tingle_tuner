@@ -102,6 +102,12 @@ extern u8 gGbaComBufShop[0x10];
 extern u8 gGbaComBufItemBuy[0x10];
 extern u8 gGbaComBufSE[0x10];
 
+// The game code addresses the buffers by constant address rather than by symbol: agbcc
+// then loads each address it needs (buf, buf + 1, ...) from the pool, where with a symbol
+// it would derive buf + 1 from buf.
+#define GBACOM_BUF_3      ((u8 *)(PROG_BASE - 0x800))
+#define GBACOM_BUF_SWITCH ((u8 *)(PROG_BASE - 0x6E0))
+
 extern void *const gGbaComBuffers[GBACOM_SLOT_COUNT];
 extern u8 gGbaComDataStatus[GBACOM_SLOT_COUNT];
 

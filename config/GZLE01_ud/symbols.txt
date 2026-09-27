@@ -35,7 +35,7 @@ Mode1Func_020150A4 = 0x0201B8A4; // thumb
 Mode1Func_0201521C = 0x0201BA1C; // thumb
 Mode1Func_02015298 = 0x0201BA98; // thumb
 Mode1SendSwitch = 0x0201C040; // thumb
-Mode1Func_020160C8 = 0x0201C8C8; // thumb
+Mode1RecvMarkers = 0x0201C8C8; // thumb
 Mode1Func_02016350 = 0x0201CB4C; // thumb
 Mode1StartFadeOut = 0x0201CE80; // thumb
 Mode1VBlank = 0x020213B4; // thumb
@@ -176,6 +176,5 @@ gGbaComBufShop = 0x0201AA90; // data
 gGbaComBufItemBuy = 0x0201AAA0; // data
 gGbaComBufSE = 0x0201AAB0; // data
 gBgScrollTables = 0x0201AB40; // data
-gBgScrollTable1 = 0x0201AC80; // data
 // GZLE01_ud only
 gMode0UsString = 0x0202AD74; // data

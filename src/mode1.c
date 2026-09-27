@@ -161,9 +161,9 @@ void Mode1State1(void)
     u16 *table;
 
     if (gGameState.scrollTableNext)
-        table = gBgScrollTable1;
+        table = BG_SCROLL_TABLE_1;
     else
-        table = gBgScrollTables[0];
+        table = BG_SCROLL_TABLE_0;
     gGameState.wavePhase += (gGameState.waveAmplitude << 4) + 0x100;
     BuildWaveScrollTable(table, gGameState.wavePhase >> 8, gGameState.waveAmplitude);
     gGameState.scrollTableNext ^= 1;
@@ -224,20 +224,21 @@ void Mode1State5(void)
     Func_0201A224();
     Func_0201CFE8();
 }
-// Near-miss: the original loads &gGbaComBufSwitch[1] as its own pool constant after the
-// first store; agbcc derives one address from the other (either way round).
+// Near-miss: the original loads GBACOM_BUF_SWITCH + 1 into r2 after the first store; this
+// loads it first (assigning p after the store puts it in r1 instead).
 /*
 void Mode1SendSwitch(u8 soundArg)
 {
-    u8 *p = &gGbaComBufSwitch[1];
+    u8 *p;
 
-    gGbaComBufSwitch[0] = gGameState.switchNo;
+    p = GBACOM_BUF_SWITCH + 1;
+    GBACOM_BUF_SWITCH[0] = gGameState.switchNo;
     *p++ = gGameState.switchStageNo;
     *p++ = gGameState.switchRoomNo;
     *p++ = gGameState.switchType;
     *p = gGameState.switchNo2;
-    GbaComSendDataSet(gGbaComBufSwitch, 6, GBACOM_SLOT_SWITCH,
-                      ((u32 *)gGbaComBufSwitch)[0] + ((u32 *)gGbaComBufSwitch)[1]);
+    GbaComSendDataSet(GBACOM_BUF_SWITCH, 6, GBACOM_SLOT_SWITCH,
+                      ((u32 *)GBACOM_BUF_SWITCH)[0] + *(u32 *)p);
     GamePlaySound(gGameState.switchSound, soundArg);
     gGameState.unk21C = 1;
     gGameState.unk206 = 0x100;
@@ -292,7 +293,119 @@ void Mode1State3(void)
     Func_0201CFE8();
     StepToward((s16 *)&gMain.bgOfs[1][0], target, 16);
 }
-INCLUDE_ASM(Mode1Func_020160C8);
+// Matches in GZLJ01. The US builds check the new marker position instead of the old one
+// (the #else below); that version has the right code but agbcc permutes its registers
+// (count, gGameState, m, i and the 0x3F mask), so they keep the asm for now.
+#ifndef VERSION_GZLJ01
+INCLUDE_ASM(Mode1RecvMarkers);
+#else
+// Slot 3: the map markers. Byte 0 is the count, byte 1 goes to unk133 and unk104, then
+// 8-byte markers (struct MapMarker, unaligned here so read as bytes).
+void Mode1RecvMarkers(void)
+{
+    u8 count = GBACOM_BUF_3[0];
+    u8 *m;
+    s32 i;
+
+    if (gMain.mode == 1)
+    {
+        if (GBACOM_BUF_3[1] != 0)
+        {
+            // Both searches' results are unused. (do/while (1): a for or while loop
+            // gets its exit test copied to the bottom, the original's doesn't.)
+            m = GBACOM_BUF_3 + 2;
+            i = 0;
+            do
+            {
+                if ((m[5] & 0x3F) == 3 || i >= count)
+                    break;
+                i++;
+                m += 8;
+            } while (1);
+            i = 0;
+            do
+            {
+                if (gGameState.markers[i].type == 3 || i >= gGameState.markerCount)
+                    break;
+                i++;
+            } while (1);
+        }
+        if (!gMain.unk457)
+        {
+            s16 x;
+
+            m = GBACOM_BUF_3 + 2;
+            i = 0;
+            do
+            {
+                if ((m[5] & 0x3F) == 1 || i >= count)
+                    break;
+                i++;
+                m += 8;
+            } while (1);
+            i = 0;
+            x = *(s16 *)m;
+            do
+            {
+                if (gGameState.markers[i].type == 1 || i >= gGameState.markerCount)
+                    break;
+                i++;
+            } while (1);
+            if ((gGameState.markers[i].x >> 8) != (x >> 8)
+             || (gGameState.markers[i].y >> 8) != (*(s16 *)(m + 2) >> 8))
+            {
+#ifdef VERSION_GZLJ01
+                if (gGameState.markers[i].x <= 0x6FF && gGameState.markers[i].y <= 0x6FF)
+#else
+                // The US builds check the new position instead of the old one.
+                if ((u16)x <= 0x6FF && *(u16 *)(m + 2) <= 0x6FF)
+#endif
+                {
+                    gGameState.unk106 = 1;
+                    gGameState.unk030 = (gMain.random % 6 + 3) * 60;
+                }
+                gGameState.unk026 = 0;
+                gGameState.unk11D = 0;
+                gGameState.unk010 = 0;
+                gGameState.unk11B = 0;
+                gGameState.unk11A = 0;
+                if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
+                    GbaComDataStatusReset(GBACOM_SLOT_MAIL);
+                gGameState.switchSound = 0xFFFF;
+                gGameState.switchType = 0;
+            }
+        }
+    }
+    gGameState.markerCount = GBACOM_BUF_3[0];
+    gGameState.unk133 = GBACOM_BUF_3[1];
+    if (gGameState.flags.busy)
+        gGameState.unk104 = 0;
+    else if (gGameState.unk133 == 0)
+    {
+        if (*(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0)
+            gGameState.unk104 = 1;
+        else
+            gGameState.unk104 = GBACOM_BUF_3[1];
+    }
+    else
+    {
+        gGameState.unk104 = gGameState.unk133;
+    }
+    if (gGameState.flags.isFree || gGameState.unk11A)
+    {
+        // The first two markers swap places.
+        CpuCopy16(&GBACOM_BUF_3[2], &gGameState.markers[1], 8);
+        CpuCopy16(&GBACOM_BUF_3[10], &gGameState.markers[0], 8);
+        if (gGameState.markerCount > 2)
+            CpuCopy16(&GBACOM_BUF_3[18], &gGameState.markers[2], (gGameState.markerCount - 2) * 8);
+    }
+    else
+    {
+        CpuCopy16(&GBACOM_BUF_3[2], gGameState.markers, gGameState.markerCount * 8);
+    }
+    GbaComDataStatusReset(GBACOM_SLOT_3);
+}
+#endif
 // Near-miss: all but the loop. The original drops the counter and ends the loop on a
 // signed compare of the object pointer against gObjs; agbcc keeps the counter (tried index,
 // pointer, do/while, local base, constant base and two-induction-variable forms).
@@ -357,7 +470,7 @@ void Mode1State4(void)
         if (gGameState.flags.unkA_3)
         {
             if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
-                Mode1Func_020160C8();
+                Mode1RecvMarkers();
         }
         else if (!(gGameState.flags.busy & 2))  // no event running
         {
@@ -369,7 +482,7 @@ void Mode1State4(void)
                     if (gGameState.unk237 != 0)
                     {
                         if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
-                            Mode1Func_020160C8();
+                            Mode1RecvMarkers();
                         gGameState.unk237--;
                     }
                     else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
@@ -381,7 +494,7 @@ void Mode1State4(void)
                         gMain.unk457 = gMain.inDungeon;
                         Func_0201E190();
                         Mode1Func_0201521C();
-                        Mode1Func_020160C8();
+                        Mode1RecvMarkers();
                         Mode1Func_02016350();
                         gMain.bgcnt[2] |= 0x40;
                         gMain.bgcnt[3] |= 0x40;
@@ -397,12 +510,12 @@ void Mode1State4(void)
                 if (gGameState.unk237 != 0)
                 {
                     if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
-                        Mode1Func_020160C8();
+                        Mode1RecvMarkers();
                     gGameState.unk237--;
                 }
                 else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
                 {
-                    Mode1Func_020160C8();
+                    Mode1RecvMarkers();
                     gMain.unk457 = gMain.inDungeon;
                     Func_0201E190();
                     Mode1Func_0201521C();

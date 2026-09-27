@@ -44,7 +44,7 @@ Mode1Func_020150A4 = 0x020150A4; // thumb
 Mode1Func_0201521C = 0x0201521C; // thumb
 Mode1Func_02015298 = 0x02015298; // thumb
 Mode1SendSwitch = 0x02015840; // thumb
-Mode1Func_020160C8 = 0x020160C8; // thumb
+Mode1RecvMarkers = 0x020160C8; // thumb
 Mode1Func_02016350 = 0x02016350; // thumb
 Mode1StartFadeOut = 0x02016684; // thumb
 // VBlankIntr calls it in mode 1 unless gMain.unk457 is set
@@ -223,5 +223,3 @@ gGbaComBufItemBuy = 0x020142A0; // data
 gGbaComBufSE = 0x020142B0; // data
 // per-line BG0HOFS tables (u16[160] each), DMAed at HBlank when gMain.hblankScroll is set
 gBgScrollTables = 0x02014340; // data
-// Mode1State1 addresses the second table by its own symbol
-gBgScrollTable1 = 0x02014480; // data

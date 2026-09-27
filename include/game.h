@@ -4,11 +4,24 @@
 #include "global.h"
 #include "gba_com.h"
 
+// One map marker, as slot 3 sends them (8 bytes each after a count byte and one more).
+struct MapMarker
+{
+    /*0x0*/ s16 x;       // 8.8? compared by the high byte
+    /*0x2*/ s16 y;
+    /*0x4*/ u8 unk4;
+    /*0x5*/ u8 type:6;   // 1 and 3 are looked up by Mode1RecvMarkers
+            u8 unk5_6:2;
+    /*0x6*/ u8 unk6;
+    /*0x7*/ u8 unk7;
+};
+
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
 // 0x010 u32 unk010
+// 0x026 u16 unk026
 // 0x030 u16 unk030
 // 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
@@ -17,6 +30,8 @@
 // 0x03F u8 switchType  // the GC switches on type - 1
 // 0x040 u8 switchNo2
 // 0x042 u8 unk042
+// 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
+// 0x0E4 u8 markerCount
 // 0x0FD u8 unk0FD
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
 // 0x106 u8 unk106
@@ -28,6 +43,7 @@
 // 0x120 u8 unk120
 // 0x121 u8 unk121
 // 0x12B u8 unk12B
+// 0x133 u8 unk133  // slot 3 byte 1
 // 0x136 u8 unk136
 // 0x138 u8 unk138  // sent as GbaFlg.unk2
 // 0x140 s16 unk140
@@ -63,7 +79,9 @@ struct GameState
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
     /*0x00C*/ u8 filler00C[0x010 - 0x00C];
     /*0x010*/ u32 unk010;
-    /*0x014*/ u8 filler014[0x030 - 0x014];
+    /*0x014*/ u8 filler014[0x026 - 0x014];
+    /*0x026*/ u16 unk026;
+    /*0x028*/ u8 filler028[0x030 - 0x028];
     /*0x030*/ u16 unk030;
     /*0x032*/ u8 filler032[0x03A - 0x032];
     /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
@@ -74,7 +92,10 @@ struct GameState
     /*0x040*/ u8 switchNo2;
     /*0x041*/ u8 filler041[0x042 - 0x041];
     /*0x042*/ u8 unk042;
-    /*0x043*/ u8 filler043[0x0FD - 0x043];
+    /*0x043*/ u8 filler043[0x064 - 0x043];
+    /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
+    /*0x0E4*/ u8 markerCount;
+    /*0x0E5*/ u8 filler0E5[0x0FD - 0x0E5];
     /*0x0FD*/ u8 unk0FD;
     /*0x0FE*/ u8 filler0FE[0x104 - 0x0FE];
     /*0x104*/ u8 unk104;                      // cleared while a menu or event runs on the GC
@@ -92,7 +113,9 @@ struct GameState
     /*0x121*/ u8 unk121;
     /*0x122*/ u8 filler122[0x12B - 0x122];
     /*0x12B*/ u8 unk12B;
-    /*0x12C*/ u8 filler12C[0x136 - 0x12C];
+    /*0x12C*/ u8 filler12C[0x133 - 0x12C];
+    /*0x133*/ u8 unk133;                      // slot 3 byte 1
+    /*0x134*/ u8 filler134[0x136 - 0x134];
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
     /*0x138*/ u8 unk138;                      // sent as GbaFlg.unk2
@@ -150,8 +173,9 @@ extern struct GameState gGameState;
 // EWRAM below the program: per-line BG0HOFS tables that VBlankIntr's HBlank DMA reads
 // (gGameState.scrollTable picks one).
 extern u16 gBgScrollTables[][160];
-// gBgScrollTables[1] under its own name: Mode1State1 loads it as a separate constant.
-extern u16 gBgScrollTable1[160];
+// The same tables by constant address, as the game code addresses them (see GBACOM_BUF_3).
+#define BG_SCROLL_TABLE_0 ((u16 *)(PROG_BASE - 0x4C0))
+#define BG_SCROLL_TABLE_1 ((u16 *)(PROG_BASE - 0x380))
 
 // Graphics in .rodata (LZ77-compressed except the palettes).
 extern const u8 gMode1BgTiles[];

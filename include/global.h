@@ -25,6 +25,13 @@ typedef u32 bool32;
 
 #define IWRAM_START 0x03000000
 
+// Where the packer unpacks the program (config/versions.yml prog_base).
+#ifdef VERSION_GZLJ01
+#define PROG_BASE 0x02014800
+#else
+#define PROG_BASE 0x0201B000
+#endif
+
 #define REG_DISPCNT  (*(vu16 *)0x04000000)
 #define REG_DISPSTAT (*(vu16 *)0x04000004)
 #define REG_BG0CNT   (*(vu16 *)0x04000008)
