@@ -3823,31 +3823,31 @@ bool32 ItemMenuInit(void)
 }
 
 // Draw the dungeon chest row of the item menu (a 2x2 tile icon per flags.dungeonChests bit).
-// Nearly matches, but the original copies the running tile value to r0 before each store
-// (`adds r0, r1, #0; strh r0, ...`) and loads it in both arms of the if (`b` over the pool),
-// which neither u16, u32 nor s32 `tile` reproduces:
-//     void DrawChestRow(void)
-//     {
-//         u16 *top = (u16 *)0x06007306;
-//         s32 i;
-//         u16 *bottom = (u16 *)0x06007346;
-//         u32 tile;
-//
-//         for (i = 0; i <= 4; i++)
-//         {
-//             if ((gGameState.flags.dungeonChests >> i) & 1)
-//                 tile = 0xB0C6;
-//             else
-//                 tile = 0xC0C2;
-//             top[0] = tile;
-//             top[1] = tile + 1;
-//             bottom[0] = tile + 0x10;
-//             bottom[1] = tile + 0x11;
-//             bottom += 2;
-//             top += 2;
-//         }
-//     }
-INCLUDE_ASM(DrawChestRow);
+// The icon's four tiles are written as constants (the compiler derives each from the last).
+void DrawChestRow(void)
+{
+    u16 *top = (u16 *)0x06007306;
+    s32 i;
+
+    for (i = 0; i <= 4; i++)
+    {
+        if ((gGameState.flags.dungeonChests >> i) & 1)
+        {
+            top[0] = 0xB0C6;
+            top[1] = 0xB0C7;
+            top[0x20] = 0xB0D6;
+            top[0x21] = 0xB0D7;
+        }
+        else
+        {
+            top[0] = 0xC0C2;
+            top[1] = 0xC0C3;
+            top[0x20] = 0xC0D2;
+            top[0x21] = 0xC0D3;
+        }
+        top += 2;
+    }
+}
 
 bool32 SendItemUse(u8 item, u8 arg)
 {
