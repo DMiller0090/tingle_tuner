@@ -20,13 +20,19 @@ void HeapInit(struct Heap *heap, u32 size)
 
 INCLUDE_ASM(HeapAlloc);
 
-// Nearly matches with `volatile s16 *block = (volatile s16 *)ptr - 1;` (re-read and the -2
-// mask come out right), but r0/r1 are swapped around the AND:
-//     if (ptr != NULL && (*block & HEAP_BLOCK_USED))
+// Nearly matches (the re-read and the -2 mask come out right), but r0/r1 are swapped
+// around the AND in the `&=`; operand order, casts and 0xFFFE don't change it:
+//     volatile s16 *block;
+//
+//     if (ptr != NULL)
 //     {
-//         *block &= ~HEAP_BLOCK_USED;
-//         if (heap != NULL && (heap->firstFree > block || heap->firstFree == NULL))
-//             heap->firstFree = block;
+//         block = (volatile s16 *)ptr - 1;
+//         if (*block & HEAP_BLOCK_USED)
+//         {
+//             *block &= ~HEAP_BLOCK_USED;
+//             if (heap != NULL && (heap->firstFree > (u16 *)block || heap->firstFree == NULL))
+//                 heap->firstFree = (u16 *)block;
+//         }
 //     }
 INCLUDE_ASM(HeapFree);
 
