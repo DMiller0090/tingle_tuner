@@ -22,11 +22,14 @@ struct GameData;
 // The struct body is generated from this list by tools/genstruct.py.
 // genstruct GameState 0x240
 // 0x000 struct GbaComFlags flags size=12  // last slot 9 packet from the GC
-// 0x00C struct GameData * unk00C  // width at +0x30 (game.c part A)
+// 0x00C struct GameData * unk00C  // width at +0x30
 // 0x010 u32 unk010
 // 0x014 s16 scrollX  // BG3 map view + 8 (ScrollMap streams the map in as it moves)
 // 0x016 s16 scrollY
+// 0x018 u8 unk018  // set when the followed marker stood still for 2 frames
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
+// 0x01E s16 unk01E  // followed marker's last x/y
+// 0x020 s16 unk020
 // 0x026 u16 unk026
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
@@ -75,6 +78,7 @@ struct GameData;
 // 0x124 u8 unk124
 // 0x12B u8 unk12B
 // 0x133 u8 unk133  // slot 3 byte 1
+// 0x134 u8 scrolling  // the view is still catching up with the followed marker
 // 0x136 u8 unk136
 // 0x138 bits u8 unk138_0:2 unk138_2:1 unk138_3:1 unk138_4:1 unk138_5:1 unk138_6:2  // sent as GbaFlg.unk2
 // 0x13C u8 unk13C
@@ -137,13 +141,16 @@ struct GameData;
 struct GameState
 {
     /*0x000*/ struct GbaComFlags flags;       // last slot 9 packet from the GC
-    /*0x00C*/ struct GameData * unk00C;       // width at +0x30 (game.c part A)
+    /*0x00C*/ struct GameData * unk00C;       // width at +0x30
     /*0x010*/ u32 unk010;
     /*0x014*/ s16 scrollX;                    // BG3 map view + 8 (ScrollMap streams the map in as it moves)
     /*0x016*/ s16 scrollY;
-    /*0x018*/ u8 filler018[0x019 - 0x018];
+    /*0x018*/ u8 unk018;                      // set when the followed marker stood still for 2 frames
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
-    /*0x01A*/ u8 filler01A[0x026 - 0x01A];
+    /*0x01A*/ u8 filler01A[0x01E - 0x01A];
+    /*0x01E*/ s16 unk01E;                     // followed marker's last x/y
+    /*0x020*/ s16 unk020;
+    /*0x022*/ u8 filler022[0x026 - 0x022];
     /*0x026*/ u16 unk026;
     /*0x028*/ u8 filler028[0x030 - 0x028];
     /*0x030*/ u16 unk030;
@@ -209,7 +216,8 @@ struct GameState
     /*0x12B*/ u8 unk12B;
     /*0x12C*/ u8 filler12C[0x133 - 0x12C];
     /*0x133*/ u8 unk133;                      // slot 3 byte 1
-    /*0x134*/ u8 filler134[0x136 - 0x134];
+    /*0x134*/ u8 scrolling;                   // the view is still catching up with the followed marker
+    /*0x135*/ u8 filler135[0x136 - 0x135];
     /*0x136*/ u8 unk136;
     /*0x137*/ u8 filler137[0x138 - 0x137];
     /*0x138*/ u8 unk138_0:2;                  // sent as GbaFlg.unk2
@@ -416,7 +424,9 @@ u16 CountDownU16(u16 *timer);
 // Pointed to by gGameState.unk00C.
 struct GameData
 {
-    /*0x00*/ u8 filler00[0x30];
+    /*0x00*/ u16 unk00;  // map size in pixels? the view is kept within (0, unk00 - 120)
+    /*0x02*/ u16 unk02;
+    /*0x04*/ u8 filler04[0x2C];
     /*0x30*/ u8 width;  // map width in tiles
     /*0x31*/ u8 filler31[3];
     /*0x34*/ const u16 *map;  // BG map entries, width per row
@@ -425,6 +435,9 @@ struct GameData
 void CopyMapColumn(s16 x, s16 y, const u16 *src);
 void CopyMapRow(s16 y, s16 x, const u16 *src);
 void ScrollMap(struct GameState *state);
+void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority);
+void FollowMarkerFixedMap(void);
+void FollowMarkerStreamedMap(void);
 
 // A hardware OAM entry, as DrawSprite writes it into gOamBuffer.
 struct OamData

@@ -260,7 +260,35 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
     }
 }
 
-INCLUDE_ASM(Func_020190A8);
+// DrawSpriteAt for a bare part list, keeping the parts' palettes.
+// Near-miss: x and the ~0x10 mosaic mask swap registers (sb/r8); everything else matches.
+/*
+void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
+{
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    const struct SpritePart *part = parts;
+    s32 shake = (gGameState.shake >> 1) & 1;
+
+    while (part->end != 0xFFFF)
+    {
+        oam->y = y + part->y + shake;
+        oam->objMode = part->objMode;
+        oam->mosaic = mosaic;
+        oam->shape = part->shape;
+        oam->x = x + part->x;
+        oam->hFlip = part->hFlip;
+        oam->vFlip = part->vFlip;
+        oam->size = part->size;
+        oam->tileNum = part->tileNum;
+        oam->priority = priority;
+        oam->paletteNum = part->paletteNum;
+        oam++;
+        gMain.unk450++;
+        part++;
+    }
+}
+*/
+INCLUDE_ASM(DrawSpriteParts);
 
 void CopyMapColumn(s16 x, s16 y, const u16 *src)
 {
@@ -392,9 +420,132 @@ INCLUDE_ASM(Func_02019510);
 
 INCLUDE_ASM(Func_02019CAC);
 
-INCLUDE_ASM(Func_02019F5C);
+void FollowMarkerFixedMap(void)
+{
+    s16 dx;
+    s16 dy = 0;
+    u8 i = FindMarker(3);
 
-INCLUDE_ASM(Func_0201A0A8);
+    if (i == 0xFF)
+        i = FindMarker(1);
+    gGameState.scrolling = FALSE;
+    dx = gGameState.markers[i].x - (s16)(gGameState.scrollX + 0x44);
+    if (dx < -16)
+    {
+        dx = -16;
+        gGameState.scrolling = TRUE;
+    }
+    else if (dx > 16)
+    {
+        dx = 16;
+        gGameState.scrolling = TRUE;
+    }
+    dy = gGameState.markers[i].y - (s16)(gGameState.scrollY + 0x44);
+    if (dy < -16)
+    {
+        dy = -16;
+        gGameState.scrolling = TRUE;
+    }
+    else if (dy > 16)
+    {
+        dy = 16;
+        gGameState.scrolling = TRUE;
+    }
+    gGameState.scrollX += dx;
+    gGameState.scrollY += dy;
+    gMain.bgOfs[2][0] = gGameState.scrollX;
+    gMain.bgOfs[2][1] = gGameState.scrollY;
+    if (((s16)gMain.bgOfs[2][0] + 8) & 0x8000)
+    {
+        gGameState.scrolling = FALSE;
+        gMain.bgOfs[2][0] = -8;
+    }
+    if ((s16)gMain.bgOfs[2][0] > 0x680)
+    {
+        gGameState.scrolling = FALSE;
+        gMain.bgOfs[2][0] = 0x680;
+    }
+    if (((s16)gMain.bgOfs[2][1] + 8) & 0x8000)
+    {
+        gGameState.scrolling = FALSE;
+        gMain.bgOfs[2][1] = -8;
+    }
+    if ((s16)gMain.bgOfs[2][1] > 0x680)
+    {
+        gGameState.scrolling = FALSE;
+        gMain.bgOfs[2][1] = 0x680;
+    }
+    gMain.bgOfs[3][0] = gMain.bgOfs[2][0];
+    gMain.bgOfs[3][1] = gMain.bgOfs[2][1];
+}
+
+void FollowMarkerStreamedMap(void)
+{
+    s16 maxX = gGameState.unk00C->unk00 - 120;
+    s16 maxY = gGameState.unk00C->unk02 - 120;
+    s16 dx;
+    s16 dy = 0;
+    u8 i = FindMarker(3);
+
+    if (i == 0xFF)
+        i = FindMarker(1);
+    gGameState.scrolling = FALSE;
+    dx = gGameState.markers[i].x - (s16)(gGameState.scrollX + 0x3C);
+    if (dx < -16)
+    {
+        dx = -16;
+        gGameState.scrolling = TRUE;
+    }
+    else if (dx > 16)
+    {
+        dx = 16;
+        gGameState.scrolling = TRUE;
+    }
+    dy = gGameState.markers[i].y - (s16)(gGameState.scrollY + 0x3C);
+    if (dy < -16)
+    {
+        dy = -16;
+        gGameState.scrolling = TRUE;
+    }
+    else if (dy > 16)
+    {
+        dy = 16;
+        gGameState.scrolling = TRUE;
+    }
+    if (gGameState.markers[i].x == gGameState.unk01E && gGameState.markers[i].y == gGameState.unk020)
+        gGameState.unk019--;
+    else
+        gGameState.unk019 = 2;
+    if ((s8)gGameState.unk019 <= 0)
+    {
+        gGameState.unk018 = 1;
+        gGameState.unk019 = 2;
+    }
+    gGameState.unk01E = gGameState.markers[i].x;
+    gGameState.unk020 = gGameState.markers[i].y;
+    gGameState.scrollX += dx;
+    if (gGameState.scrollX < 0)
+    {
+        gGameState.scrolling = FALSE;
+        gGameState.scrollX = 0;
+    }
+    if (gGameState.scrollX > maxX)
+    {
+        gGameState.scrolling = FALSE;
+        gGameState.scrollX = maxX;
+    }
+    gGameState.scrollY += dy;
+    if (gGameState.scrollY < 0)
+    {
+        gGameState.scrolling = FALSE;
+        gGameState.scrollY = 0;
+    }
+    if (gGameState.scrollY > maxY)
+    {
+        gGameState.scrolling = FALSE;
+        gGameState.scrollY = maxY;
+    }
+}
 
 INCLUDE_ASM(Func_0201A224);
 

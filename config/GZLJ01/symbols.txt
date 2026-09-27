@@ -113,7 +113,8 @@ StepTowardAngle = 0x02018A38; // thumb
 // if (*p) --*p; return *p
 CountDownU8 = 0x02018A90; // thumb
 CountDownU16 = 0x02018AA4; // thumb
-Func_020190A8 = 0x020190A8; // thumb
+// DrawSpriteAt for a bare struct SpritePart list, keeping the parts' palettes
+DrawSpriteParts = 0x020190A8; // thumb
 // copy 16 map entries (gGameState.unk00C->map, width apart) down BG3's map column at (x, y), wrapping at the bottom
 CopyMapColumn = 0x0201920C; // thumb
 // copy 16 map entries along BG3's map row at (x, y), wrapping at the right edge
@@ -122,8 +123,10 @@ CopyMapRow = 0x020192D8; // thumb
 ScrollMap = 0x02019350; // thumb
 Func_02019510 = 0x02019510; // thumb
 Func_02019CAC = 0x02019CAC; // thumb
-Func_02019F5C = 0x02019F5C; // thumb
-Func_0201A0A8 = 0x0201A0A8; // thumb
+// move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
+FollowMarkerFixedMap = 0x02019F5C; // thumb
+// the same for the streamed map (gMain.unk457 set): gGameState.scrollX/Y, clamped to the map; ScrollMap follows
+FollowMarkerStreamedMap = 0x0201A0A8; // thumb
 Func_0201A8AC = 0x0201A8AC; // thumb
 Func_0201A944 = 0x0201A944; // thumb
 Func_0201AC94 = 0x0201AC94; // thumb
