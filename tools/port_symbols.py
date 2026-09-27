@@ -66,16 +66,23 @@ def match_functions(src, dst):
     return pairs
 
 
-def dst_only(src_ver, dst_ver):
-    """Destination names the source doesn't have: {addr: (name, kind)}."""
-    src_names = {n for n, _ in load_symbols(src_ver).values()}
-    return {a: nk for a, nk in load_symbols(dst_ver).items() if nk[0] not in src_names}
+def dst_only(dst_ver):
+    """Names in the destination's `// <ver> only` block: {addr: name}."""
+    text = (CONFIG / dst_ver / 'symbols.txt').read_text().splitlines()
+    marker = f'// {dst_ver} only'
+    out = {}
+    if marker in text:
+        for line in text[text.index(marker) + 1:]:
+            m = SYM_RE.match(line)
+            if m:
+                out[int(m.group(2), 16)] = m.group(1)
+    return out
 
 
 def port(src_ver, dst_ver):
     # Functions only the destination has (named in its file) are left out of the matching,
     # so the pairing in order doesn't give their names' neighbours the wrong function.
-    src, dst = Image(src_ver), Image(dst_ver, skip=dst_only(src_ver, dst_ver))
+    src, dst = Image(src_ver), Image(dst_ver, skip=dst_only(dst_ver))
     pairs = match_functions(src, dst)
     src_index = {f[0]: i for i, f in enumerate(src.funcs)}
     lines = []
@@ -163,8 +170,11 @@ def main():
             if m is None or m.group(1) not in ported_names:
                 extra.append(line)
     listed = {SYM_RE.match(l).group(1) for l in extra if SYM_RE.match(l)}
+    # Other leftovers are stale when a ported name now has their address (a renamed source
+    # symbol); anything else is kept.
+    taken = {p[1] for p in ported}
     extra += [f'{n} = 0x{a:08X}; // {k}' for a, (n, k) in sorted(existing.items())
-              if n not in ported_names and n not in listed]
+              if n not in ported_names and n not in listed and a not in taken]
     if extra:
         out.append(marker)
         out += extra
