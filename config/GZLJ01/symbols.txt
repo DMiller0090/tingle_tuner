@@ -434,6 +434,14 @@ gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
 // update function per GameState.icons type (entry 0 unused), called by Func_0201AF48
+// (column, row) of the four sea chart squares around the view, added by Func_0201A224
+gSeaQuadrantOffsets = 0x020241F4; // data
+// animated sea tile set per sea chart square (7x7), used by Func_0201A224
+gSeaSquareTileSets = 0x02024204; // data
+// sea tile animation frame sequence (5 steps), used by Mode1VBlank
+gSeaAnimFrames = 0x02024235; // data
+// frames per sea animation step, per tile set
+gSeaAnimPeriods = 0x0202423A; // data
 // target compass blink period per distance level (Func_0201A944)
 gTargetBlinkPeriods = 0x0202423D; // data
 gMapIconFuncs = 0x02024244; // data
@@ -444,9 +452,13 @@ gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data
 gMode1BgMap = 0x02026850; // data
 gMode1SeaMap = 0x020270B8; // data
+// raw sea animation tiles (0x2000 bytes), copied to VRAM by Func_0201A224
+gSeaAnimTiles = 0x02027498; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+// map scroll cursor (Func_0201A224)
+gSprite_0202BDC8 = 0x0202BDC8; // data
 // target compass arrow (Func_0201A944)
 gSprite_0202C3F8 = 0x0202C3F8; // data
 gSprite_0202C438 = 0x0202C438; // data

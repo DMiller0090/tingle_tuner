@@ -36,10 +36,12 @@ struct MapIcon
 // 0x010 u32 unk010
 // 0x014 s16 mapX  // top left of the map view in the map image (pixels)
 // 0x016 s16 mapY
+// 0x018 u8 unk018  // cleared by Func_0201A224
 // 0x022 u16 unk022  // set to 240 when a target is placed (Func_0201AD90)
 // 0x024 u16 targetScale  // pulse of the target compass sprite (Func_0201A944)
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
+// 0x028 u16 seaAnimTimer[4] size=8  // per quadrant of the view (Func_0201A224)
 // 0x030 u16 unk030
 // 0x032 s16 unk032  // title sprite x
 // 0x034 s16 unk034  // title sprite y
@@ -54,6 +56,9 @@ struct MapIcon
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
 // 0x0E5 u8 unk0E5
+// 0x0E8 u8 seaTileSet[4]  // gSeaSquareTileSets of each quadrant's square
+// 0x0EC u8 seaAnimFrame[4]  // index into gSeaAnimFrames
+// 0x0F0 u8 seaSquare[4]  // sea chart square of each quadrant
 // 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
@@ -82,6 +87,7 @@ struct MapIcon
 // 0x11C u8 unk11C
 // 0x11D u8 unk11D
 // 0x11E u8 unk11E
+// 0x11F u8 mapScrolling  // L pressed to scroll the map (Func_0201A224)
 // 0x120 u8 unk120
 // 0x121 u8 unk121
 // 0x122 u8 unk122
@@ -155,13 +161,13 @@ struct GameState
     /*0x010*/ u32 unk010;
     /*0x014*/ s16 mapX;                       // top left of the map view in the map image (pixels)
     /*0x016*/ s16 mapY;
-    /*0x018*/ u8 filler018[0x019 - 0x018];
+    /*0x018*/ u8 unk018;                      // cleared by Func_0201A224
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
     /*0x01A*/ u8 filler01A[0x022 - 0x01A];
     /*0x022*/ u16 unk022;                     // set to 240 when a target is placed (Func_0201AD90)
     /*0x024*/ u16 targetScale;                // pulse of the target compass sprite (Func_0201A944)
     /*0x026*/ u16 unk026;
-    /*0x028*/ u8 filler028[0x030 - 0x028];
+    /*0x028*/ u16 seaAnimTimer[4];            // per quadrant of the view (Func_0201A224)
     /*0x030*/ u16 unk030;
     /*0x032*/ s16 unk032;                     // title sprite x
     /*0x034*/ s16 unk034;                     // title sprite y
@@ -179,7 +185,10 @@ struct GameState
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
     /*0x0E5*/ u8 unk0E5;
-    /*0x0E6*/ u8 filler0E6[0x0F4 - 0x0E6];
+    /*0x0E6*/ u8 filler0E6[0x0E8 - 0x0E6];
+    /*0x0E8*/ u8 seaTileSet[4];               // gSeaSquareTileSets of each quadrant's square
+    /*0x0EC*/ u8 seaAnimFrame[4];             // index into gSeaAnimFrames
+    /*0x0F0*/ u8 seaSquare[4];                // sea chart square of each quadrant
     /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here); one bit per sea chart square (7x7)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
@@ -213,7 +222,7 @@ struct GameState
     /*0x11C*/ u8 unk11C;
     /*0x11D*/ u8 unk11D;
     /*0x11E*/ u8 unk11E;
-    /*0x11F*/ u8 filler11F[0x120 - 0x11F];
+    /*0x11F*/ u8 mapScrolling;                // L pressed to scroll the map (Func_0201A224)
     /*0x120*/ u8 unk120;
     /*0x121*/ u8 unk121;
     /*0x122*/ u8 unk122;
@@ -469,6 +478,15 @@ extern const u8 *const gMapIconSprites[];
 extern const s16 gSinTable[];
 extern const u8 gTargetBlinkPeriods[5];
 extern const u8 gSprite_0202C3F8[];
+extern const u8 gSprite_0202BDC8[];
+extern const u16 gSeaQuadrantOffsets[4][2];
+extern const u8 gSeaSquareTileSets[49];
+extern const u8 gSeaAnimFrames[5];
+extern const u8 gSeaAnimPeriods[3];
+extern const u8 gSeaAnimTiles[0x2000];
+void Func_0201B2C0(void);
+void Func_02019CAC(void);
+void Func_02019510(struct GameState *state, u8 frameCount);
 u16 ArcTan2(s32 x, s32 y);
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----

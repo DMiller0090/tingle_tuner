@@ -42,6 +42,126 @@ INCLUDE_ASM(Func_02019F5C);
 
 INCLUDE_ASM(Func_0201A0A8);
 
+// Per-frame map update. Sea chart mode (gMain.unk457 == 0): find the four sea chart squares
+// around the view, step their tile animations and draw the chart. Map mode: while L is held,
+// scroll the map image with the D-pad and draw the scroll cursor.
+// Nearly matches: all but one instruction's placement. The original computes j * 2 (for
+// seaAnimTimer[j]) in the loop body's first block, next to the row read; this computes it
+// in the else. Writing `t = j * 2;` after the row and `seaAnimTimer[t / 2]++` gets it within
+// one scheduling slot. The locals dx and dy double as the loop's column and row.
+//     void Func_0201A224(void)
+//     {
+//         u16 maxX = gGameState.mapImage->width - 120;
+//         u16 maxY = gGameState.mapImage->height - 120;
+//         s16 dx = 0;
+//         s16 dy = 0;
+//         u8 i = FindMarker(3);
+//
+//         if (i == 0xFF)
+//             FindMarker(1);
+//         gGameState.unk018 = 0;
+//         if (gMain.unk457 == 0)
+//         {
+//             s32 j;
+//
+//             Func_0201B2C0();
+//             Func_02019F5C();
+//             for (j = 0; j < 4; j++)
+//             {
+//                 s32 k;
+//
+//                 dx = (((s16)gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
+//                 if (dx > 6)
+//                     dx = 7;
+//                 dy = (((s16)gMain.bgOfs[2][1] + 8) >> 8) + gSeaQuadrantOffsets[j][1];
+//                 if (dy > 6)
+//                     dy = 7;
+//                 k = (dy & 1) * 2 + (dx & 1);
+//                 gGameState.seaSquare[k] = dx + dy * 7;
+//                 gGameState.seaTileSet[k] = gSeaSquareTileSets[dy * 7 + dx];
+//                 if (gGameState.seaAnimTimer[k] >= gSeaAnimPeriods[gGameState.seaTileSet[k]])
+//                 {
+//                     if (++gGameState.seaAnimFrame[k] > 4)
+//                         gGameState.seaAnimFrame[k] = 0;
+//                     gGameState.seaAnimTimer[k] = 0;
+//                 }
+//                 else
+//                 {
+//                     gGameState.seaAnimTimer[j]++;  // [j], not [k]
+//                 }
+//             }
+//             CpuCopy16(gSeaAnimTiles, (void *)0x0600C000, 0x2000);
+//             Func_02019CAC();
+//         }
+//         else
+//         {
+//             if (!(gMain.heldKeys & 0x200))
+//             {
+//                 if (gGameState.mapScrolling == 1)
+//                 {
+//                     SoundPlay(7 - SOUND_ID_SHIFT, 0);
+//                     gGameState.mapScrolling = 0;
+//                 }
+//                 if (gGameState.unk120 == 0)
+//                     Func_0201A0A8();
+//             }
+//             else if (gGameState.unk1E5_1)
+//             {
+//                 u8 mosaic;
+//                 const u8 *sprite;
+//                 u8 frame;
+//                 bool32 clamped;
+//
+//                 if (gMain.newKeys & 0x200)
+//                 {
+//                     SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
+//                     gGameState.mapScrolling = 1;
+//                 }
+//                 if (gMain.heldKeys & 0x40)
+//                     dy = -4;
+//                 else if (gMain.heldKeys & 0x80)
+//                     dy = 4;
+//                 if (gMain.heldKeys & 0x20)
+//                     dx = -4;
+//                 else if (gMain.heldKeys & 0x10)
+//                     dx = 4;
+//                 mosaic = gMain.mosaic != 0;
+//                 sprite = gSprite_0202BDC8;
+//                 frame = 0;
+//                 if (!(gMain.frameCount & 0xC))
+//                     frame = 1;
+//                 DrawSprite(sprite, frame, 0x44, 0x44, 0, mosaic, 0, 0, 0, 0, 0);
+//                 clamped = FALSE;
+//                 gGameState.mapX += dx;
+//                 if (gGameState.mapX < 0)
+//                 {
+//                     gGameState.mapX = 0;
+//                     clamped = TRUE;
+//                 }
+//                 if (gGameState.mapX > (s16)maxX)
+//                 {
+//                     gGameState.mapX = maxX;
+//                     clamped = TRUE;
+//                 }
+//                 gGameState.mapY += dy;
+//                 if (gGameState.mapY < 0)
+//                 {
+//                     gGameState.mapY = 0;
+//                     clamped = TRUE;
+//                 }
+//                 if (gGameState.mapY > (s16)maxY)
+//                 {
+//                     gGameState.mapY = maxY;
+//                     clamped = TRUE;
+//                 }
+//                 if (!clamped && (gMain.heldKeys & 0xF0))
+//                     Func_02021284(8, 8, NULL);
+//             }
+//             Func_02019350(&gGameState);
+//         }
+//         if (gGameState.unk224 == 0)
+//             Func_02019510(&gGameState, gMain.frameCount);
+//     }
 INCLUDE_ASM(Func_0201A224);
 
 void Func_0201A540(void)
@@ -323,6 +443,32 @@ u32 Func_0201A8AC(u8 arg)
 // }
 INCLUDE_ASM(Func_0201A944);
 
+// Copy each view quadrant's current sea animation frame into the BG tiles, then the map image
+// tiles (loaded at 0x0600C000) to 0x06004000.
+// Nearly matches: only the last two instructions of each tile address differ (the original
+// adds the VRAM base into a new register, `mov r2, sl; adds r0, r1, r2`, where this adds it in
+// place). The separate a and t are needed to keep 0x300 from being folded into the base.
+//     void Mode1VBlank(void)
+//     {
+//         u8 *dest = (u8 *)0x0600EC00;
+//         s32 i;
+//         s32 a, t;
+//
+//         for (i = 0; i < 4; i++)
+//         {
+//             a = gGameState.seaTileSet[i] * 16;
+//             t = gSeaAnimFrames[gGameState.seaAnimFrame[i]] * 4 + 0x300;
+//             a += t;
+//             CpuCopy32((u8 *)0x06008000 + a * 32, dest, 0x80);
+//             dest += 0x80;
+//             a = gGameState.seaTileSet[i] * 16;
+//             t = ((gSeaAnimFrames[gGameState.seaAnimFrame[i]] + 2) & 3) * 4 + 0x300;
+//             a += t;
+//             CpuCopy32((u8 *)0x06008000 + a * 32, dest, 0x80);
+//             dest += 0x80;
+//         }
+//         CpuCopy32((void *)0x0600C000, (void *)0x06004000, 0x2000);
+//     }
 INCLUDE_ASM(Mode1VBlank);
 
 // Icon type 1: follow the player's marker (type 3, else type 1).
