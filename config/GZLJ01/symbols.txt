@@ -65,6 +65,8 @@ Func_020209E0 = 0x020209E0; // thumb
 DrawSprite = 0x02018AB8; // thumb
 Func_0201A69C = 0x0201A69C; // thumb
 Func_0201E190 = 0x0201E190; // thumb
+Func_02020BEC = 0x02020BEC; // thumb
+Func_0201D8AC = 0x0201D8AC; // thumb
 ObjResetActive = 0x02020644; // thumb
 Func_0201A6D4 = 0x0201A6D4; // thumb
 Func_0201A224 = 0x0201A224; // thumb
@@ -178,6 +180,8 @@ gMode0Unk_02023EE4 = 0x02023EE4; // data
 gMode0StateFuncs = 0x02023EEC; // data
 // sin(i * 2pi / 256) in 8.8 fixed point; 320 entries so cos(i) = gSinTable[i + 64]
 gSinTable = 0x02023EFC; // data
+// sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
+gSpriteTable = 0x0202417C; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data

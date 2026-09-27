@@ -153,6 +153,112 @@ void Mode1Func_02015298(void)
     LZ77UnCompVram(gMode1BgMap, (void *)0x06006000);
     Mode1Func_0201521C();
 }
+// Set up the screen and the game state, then start the intro wave (state 1).
+// Near-miss: the object loop is Mode1Func_02016350's (the original drops the counter), and
+// the original computes &gGameState.unk106 early, into r6, which shifts r6/r7.
+/*
+void Mode1State0(void)
+{
+    s32 i;
+
+    if (!gGameState.flagsReceived)
+        return;
+    REG_DISPCNT = 0x80;  // forced blank
+    gMain.dispcnt = 0x100;  // BG0
+    gMain.bgcnt[0] = 0x4C08;
+    gMain.bgcnt[1] = 0x0E08;
+    gMain.bgOfs[3][0] = 0;
+    gMain.bgOfs[3][1] = 0;
+    gMain.bgOfs[0][0] = 0;
+    gMain.bgOfs[0][1] = 0;
+    gMain.bgOfs[1][0] = 0x7C;
+    gMain.bgOfs[1][1] = -4;
+    gMain.bgOfs[2][0] = 0;
+    gMain.bgOfs[2][1] = 0;
+    gGameState.unk0FC = 1;
+    gGameState.unk21D = 0;
+    gGameState.unk21E = 0;
+    gGameState.unk102 = 0xFF;
+    gGameState.unk21F = 0;
+    gGameState.unk220 = 0;
+    gGameState.dungeonChests = gGameState.flags.dungeonChests;
+    gGameState.unk157 = 8;
+    gGameState.unk0FD = 0;
+    gGameState.unk140 = 0xFFFF;
+    gGameState.unk1F8 = -1;
+    gGameState.unk121 = 0;
+    gGameState.unk11B = 0;
+    gGameState.unk11A = 0;
+    gGameState.unk11D = 0;
+    gGameState.unk010 = 0;
+    gGameState.unk11C = 0;
+    gGameState.unk106 = 0;
+    gGameState.unk030 = 0;
+    gGameState.unk120 = 0;
+    gGameState.switchSound = -1;
+    gGameState.switchType = 0;
+    gGameState.unk140 = -1;
+    gGameState.unk1F8 = -1;
+    gGameState.unk136 = 0;
+    gGameState.unk1E0 = 0;
+    for (i = 15; i >= 0; i--)
+        gObjs[i].active = 0;
+    gGameState.unk10F = gSpriteTable[9][4];
+    gGameState.unk110 = 0;
+    gGameState.unk113 = gSpriteTable[13][4];
+    gGameState.unk114 = 0;
+    gGameState.unk115 = gSpriteTable[16][4];
+    gGameState.unk116 = 0;
+    gGameState.unk117 = gSpriteTable[19][4];
+    gGameState.unk118 = 0;
+    Mode1Func_02015298();
+    if (gGameState.flags.unkA_0)
+    {
+        gMain.unk457 = 1;
+        gGameState.unk10E = 0;
+    }
+    else
+    {
+        gMain.unk457 = gMain.inDungeon;
+        gGameState.unk10E = 1;
+    }
+    Func_02020BEC();
+    Func_0201A6D4();
+    if (gGameState.flags.dungeonNo != 0)
+    {
+        gGameState.unk108 = 0;
+        gGameState.unk10A = 0;
+        gGameState.unk10C = 0;
+        if (gGameState.unk10E)
+            Func_0201A224();
+    }
+    else
+    {
+        Func_0201A224();
+    }
+    Func_0201D8AC();
+    gGameState.switchSound = 0xFFFF;
+    gGameState.unk21C = 0;
+    gGameState.unk206 = 0x300;
+    Func_0201E190();
+    gGameState.unk1E5_1 = 1;
+    gGameState.unk12B = 0;
+    gGameState.unk1FA = 0;
+    gGameState.unk1FB = 0;
+    gGameState.unk224 = 0;
+    gGameState.rupeeDelta = 0;
+    Mode1Func_020150A4();
+    gMain.bldcnt = 0;
+    gMain.bldalpha = 0;
+    gGameState.wavePhase = 0;
+    gGameState.scrollTableNext = 1;
+    gGameState.scrollTable = 0;
+    gGameState.waveAmplitude = 0x60;
+    BuildWaveScrollTable(BG_SCROLL_TABLE_0, 0, 0x60);
+    gMain.hblankScroll = TRUE;
+    gMain.modeState = 1;
+}
+*/
 INCLUDE_ASM(Mode1State0);
 // The screen comes in with a wave (per-line BG0HOFS by HBlank DMA, double-buffered) that
 // dies down; then the dungeon music starts and the game goes to state 2.

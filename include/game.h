@@ -32,10 +32,23 @@ struct MapMarker
 // 0x042 u8 unk042
 // 0x064 struct MapMarker markers[16] size=0x80  // from slot 3 (Mode1RecvMarkers)
 // 0x0E4 u8 markerCount
+// 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
+// 0x102 u8 unk102
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
 // 0x106 u8 unk106
+// 0x108 u8 unk108
+// 0x10A u8 unk10A
+// 0x10C u8 unk10C
 // 0x10E u8 unk10E
+// 0x10F u8 unk10F
+// 0x110 u8 unk110
+// 0x113 u8 unk113
+// 0x114 u8 unk114
+// 0x115 u8 unk115
+// 0x116 u8 unk116
+// 0x117 u8 unk117
+// 0x118 u8 unk118
 // 0x11A u8 unk11A
 // 0x11B u8 unk11B
 // 0x11C u8 unk11C
@@ -47,6 +60,7 @@ struct MapMarker
 // 0x136 u8 unk136
 // 0x138 u8 unk138  // sent as GbaFlg.unk2
 // 0x140 s16 unk140
+// 0x157 u8 unk157
 // 0x15A u8 unk15A
 // 0x1CC u8 unk1CC
 // 0x1E0 u8 unk1E0
@@ -61,6 +75,10 @@ struct MapMarker
 // 0x20E u16 wavePhase  // 8.8; the high byte indexes gSinTable
 // 0x210 u16 timer  // flags.timer
 // 0x21C u8 unk21C
+// 0x21D u8 unk21D
+// 0x21E u8 unk21E
+// 0x21F u8 unk21F
+// 0x220 u8 unk220
 // 0x221 u8 fadeTimer  // frames to the next mosaic/brightness step
 // 0x222 u8 unk222
 // 0x224 u8 unk224
@@ -95,15 +113,33 @@ struct GameState
     /*0x043*/ u8 filler043[0x064 - 0x043];
     /*0x064*/ struct MapMarker markers[16];   // from slot 3 (Mode1RecvMarkers)
     /*0x0E4*/ u8 markerCount;
-    /*0x0E5*/ u8 filler0E5[0x0FD - 0x0E5];
+    /*0x0E5*/ u8 filler0E5[0x0FC - 0x0E5];
+    /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
-    /*0x0FE*/ u8 filler0FE[0x104 - 0x0FE];
+    /*0x0FE*/ u8 filler0FE[0x102 - 0x0FE];
+    /*0x102*/ u8 unk102;
+    /*0x103*/ u8 filler103[0x104 - 0x103];
     /*0x104*/ u8 unk104;                      // cleared while a menu or event runs on the GC
     /*0x105*/ u8 filler105[0x106 - 0x105];
     /*0x106*/ u8 unk106;
-    /*0x107*/ u8 filler107[0x10E - 0x107];
+    /*0x107*/ u8 filler107[0x108 - 0x107];
+    /*0x108*/ u8 unk108;
+    /*0x109*/ u8 filler109[0x10A - 0x109];
+    /*0x10A*/ u8 unk10A;
+    /*0x10B*/ u8 filler10B[0x10C - 0x10B];
+    /*0x10C*/ u8 unk10C;
+    /*0x10D*/ u8 filler10D[0x10E - 0x10D];
     /*0x10E*/ u8 unk10E;
-    /*0x10F*/ u8 filler10F[0x11A - 0x10F];
+    /*0x10F*/ u8 unk10F;
+    /*0x110*/ u8 unk110;
+    /*0x111*/ u8 filler111[0x113 - 0x111];
+    /*0x113*/ u8 unk113;
+    /*0x114*/ u8 unk114;
+    /*0x115*/ u8 unk115;
+    /*0x116*/ u8 unk116;
+    /*0x117*/ u8 unk117;
+    /*0x118*/ u8 unk118;
+    /*0x119*/ u8 filler119[0x11A - 0x119];
     /*0x11A*/ u8 unk11A;
     /*0x11B*/ u8 unk11B;
     /*0x11C*/ u8 unk11C;
@@ -121,7 +157,9 @@ struct GameState
     /*0x138*/ u8 unk138;                      // sent as GbaFlg.unk2
     /*0x139*/ u8 filler139[0x140 - 0x139];
     /*0x140*/ s16 unk140;
-    /*0x142*/ u8 filler142[0x15A - 0x142];
+    /*0x142*/ u8 filler142[0x157 - 0x142];
+    /*0x157*/ u8 unk157;
+    /*0x158*/ u8 filler158[0x15A - 0x158];
     /*0x15A*/ u8 unk15A;
     /*0x15B*/ u8 filler15B[0x1CC - 0x15B];
     /*0x1CC*/ u8 unk1CC;
@@ -147,7 +185,10 @@ struct GameState
     /*0x210*/ u16 timer;                      // flags.timer
     /*0x212*/ u8 filler212[0x21C - 0x212];
     /*0x21C*/ u8 unk21C;
-    /*0x21D*/ u8 filler21D[0x221 - 0x21D];
+    /*0x21D*/ u8 unk21D;
+    /*0x21E*/ u8 unk21E;
+    /*0x21F*/ u8 unk21F;
+    /*0x220*/ u8 unk220;
     /*0x221*/ u8 fadeTimer;                   // frames to the next mosaic/brightness step
     /*0x222*/ u8 unk222;
     /*0x223*/ u8 filler223[0x224 - 0x223];
@@ -186,6 +227,7 @@ extern const u8 gMode2BgMap[];
 extern const u8 gMode1ObjTiles[];
 extern const u16 gMode1ObjPalette[0x100];
 extern const u8 gSprite_0202C438[];
+extern const u8 *const gSpriteTable[];
 
 void Mode1VBlank(void);
 void Func_0201A570(void);
@@ -199,6 +241,8 @@ void DrawSprite(const void *sprite, u8 frame, u16 x, u16 y, u8 a4, u8 a5, u16 a6
                 u8 a9, u8 a10);
 void Func_0201A69C(void);
 void Func_0201E190(void);
+void Func_02020BEC(void);
+bool32 Func_0201D8AC(void);
 void BuildWaveScrollTable(u16 *table, u8 phase, u16 amplitude);
 
 // 16 objects in IWRAM (0x03005650).
