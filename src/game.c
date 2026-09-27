@@ -616,7 +616,64 @@ void Func_0201FCA0(void)
     gGameState.unk1E2 = 0;
 }
 
-INCLUDE_ASM(Func_0201FD04);
+// Item effect 11.
+void Func_0201FD04(void)
+{
+    if (gGameState.unk1E2 == 0)
+    {
+        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+        {
+            if (gGameState.unk14F == 0)
+                gGameState.unk1E2 = 2;
+            else if (gGameState.unk14F == 1)
+                gGameState.unk1E2 = 1;
+            else
+                gGameState.unk1E2 = 4;
+        }
+    }
+    else if (gGameState.unk1E2 == 1)
+    {
+        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+            gGameState.unk1E2 = 2;
+    }
+    else if (gGameState.unk1E2 == 2)
+    {
+        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        {
+            gMain.newKeys &= ~(gMain.newKeys & 0x30F);
+            GamePlaySound(0xD8, 1);
+            gGameState.unk1E2 = 3;
+        }
+    }
+    else if (gGameState.unk1E2 == 3)
+    {
+        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+        {
+            if (gGameState.unk14F == 1)
+            {
+                gMain.newKeys ^= 1;
+                if (!gGameState.unk1E5_3)
+                    GamePlaySound(0xD4, 1);
+                else
+                    GamePlaySound(0xDD, 1);
+                gGameState.unk1E2 = 1;
+            }
+            else
+            {
+                gGameState.unk1E2 = 4;
+            }
+        }
+    }
+    else
+    {
+        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        {
+            gGameState.unk164[10].unk4 = (gGameState.unk164[10].unk4 & 0xF000) + 0xAE;
+            Func_0201DCEC(gGameState.unk1DE);
+            Func_0201EBAC();
+        }
+    }
+}
 
 void Func_0201FEEC(void)
 {

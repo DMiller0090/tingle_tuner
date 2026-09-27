@@ -21,7 +21,9 @@ struct Unk164
 {
     /*0x0*/ u8 filler0[2];
     /*0x2*/ u8 unk2;
-    /*0x3*/ u8 filler3[5];
+    /*0x3*/ u8 filler3;
+    /*0x4*/ u16 unk4;
+    /*0x6*/ u8 filler6[2];
 };
 
 // Game state in IWRAM (0x030050E0 in every version), 0x240 bytes up to gGbaComDataStatus.
@@ -506,5 +508,6 @@ extern const u8 gSprite_0202C490[];
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
 void Func_0201F8C4(s16 x, s16 y, u8 kind);
 void Func_0201FEEC(void);
+void Func_0201DCEC(u8 arg);
 
 #endif // GUARD_GAME_H
