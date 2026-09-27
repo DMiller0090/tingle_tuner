@@ -5,3 +5,5 @@ src/libc/rand.c 0x02023DB8 0x02023DEC
 src/main.c .rodata 0x02023DEC 0x02023E38
 src/joy_com.c 0x02017824 0x02018158
 src/heap.c 0x02018658 0x02018884
+src/multi_sio.c 0x020173B8 0x02017824
+src/multi_sio.c .rodata 0x02023ED0 0x02023EE4
