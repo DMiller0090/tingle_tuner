@@ -157,8 +157,8 @@ void Mode1Func_02015298(void)
     Mode1Func_0201521C();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
-// Near-miss: the object loop is Mode1Func_02016350's (the original drops the counter), and
-// the original computes &gGameState.unk106 early, into r6, which shifts r6/r7.
+// Near-miss: the original computes &gGameState.unk106 early, into r6 (right after the
+// unk21E store, though unk106 is stored much later), which shifts r6/r7 through the rest.
 /*
 void Mode1State0(void)
 {
@@ -204,7 +204,7 @@ void Mode1State0(void)
     gGameState.unk1F8 = -1;
     gGameState.unk136 = 0;
     gGameState.unk1E0 = 0;
-    for (i = 15; i >= 0; i--)
+    for (i = 0; i < 16; i++)
         gObjs[i].active = 0;
     gGameState.unk10F = gSpriteTable[9][4];
     gGameState.unk110 = 0;
@@ -728,10 +728,9 @@ void Mode1RecvMarkers(void)
     GbaComDataStatusReset(GBACOM_SLOT_3);
 }
 #endif
-// Near-miss: all but the loop. The original drops the counter and ends the loop on a
-// signed compare of the object pointer against gObjs; agbcc keeps the counter (tried index,
-// pointer, do/while, local base, constant base and two-induction-variable forms).
-/*
+
+// Reset the per-map state (Mode1State4 after a map change). The object loop counts up: agbcc
+// reverses it into the original's pointer countdown, a countdown in C keeps the counter.
 void Mode1Func_02016350(void)
 {
     s32 i;
@@ -755,7 +754,7 @@ void Mode1Func_02016350(void)
     gGameState.unk0FD = 0;
     gGameState.unk136 = 0;
     gGameState.unk1E0 = 0;
-    for (i = 15; i >= 0; i--)
+    for (i = 0; i < 16; i++)
         gObjs[i].active = 0;
     if (!gGameState.unk1E5_1)
     {
@@ -765,8 +764,6 @@ void Mode1Func_02016350(void)
     }
     Func_0201A6D4();
 }
-*/
-INCLUDE_ASM(Mode1Func_02016350);
 // Wait for the GC to switch maps (slots 1-3), then load the new one and fade in (state 5).
 void Mode1State4(void)
 {
