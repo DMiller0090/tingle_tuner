@@ -216,6 +216,187 @@ void Func_0201B2C0(void)
     }
 }
 
+// What the player's marker (type 3) is on: returns the index of a marker within 8 pixels
+// (and sets unk11B to its type), else looks the position up in the slot 14 table of sea
+// chart squares (setting unk135 to the square's id + 1). unk11A: something is selected.
+// Near-miss, written with gSlot14Data as struct SeaChartSquare[49]: same code shape, but
+// the registers differ throughout (the original keeps gGameState in r3 inside the marker loop).
+/*
+s32 Func_0201B3A4(void)
+{
+    u8 player;
+    s32 i;
+    u8 type;
+    u8 square;
+    u16 ex;
+    u16 ey;
+    s32 r;
+
+    if (gGameState.unk121 != 0)
+    {
+        gGameState.unk11B = 0;
+        gGameState.unk11A = 0;
+        return 0;
+    }
+    gGameState.unk135 = 0;
+    player = FindMarker(3);
+    i = FindMarker(0x14);
+    if (i != 0xFF && gGameState.unk136 == 0)
+    {
+        if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16 || (u16)(gGameState.markers[i].y - gGameState.markers[player].y + 8) > 16)
+            gGameState.unk136 = 1;
+    }
+    if ((u8)(gGameState.switchType - 1) <= 1 || gGameState.switchType == 4
+     || (gGameState.switchType == 13 && gGameState.flags.isFree))
+    {
+        if (gGameState.unk11A == 0)
+        {
+            SoundPlay(1, 0);
+            gGameState.unk11A = 1;
+        }
+        return 0;
+    }
+    if (gGameState.switchType == 0xFF)
+    {
+        gGameState.unk11A = 1;
+        return 0;
+    }
+    if (player == 0xFF)
+        goto none;
+    for (i = 0; i < gGameState.markerCount; i++)
+    {
+        type = gGameState.markers[i].type;
+        if (type == 1 || type == 3 || type == 4 || type == 0x11 || type == 0x12)
+            continue;
+        if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16)
+            continue;
+        if ((u16)(gGameState.markers[i].y - gGameState.markers[player].y + 8) > 16)
+            continue;
+        gGameState.unk11B = type;
+        if (gGameState.markers[i].unk7 != 0)
+        {
+            if (gGameState.markers[i].type == 2 || gGameState.markers[i].type == 6 || gGameState.markers[i].type == 14 || gGameState.markers[i].type == 15)
+            {
+                gGameState.unk11A = 1;
+                return i;
+            }
+            if (gGameState.markers[i].type == 5)
+            {
+                if (gGameState.markers[i].unk6 == 0xFF)
+                    continue;
+                if (gGameState.unk010 & (1 << gGameState.markers[i].unk6))
+                    continue;
+                if (gGameState.unk11A == 0)
+                {
+                    SoundPlay(1, 0);
+                    gGameState.unk11A = 1;
+                }
+                return i;
+            }
+            if (gGameState.markers[i].type == 12)
+            {
+                if (gGameState.unk11C)
+                    continue;
+                if (gGameState.unk11A == 0)
+                {
+                    SoundPlay(1, 0);
+                    gGameState.unk11A = 1;
+                }
+                return i;
+            }
+            if (gGameState.unk11A == 0)
+            {
+                if (gGameState.flags.isFree)
+                    SoundPlay(1, 0);
+                gGameState.unk11A = 1;
+            }
+            return i;
+        }
+        if (gGameState.markers[i].type == 7)
+        {
+            if (gGameState.switchType == 4 || gGameState.switchType == 10)
+            {
+                if (gGameState.unk11A == 0)
+                {
+                    SoundPlay(1, 0);
+                    gGameState.unk11A = 1;
+                }
+                return i;
+            }
+            gGameState.unk11A = 0;
+            return 0;
+        }
+        if ((u8)(gGameState.markers[i].type - 8) <= 3 || gGameState.markers[i].type == 0x15)
+        {
+            if (gGameState.switchType == 3 || gGameState.switchType == 15)
+                gGameState.unk11A = 1;
+            else
+                gGameState.unk11A = 0;
+            return 0;
+        }
+        if (gGameState.markers[i].type == 0x13)
+        {
+            if ((u8)(gGameState.markers[i].unk6 - 1) <= 2)
+            {
+                gGameState.unk11A = 1;
+                return i;
+            }
+            return 0;
+        }
+        if (gGameState.markers[i].type == 0x14)
+        {
+            if (gGameState.unk136)
+            {
+                gGameState.unk11A = 1;
+                return i;
+            }
+            gGameState.unk11B = 0;
+            return 0;
+        }
+        if (gGameState.unk11A == 0)
+        {
+            if (gGameState.flags.isFree)
+                SoundPlay(1, 0);
+            gGameState.unk11A = 1;
+        }
+        return 0;
+    }
+    if (gMain.unk457 == 0)
+    {
+        square = (gGameState.markers[player].x >> 8) + (gGameState.markers[player].y >> 8) * 7;
+        for (i = 0; i < 49; i++)
+        {
+            if (gSlot14Data[i].id != square)
+                continue;
+            if (square == 25 && !gGameState.flags.unkA_4)
+                return 0;
+            if (gSlot14Data[i].big)
+            {
+                ex = (gSlot14Data[i].x - 16) & 0xF8;
+                ey = (gSlot14Data[i].y - 16) & 0xF8;
+                r = 32;
+            }
+            else
+            {
+                ex = gSlot14Data[i].x - 8;
+                ey = gSlot14Data[i].y - 8;
+                r = 8;
+            }
+            if ((u8)(gGameState.markers[player].x - ex) > r)
+                continue;
+            if ((u8)(gGameState.markers[player].y - ey) > r)
+                continue;
+            gGameState.unk135 = gSlot14Data[i].id + 1;
+            gGameState.unk11A = 1;
+            return 0;
+        }
+    }
+none:
+    gGameState.unk11B = 0;
+    gGameState.unk11A = 0;
+    return 0;
+}
+*/
 INCLUDE_ASM(Func_0201B3A4);
 
 // Play the sound for what the cursor is on: unk135 if set, else the selected marker's.

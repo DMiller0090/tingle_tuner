@@ -416,7 +416,7 @@ void Func_0201B8C8(void);
 u8 FindMarker(u8 type);
 void Func_0201DEAC(void);
 void Func_02020C10(void);
-u8 Func_0201B3A4(void);
+s32 Func_0201B3A4(void);
 void Func_0201C484(u8 id);
 void Func_0201C568(void);
 void Func_0201DD20(u8 a, u8 b);
@@ -486,6 +486,15 @@ extern const u8 gTempleMarkerPos[4];
 extern const u8 gSprite_0202C200[];
 extern const u16 gTable_02024274[2];
 u8 ChoiceMenuUpdate(void);
+// One entry of gSlot14Data (49 of them, one per sea chart square, 0xC4 bytes): a spot
+// Func_0201B3A4 checks the player against (8 pixels, or 32 on a 8-pixel grid when big).
+struct SeaChartSquare
+{
+    /*0x0*/ u8 x;
+    /*0x1*/ u8 y;
+    /*0x2*/ u8 big;
+    /*0x3*/ u8 id;  // the square number (x / 256 + y / 256 * 7 of the player marker)
+};
 // Per question (unk142): the ids, then the sound per choice (0xFFFF: none).
 extern const u16 gTwoChoiceIds[];
 extern const u16 gTwoChoiceSounds[];  // [id index * 2 + choice]
