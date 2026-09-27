@@ -185,7 +185,7 @@ void Mode1State0(void)
     gGameState.unk0FC = 1;
     gGameState.unk21D = 0;
     gGameState.unk21E = 0;
-    gGameState.unk102 = 0xFF;
+    gGameState.targetDir = 0xFF;
     gGameState.unk21F = 0;
     gGameState.unk220 = 0;
     gGameState.dungeonChests = gGameState.flags.dungeonChests;

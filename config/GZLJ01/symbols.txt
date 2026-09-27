@@ -434,6 +434,8 @@ gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
 // update function per GameState.icons type (entry 0 unused), called by Func_0201AF48
+// target compass blink period per distance level (Func_0201A944)
+gTargetBlinkPeriods = 0x0202423D; // data
 gMapIconFuncs = 0x02024244; // data
 // sprite per GameState.icons type
 gMapIconSprites = 0x02024254; // data
@@ -445,6 +447,8 @@ gMode1SeaMap = 0x020270B8; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
+// target compass arrow (Func_0201A944)
+gSprite_0202C3F8 = 0x0202C3F8; // data
 gSprite_0202C438 = 0x0202C438; // data
 gSprite_0202C938 = 0x0202C938; // data
 gSprite_0202CA08 = 0x0202CA08; // data

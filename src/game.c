@@ -195,7 +195,7 @@ u8 FindMarker(u8 type)
 }
 
 // Distance from the type 1 marker to icons[2] (arg 0) or to the type 3 marker.
-u16 Func_0201A8AC(u8 arg)
+u32 Func_0201A8AC(u8 arg)
 {
     u8 i = FindMarker(1);
     s32 dx, dy;
@@ -218,6 +218,109 @@ u16 Func_0201A8AC(u8 arg)
     return Sqrt(dx);
 }
 
+// The target compass: while a target (icons[2], type 3) is placed, point an arrow at it
+// from the player, pulse it faster the closer the player gets, play the near and arrival
+// sounds, and (once Link has the Wind Waker, flags.hasTact) announce its direction when
+// Link is not facing it (flags.unk2 looks like his heading).
+// Nearly matches: the logic and instruction selection are right, but registers differ from
+// the start (the ArcTan2 operands land in r4 instead of r2, so the address temporaries shift
+// and the targetNear stores of levels 2 and 4 are not cross-jumped):
+// void Func_0201A944(void)
+// {
+//     u8 angle;
+//     s32 x, y;
+//     s32 level;
+//
+//     if (gGameState.unk1FA != 0)
+//         return;
+//     if (gGameState.unk224 != 0)
+//         return;
+//     if (gGameState.icons[2].type != 3)
+//         return;
+//     {
+//         u8 i = FindMarker(1);
+//
+//         x = gGameState.icons[2].x - gGameState.markers[i].x;
+//         y = gGameState.icons[2].y - gGameState.markers[i].y;
+//         angle = ((u16)~ArcTan2(x >> 4, y >> 4) + 0x4001) >> 8;
+//     }
+//     x = gSinTable[angle];
+//     x >>= 3;
+//     y = (gSinTable + 64)[angle];
+//     y >>= 3;
+//     DrawSprite(gMapIconSprites[gGameState.icons[2].type], 0, (u16)(x + 0xB8), (u16)(y + 0x58), 0, 0, 0, 0, 0, 0, 0);
+//     level = Func_0201A8AC(0);
+//     if ((u32)level <= 0x18)
+//     {
+//         if (gGameState.unk224 == 0)
+//         {
+//             GamePlaySound(0x1A5, 1);
+//             gGameState.icons[2].type = 0;
+//             gGameState.icons[1].type = 0;
+//             gGameState.unk105 = 0;
+//         }
+//         level = 0;
+//         gGameState.targetNear = 0;
+//     }
+//     else if ((u32)level <= 0x7F)
+//     {
+//         if (gGameState.unk224 == 0 && gGameState.targetNear == 0)
+//         {
+//             GamePlaySound(0x1A4, 1);
+//             gGameState.targetNear = 1;
+//         }
+//         level = 1;
+//     }
+//     else if ((u32)level <= 0x1FF)
+//     {
+//         level = 2;
+//         gGameState.targetNear = 0;
+//     }
+//     else if ((u32)level <= 0x3FF)
+//     {
+//         level = 3;
+//         gGameState.targetNear = 0;
+//     }
+//     else
+//     {
+//         level = 4;
+//         gGameState.targetNear = 0;
+//     }
+//     if (gGameState.targetBlinkOn != 0)
+//     {
+//         if (--gGameState.targetBlinkTimer == 0)
+//             gGameState.targetBlinkOn = 0;
+//     }
+//     else
+//     {
+//         if (++gGameState.targetBlinkTimer >= gTargetBlinkPeriods[level])
+//         {
+//             gGameState.targetBlinkTimer = gTargetBlinkPeriods[level];
+//             gGameState.targetBlinkOn = 1;
+//         }
+//     }
+//     gGameState.targetScale = (gGameState.targetBlinkTimer << 7) / gTargetBlinkPeriods[level] + 0x100;
+//     DrawSprite(gSprite_0202C3F8, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
+//     if (gGameState.unk224 == 0 && gGameState.flags.hasTact && level > 1
+//      && (u8)(gGameState.flags.unk2 - angle + 9) > 18)
+//     {
+//         angle = ~angle + 1;
+//         if (((angle + 8) & 0x1F) <= 0x10)
+//         {
+//             u8 dir = (u8)(angle + 0x88) >> 5;
+//
+//             if (gGameState.targetDir != dir && gGameState.unk1FA == 0)
+//             {
+//                 GamePlaySound(0x19C + dir, 1);
+//                 gGameState.targetDir = dir;
+//             }
+//         }
+//         else
+//         {
+//             gGameState.targetDir = 0xFF;
+//         }
+//     }
+// }
 INCLUDE_ASM(Func_0201A944);
 
 INCLUDE_ASM(Mode1VBlank);

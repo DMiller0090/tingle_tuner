@@ -36,6 +36,7 @@ struct MapIcon
 // 0x010 u32 unk010
 // 0x014 s16 mapX  // top left of the map view in the map image (pixels)
 // 0x016 s16 mapY
+// 0x024 u16 targetScale  // pulse of the target compass sprite (Func_0201A944)
 // 0x019 u8 unk019  // cleared when unk222 turns on (R)
 // 0x026 u16 unk026
 // 0x030 u16 unk030
@@ -55,9 +56,13 @@ struct MapIcon
 // 0x0F4 u8 unk0F4[8] size=8  // slot 11 (MainMode1 copies it here)
 // 0x0FC u8 unk0FC
 // 0x0FD u8 unk0FD
-// 0x102 u8 unk102
+// 0x101 u8 targetBlinkOn
+// 0x102 u8 targetDir  // direction (0-7) last announced by Func_0201A944; 0xFF: none
+// 0x103 u8 targetBlinkTimer
 // 0x104 u8 unk104  // cleared while a menu or event runs on the GC
+// 0x105 u8 unk105
 // 0x106 u8 unk106
+// 0x107 u8 targetNear  // the near sound has played
 // 0x108 u8 unk108
 // 0x10A u8 unk10A
 // 0x10C u8 unk10C
@@ -151,7 +156,8 @@ struct GameState
     /*0x016*/ s16 mapY;
     /*0x018*/ u8 filler018[0x019 - 0x018];
     /*0x019*/ u8 unk019;                      // cleared when unk222 turns on (R)
-    /*0x01A*/ u8 filler01A[0x026 - 0x01A];
+    /*0x01A*/ u8 filler01A[0x024 - 0x01A];
+    /*0x024*/ u16 targetScale;                // pulse of the target compass sprite (Func_0201A944)
     /*0x026*/ u16 unk026;
     /*0x028*/ u8 filler028[0x030 - 0x028];
     /*0x030*/ u16 unk030;
@@ -175,13 +181,14 @@ struct GameState
     /*0x0F4*/ u8 unk0F4[8];                   // slot 11 (MainMode1 copies it here)
     /*0x0FC*/ u8 unk0FC;
     /*0x0FD*/ u8 unk0FD;
-    /*0x0FE*/ u8 filler0FE[0x102 - 0x0FE];
-    /*0x102*/ u8 unk102;
-    /*0x103*/ u8 filler103[0x104 - 0x103];
+    /*0x0FE*/ u8 filler0FE[0x101 - 0x0FE];
+    /*0x101*/ u8 targetBlinkOn;
+    /*0x102*/ u8 targetDir;                   // direction (0-7) last announced by Func_0201A944; 0xFF: none
+    /*0x103*/ u8 targetBlinkTimer;
     /*0x104*/ u8 unk104;                      // cleared while a menu or event runs on the GC
-    /*0x105*/ u8 filler105[0x106 - 0x105];
+    /*0x105*/ u8 unk105;
     /*0x106*/ u8 unk106;
-    /*0x107*/ u8 filler107[0x108 - 0x107];
+    /*0x107*/ u8 targetNear;                  // the near sound has played
     /*0x108*/ u8 unk108;
     /*0x109*/ u8 filler109[0x10A - 0x109];
     /*0x10A*/ u8 unk10A;
@@ -336,8 +343,8 @@ bool32 Func_0201A6D4(void);
 void Func_0201A540(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void Func_020209E0(void);
-// The definition takes u16 x and y; callers pass them unnarrowed.
-void DrawSprite(const void *sprite, u8 frame, s32 x, s32 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
+// The definition takes u16 x and y; callers see s16 (they sign-extend).
+void DrawSprite(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u16 a6, u16 a7, u16 a8,
                 u8 a9, u8 a10);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 a4, u8 a5, u8 a6);
@@ -444,9 +451,13 @@ void Func_0201AD24(void);
 void Func_0201AD4C(void);
 void Func_0201AD90(struct MapIcon *icon);
 void Func_0201AF48(void);
-u16 Func_0201A8AC(u8 arg);
+u32 Func_0201A8AC(u8 arg);
 extern void (*const gMapIconFuncs[])(struct MapIcon *icon);
 extern const u8 *const gMapIconSprites[];
+extern const s16 gSinTable[];
+extern const u8 gTargetBlinkPeriods[5];
+extern const u8 gSprite_0202C3F8[];
+u16 ArcTan2(s32 x, s32 y);
 
 // ---- game.c part C (GZLJ01 0201AFCC-0201C660) ----
 
