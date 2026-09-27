@@ -114,8 +114,10 @@ extern u8 gGbaComBufSE[0x10];
 // then loads each address it needs (buf, buf + 1, ...) from the pool, where with a symbol
 // it would derive buf + 1 from buf.
 #define GBACOM_BUF_3      ((u8 *)(PROG_BASE - 0x800))
+#define GBACOM_BUF_GBA_FLG ((u8 *)(PROG_BASE - 0x700))
 #define GBACOM_BUF_MAIL   ((u8 *)(PROG_BASE - 0x6F0))
 #define GBACOM_BUF_SWITCH ((u8 *)(PROG_BASE - 0x6E0))
+#define GBACOM_BUF_FLAGS  ((u8 *)(PROG_BASE - 0x6A0))
 #define GBACOM_BUF_11     ((u8 *)(PROG_BASE - 0x680))
 #define GBACOM_BUF_SE     ((u8 *)(PROG_BASE - 0x550))
 

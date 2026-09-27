@@ -184,29 +184,28 @@ void InitOamBuffer(void)
     gMain.unk451 = 0;
 }
 
-// Near-miss. The original hoists gMain.modeState's address out of the loop and
-// rematerializes the GbaFlg buffer address (leaving an unused stack slot); agbcc
-// hoists the buffer address instead. The byte-offset casts are what makes agbcc
-// address gGameState+0x138 and the buffer fields with folded constants, as the
-// original does; plain field access gives base+offset.
-/*
+// The buffer fields are written through byte offsets from the constant buffer addresses:
+// that makes agbcc fold each address into one pool constant and derive the next from it, as
+// the original does (struct field access gives base + offset instead).
 void MainLoop(void)
 {
+    u8 unused[4];  // FAKEMATCH: the original has an unused stack slot
+
     while (TRUE)
     {
         gMain.linked = GbaComMain();
         if (gMain.linked)
         {
-            *(u8 *)((u8 *)&gGbaComBufGbaFlg + 2) = *((u8 *)&gGameState + 0x138);
-            *(u16 *)((u8 *)&gGbaComBufGbaFlg + 4) = gMain.bgOfs[3][0] + 8;
-            *(u16 *)((u8 *)&gGbaComBufGbaFlg + 6) = gMain.bgOfs[3][1] + 8;
-            *(u16 *)((u8 *)&gGbaComBufGbaFlg + 0) = gMain.heldKeys;
+            *(u8 *)(GBACOM_BUF_GBA_FLG + 2) = *((u8 *)&gGameState + 0x138);
+            *(u16 *)(GBACOM_BUF_GBA_FLG + 4) = gMain.bgOfs[3][0] + 8;
+            *(u16 *)(GBACOM_BUF_GBA_FLG + 6) = gMain.bgOfs[3][1] + 8;
+            *(u16 *)(GBACOM_BUF_GBA_FLG + 0) = gMain.heldKeys;
             if (*(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0
              && gMain.modeState == 2)
-                *(u8 *)((u8 *)&gGbaComBufGbaFlg + 3) = TRUE;
+                *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = TRUE;
             else
-                *(u8 *)((u8 *)&gGbaComBufGbaFlg + 3) = FALSE;
-            GbaComSendDataSet(&gGbaComBufGbaFlg, sizeof(gGbaComBufGbaFlg), GBACOM_SLOT_GBA_FLG, 0);
+                *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = FALSE;
+            GbaComSendDataSet(GBACOM_BUF_GBA_FLG, sizeof(gGbaComBufGbaFlg), GBACOM_SLOT_GBA_FLG, 0);
         }
         gGameState.timer = gGameState.flags.timer;
         gGameState.dungeonChests = gGameState.flags.dungeonChests;
@@ -215,7 +214,7 @@ void MainLoop(void)
         if (GbaComRecvStatusCheck(GBACOM_SLOT_FLAGS))
         {
             // Ignore an all-zero packet.
-            if (*(u32 *)((u8 *)gGbaComBufFlags + 0) | *(u32 *)((u8 *)gGbaComBufFlags + 4) | *(u32 *)((u8 *)gGbaComBufFlags + 8))
+            if (*(u32 *)(GBACOM_BUF_FLAGS + 0) | *(u32 *)(GBACOM_BUF_FLAGS + 4) | *(u32 *)(GBACOM_BUF_FLAGS + 8))
             {
                 GbaComRecvDataGet(&gGameState.flags, GBACOM_SLOT_FLAGS, sizeof(gGameState.flags));
                 gGameState.flagsReceived = TRUE;
@@ -242,5 +241,4 @@ void MainLoop(void)
         gMain.intrCheck &= ~INTR_FLAG_VBLANK;
     }
 }
-*/
-INCLUDE_ASM(MainLoop);
+
