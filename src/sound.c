@@ -215,11 +215,12 @@ struct SoundVoice
     /*0x20*/ struct VoiceVibrato vibrato;
     /*0x2C*/ struct VoiceSweep sweep;
     /*0x40*/ struct VoiceEnvelope env;
-    /*0x54*/ u8 unk54[4];
+    /*0x54*/ const struct SoundInstrument *inst;
     /*0x58*/ u8 release;  // released: volume * (0xE6 + release) / 512 per frame
     /*0x59*/ u8 unk59[3];
     /*0x5C*/ const struct SoundSample *sample;
-    /*0x60*/ u8 unk60[8];
+    /*0x60*/ u32 frame;               // GB channels: frames since the note started
+    /*0x64*/ const u8 *dutyList;      // GB square channels: u16 count, then the duties
     /*0x68*/ struct SoundVoice *prev;  // in gPcmActiveVoices / gPcmFreeVoices
     /*0x6C*/ struct SoundVoice *next;
     /*0x70*/ struct SoundVoice *trackPrev;
@@ -1377,7 +1378,165 @@ void PcmMixFrame(void)
     ((PcmClipFunc)gPcmClipFunc)(gPcmMixBuffer, gPcmBufA[gPcmBufIndex], gPcmMixBuffer + ARRAY_COUNT(gPcmMixBuffer));
 }
 
-INCLUDE_ASM(CgbUpdate);
+#define REG_NR32          (*(vu8 *)0x04000073)
+#define REG_SOUND3CNT_X   (*(vu16 *)0x04000074)
+#define REG_NR43          (*(vu8 *)0x0400007C)
+#define REG_NR51          (*(vu8 *)0x04000081)
+
+u8 CgbVoiceVolume(struct SoundVoice *voice, u8 loud);
+void CgbVoiceStart(struct SoundVoice *voice, u8 nr2);
+
+// Per frame for each GB voice: release it when its gate ran out, then update the pitch,
+// the NR51 routing (pan 0x40 both sides, below left, above right), the envelope (new
+// NRx2 bytes from CgbVoiceVolume restart the channel) and the duty list. A note's first
+// frame starts the channel instead; a released wave voice decays in software.
+void CgbUpdate(void)
+{
+    s32 i;
+
+    for (i = 0; i < 4; i++)
+    {
+        struct SoundVoice *voice = &gCgbVoices[i];
+        u32 freq;
+        u8 pan;
+        u8 nr2;
+        u8 ch;
+        u8 mask;
+        u8 duty;
+        vu8 *nr51;
+
+        if (voice->state == 1 && voice->gate == 0)
+            VoiceNoteOff(voice);
+        if (voice->state == 0)
+            continue;
+        if (voice->state == 1)
+        {
+            freq = VoiceUpdatePitch(voice);
+            voice->freq.pcm = freq;
+            pan = voice->fixedPan ? voice->pan : voice->track->pan;
+        }
+        else
+        {
+            freq = voice->freq.pcm;
+            pan = voice->pan;
+        }
+        nr2 = CgbVoiceVolume(voice, pan != 0x40);
+        nr51 = &REG_NR51;
+        ch = voice->type - 1;
+        mask = ~(0x11 << ch);
+        if (pan == 0x40)
+            *nr51 = (*nr51 & mask) | (0x11 << ch);
+        else if (pan < 0x40)
+            *nr51 = (*nr51 & mask) | (0x10 << ch);
+        else
+            *nr51 = (*nr51 & mask) | (1 << ch);
+        if (voice->state == 1)
+        {
+            if (voice->frame == 0)
+            {
+                CgbVoiceStart(voice, nr2);
+                voice->frame = 1;
+                voice->gate--;
+                continue;
+            }
+            voice->frame++;
+            voice->gate--;
+        }
+        else if (voice->type == 3)
+        {
+            u32 volume;
+
+            voice->volume = (voice->release + 0xE6) * voice->volume >> 9;
+            volume = voice->volume;
+            if (pan != 0x40)
+                volume <<= 1;
+            volume *= 5;
+            volume >>= 7;
+            if (volume != 0)
+            {
+                u8 level;
+
+                if (volume > 4)
+                    volume = 4;
+                level = volume;
+                REG_NR32 = gCgbWaveVolumes[level];
+                continue;
+            }
+            VoiceStop(voice);
+            continue;
+        }
+        if (voice->inst->flags & 1)
+        {
+            const u8 *list = voice->dutyList;
+            u16 n = *(const u16 *)list;
+
+            if (voice->frame < n)
+                duty = *(list + voice->frame + 2);
+            else
+                duty = list[n + 1];
+        }
+        else
+        {
+            duty = 0xFF;
+        }
+        switch (voice->type)
+        {
+        case 1:
+            if (nr2 != 8)
+            {
+                REG_NR12 = nr2;
+                REG_SOUND1CNT_X = freq | 0x8000;
+            }
+            else if (((const u8 *)voice->inst)[8] == 8)  // the sweep byte after the record
+            {
+                REG_SOUND1CNT_X = freq;
+            }
+            REG_NR11 &= 0xC0;
+            if (duty != 0xFF)
+                REG_NR11 = duty << 6;
+            break;
+        case 2:
+            if (nr2 != 8)
+            {
+                REG_NR22 = nr2;
+                REG_SOUND2CNT_H = freq | 0x8000;
+            }
+            else
+            {
+                REG_SOUND2CNT_H = freq;
+            }
+            REG_NR21 &= 0xC0;
+            if (duty != 0xFF)
+                REG_NR21 = duty << 6;
+            break;
+        case 3:
+            REG_SOUND3CNT_X = (REG_SOUND3CNT_X & 0x4000) | freq;
+            if (nr2 != 8)
+                REG_NR32 = gCgbWaveVolumes[nr2];
+            break;
+        case 4:
+            if (nr2 != 8)
+            {
+                REG_NR42 = nr2;
+                REG_NR44 = 0x80;
+            }
+            if (duty != 0xFF)
+            {
+                vu8 *nr43 = &REG_NR43;
+                u8 v = NoiseFreq(freq);
+
+                if (duty != 0)
+                    v |= 8;
+                *nr43 = v;
+            }
+            else
+            {
+                REG_NR43 = (REG_NR43 & 8) | NoiseFreq(freq);
+            }
+            break;
+        }
+    }
+}
 
 INCLUDE_ASM(TrackNoteOn);
 
