@@ -402,7 +402,7 @@ pointers through `__attribute__((packed))` copies of the structs, hence the byte
 
 ### Demo (GZLJ01_demo)
 
-The client from the Japanese store demo disc (`zz_zelda.tgc` on D44J01, Dec 2002) is an
+The client from the Japanese store demo disc (on D44J01, Dec 2002) is an
 earlier build of the JP client: same modules, program `0x94` bytes shorter. It builds from the
 JP C with `VERSION_GZLJ01_demo` marking what it lacks or does differently (19 functions):
 
