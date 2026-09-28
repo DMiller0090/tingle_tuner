@@ -70,7 +70,7 @@ void JoyComIntr(void)
     u16 cnt;
     u32 recv;
     struct JoyComPacket *pkt;
-    u8 unused[4];  // FAKEMATCH: the original has an unused 4-byte stack slot
+    u8 unused[4];  // unused; agbcc still gives it the original's 4-byte stack slot (likely authentic)
     s32 i;
 
     cnt = REG_JOYCNT;
@@ -146,8 +146,11 @@ void JoyComIntr(void)
             {
                 gJoyCom.context = recv;
             }
-            // FAKEMATCH: the volatile read makes agbcc address this block from &gJoyCom.context
-            REG_JOY_TRANS = *(vu32 *)&gJoyCom.context;
+            // FAKEMATCH: the original reads context through its address (a sym+4 pool
+            // constant that the rest of the block is then addressed from); `*&` or this
+            // cast gets that, `gJoyCom.context`, `recv` and a `u32 *` local don't (a local
+            // assigned first loads its address before REG_JOY_TRANS's).
+            REG_JOY_TRANS = *(u32 *)&gJoyCom.context;
             gJoyCom.hasContext = TRUE;
             gJoyCom.state = JOYCOM_STATE_LINKED;
             for (i = 0; i < gJoyCom.numSlots; i++)

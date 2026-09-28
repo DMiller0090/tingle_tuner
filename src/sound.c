@@ -878,7 +878,7 @@ void SoundVSyncProc(void)
 // Four 176-byte buffers: gPcmBufA/B[0] and [1], left and right, mixed and played in turn.
 void PcmInit(s8 *buffers)
 {
-    u8 unused[4];  // FAKEMATCH: the original has an unused 4-byte stack slot
+    u8 unused[4];  // unused; agbcc still gives it the original's 4-byte stack slot (likely authentic)
 
     gPcmEnabled = TRUE;
     gPcmBufA[0] = buffers;
@@ -1058,7 +1058,6 @@ void TrackLookupInstrument(struct SoundTrack *track, u8 key, struct InstLookup *
 void VoicesInit(void)
 {
     s32 i;
-    struct PackedVoice *voices;
 
     gCgbWaveLoaded = NULL;
     for (i = 0; i < 4; i++)
@@ -1085,9 +1084,8 @@ void VoicesInit(void)
         PACKED_PCM_VOICES[i].next = &PACKED_PCM_VOICES[i + 1];
         PACKED_PCM_VOICES[i].prev = &PACKED_PCM_VOICES[i - 1];
     }
-    voices = PACKED_PCM_VOICES;  // FAKEMATCH: indexing PACKED_PCM_VOICES hoists &[6]
-    voices[6].prev = &voices[5];
-    voices[6].next = NULL;
+    PACKED_PCM_VOICES[i].prev = &PACKED_PCM_VOICES[i - 1];
+    PACKED_PCM_VOICES[i].next = NULL;
     gPcmActiveVoices = NULL;
     gPcmDisabledVoices = NULL;
 }
@@ -1807,7 +1805,11 @@ void TrackNoteOn(struct SoundTrack *track, u8 key, u8 velocity, u32 length)
 
 // Release a note: a PCM voice (and the wave channel) decays in software, the other GB
 // channels get their hardware envelope (release / 32 as the step, or off).
-// The switch re-reads voice->type (the volatile read keeps cse from reusing `type`).
+// FAKEMATCH: the switch re-reads voice->type; the volatile read keeps gcse from reusing
+// `type` (-dG: "PRE: redundant insn", also with -fno-gcse via cse). Without the `type`
+// local (every test reads the field) the code is right but freq/type swap r2/r3: type's
+// load (3 refs, live 7) outranks freq (7 refs, live 36). The permuter matched that version
+// only by wrapping the switch in do { } while (0) (loop depth doubles freq's refs).
 void VoiceNoteOff(struct SoundVoice *voice)
 {
     if (voice->state == 1 && !voice->track->tie)
@@ -2517,14 +2519,18 @@ void PlayerSetPause(u32 index, u8 on)
 }
 
 // FAKEMATCH: the original adds the state offset to the table address after scaling the index
-// and before adding it; `gSoundPlayers[index].state` adds it last.
+// and before adding it; `gSoundPlayers[index].state` (any index type, pointer local or
+// `(gSoundPlayers + index)->state`) adds it last, `&gSoundPlayers->state` folds into one
+// sym+0x42 pool constant, and a state pointer taken before `index *=` gets reassociated.
+// Only a pointer local assigned after the scaling keeps the order (permuter: no gain).
 u32 PlayerGetState(u32 index)
 {
-    u8 *p = (u8 *)gSoundPlayers;
+    struct SoundPlayer *player = gSoundPlayers;
+    u8 *state;
 
     index *= sizeof(struct SoundPlayer);
-    p += 0x42;  // state
-    return p[index];
+    state = &player->state;
+    return state[index];
 }
 
 

@@ -319,7 +319,11 @@ void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
 {
     struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.oamCount];
     const struct SpritePart *part = parts;
-    // FAKEMATCH: the no-op % 2 lengthens x's live range so global-alloc ranks it after ~0x10
+    // FAKEMATCH: the no-op % 2 lengthens x's live range so global-alloc ranks it after ~0x10.
+    // `s16 shake = gGameState.shake >> 1; shake &= 1;` gets the registers too (and
+    // `s32 ... ; shake %= 2;` minus the unfolded modulo), but narrowing the y sum to the
+    // 8-bit field then puts shake first in the add (`adds r0, r5, r0`) for every operand
+    // order; the permuter fixed that only with an empty `if (!&gMain) {}`.
     s32 shake = ((gGameState.shake >> 1) % 2) & 1;
 
     while (part->end != 0xFFFF)
