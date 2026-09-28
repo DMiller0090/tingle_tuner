@@ -176,7 +176,7 @@ struct ItemSlot
 // 0x1CF u8 slotItems[13] size=13  // item shown in each menu slot (SetSlotItem); rows 0-1 index items
 // 0x1E0 u8 chestState  // dungeon chest counter state (0 off, 1 start, 2 blink, 3 wait)
 // 0x1DE u8 selectedItem  // item on B (the right HUD panel)
-// 0x1DF u8 unk1DF
+// 0x1DF u8 pickedEmptySlot  // B on an empty menu slot (a d-pad press clears it); never read
 // 0x1E1 u8 newChests  // chest bits that changed
 // 0x1E2 u8 dialogStep  // item effect step (Effect7, Effect11)
 // 0x1E3 u8 chestCount  // chests opened
@@ -376,7 +376,7 @@ struct GameState
     /*0x1CF*/ u8 slotItems[13];               // item shown in each menu slot (SetSlotItem); rows 0-1 index items
     /*0x1DC*/ u8 filler1DC[0x1DE - 0x1DC];
     /*0x1DE*/ u8 selectedItem;                // item on B (the right HUD panel)
-    /*0x1DF*/ u8 unk1DF;
+    /*0x1DF*/ u8 pickedEmptySlot;             // B on an empty menu slot (a d-pad press clears it); never read
     /*0x1E0*/ u8 chestState;                  // dungeon chest counter state (0 off, 1 start, 2 blink, 3 wait)
     /*0x1E1*/ u8 newChests;                   // chest bits that changed
     /*0x1E2*/ u8 dialogStep;                  // item effect step (Effect7, Effect11)
@@ -675,7 +675,7 @@ extern const u8 gMarkerType20Sprite[];
 extern const u8 gSprite_0202C788[];
 extern const u8 gSprite_0202C7C8[];
 extern const u8 gSprite_0202C850[];
-extern const u8 gSprite_0202CAE0[];
+extern const u8 gSelectionIconSprite[];
 
 // Sprites (struct SpriteFrame[]) and tables in .rodata used by DrawMapMarkers.
 extern const struct SpriteFrame gSprite_0202BD80[];

@@ -312,7 +312,7 @@ void ItemMenuUpdate(void)
     {
         gGameState.menuKeyRepeat = 16;
         keys = gMain.newKeys;
-        gGameState.unk1DF = 0;
+        gGameState.pickedEmptySlot = 0;
         SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
     }
     else if (CountDownU8(&gGameState.menuKeyRepeat))
@@ -359,7 +359,7 @@ void ItemMenuUpdate(void)
         {
             if (item == 0)
             {
-                gGameState.unk1DF = 1;
+                gGameState.pickedEmptySlot = 1;
             }
             else if (item != gGameState.selectedItem)
             {

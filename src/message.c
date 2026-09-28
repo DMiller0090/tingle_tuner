@@ -215,7 +215,7 @@ const u8 *const gTingleAnim10[2] =
 
 const u8 *const gTingleAnim11[1] =
 {
-    gSprite_0202CAE0
+    gSelectionIconSprite
 };
 
 const u8 *const *const gTingleAnims[15] =

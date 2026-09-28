@@ -676,7 +676,8 @@ gCursorHeldSprite = 0x0202CA08; // data
 gCursorReleaseSprite = 0x0202CA40; // data
 // cursor marker while something is selected
 gCursorSelectSprite = 0x0202CAD8; // data
-gSprite_0202CAE0 = 0x0202CAE0; // data
+// pulsing icon over Tingle while something is selected (Tingle animation 11)
+gSelectionIconSprite = 0x0202CAE0; // data
 // bomb at the cursor during the countdown (Effect14)
 gBombSprite = 0x0202CC50; // data
 // blast at the cursor (EffectBombBlast)
