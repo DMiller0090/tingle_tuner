@@ -217,8 +217,23 @@ Work area structs (sizes from the loops; offsets from the code):
 - voice (`gPcmVoices` 7 × 0x78, `gCgbVoices` 4 × 0x78): +0 type (0 PCM, 1-4 GB channel), +1
   state (0 free, 1 on, 2 released), +4 track, +8 priority, +9 key, +0xA velocity, +0xC
   frequency, +0x14 volume, +0x18 gate, +0x1C pan, +0x20-0x3C vibrato and sweep, +0x40-0x50
-  envelope, +0x54 instrument, +0x58 release, +0x5C sample, +0x60 position, +0x68/+0x6C list
-  links, +0x70/+0x74 track's voice list.
+  envelope, +0x54 instrument, +0x58 release, +0x5C sample, +0x60 position (GB: frames since
+  the note started), +0x64 GB data (wave pointer; duty list pointer when instrument flags bit 0
+  is set, a u16 count then the duties; else the duty byte), +0x68/+0x6C list links, +0x70/+0x74
+  track's voice list.
+
+GB voices (`TrackNoteOn`, `CgbVoiceStart`, `CgbUpdate`): key splits and drum kits play at key
+0x30. With instrument flags bit 4 set the note length is divided by the tempo alone (no tempo
+offset). A pitch sweep's `target` is the difference between the note and sweep frequencies and
+`offset` ramps from 0 to it; without sweep flags bit 1 the base frequency becomes the sweep
+key's; bit 2 keeps the sweep for the next note, else it is cleared. `CgbVoiceStart` triggers
+with the base frequency (+0xC), not the per-frame one (+0x10); for square 1 it writes
+instrument byte +8 (past the 8-byte record) to NR10, and the wave channel reloads wave RAM only
+when the wave pointer differs from `gCgbWaveLoaded`. A note's first frame starts the channel;
+later frames update NR51 routing (pan 0x40 both, below left, above right), the envelope (a new
+NRx2 byte restarts the channel) and the duty list. A released wave voice decays in software,
+`volume * (release + 0xE6) >> 9` per frame, written to NR32 through `gCgbWaveVolumes`, and
+stops at zero.
 
 **Sequence byte code** (keys 0-0x5F; lengths in ticks; `vl` = 1 byte, or 2 bytes
 big-endian when bit 7 is set):
