@@ -47,7 +47,7 @@ Mode1SendSwitch = 0x02015840; // thumb
 Mode1RecvMarkers = 0x020160C8; // thumb
 ResetMapState = 0x02016350; // thumb
 Mode1StartFadeOut = 0x02016684; // thumb
-// VBlankIntr calls it in mode 1 unless gMain.unk457 is set
+// VBlankIntr calls it in mode 1 unless gMain.mapImageMode is set
 Mode1VBlank = 0x0201ABDC; // thumb
 
 // ---- game code 02018884-02020E28 (not split yet) ----
@@ -69,7 +69,7 @@ UpdateMapView = 0x0201A540; // thumb
 StepToward = 0x020189E0; // thumb
 // Select wipes a window (WIN0) across the screen and back, showing BG0's other half
 UpdateSelectWindow = 0x020209E0; // thumb
-// adds one sprite (sprite data, frame, x, y, ...) to gOamBuffer at gMain.unk450
+// adds one sprite (sprite data, frame, x, y, ...) to gOamBuffer at gMain.oamCount
 DrawSprite = 0x02018AB8; // thumb
 // shorter DrawSprite: (sprite data, frame, x, y, 3 more bytes)
 DrawSpriteAt = 0x02018F0C; // thumb
@@ -97,7 +97,7 @@ PlayMsgSound = 0x0201C484; // thumb
 StartTingleAnim = 0x0201C568; // thumb
 // puts an item in a menu slot (5 per row) and draws its icon and count
 SetSlotItem = 0x0201DD20; // thumb
-// slide the two HUD panels (unk21F/unk21D, unk220/unk21E) in and out
+// slide the two HUD panels (hudLeftHidden/hudLeftSlide, hudRightHidden/hudRightSlide) in and out
 UpdateHudPanels = 0x0201E5E0; // thumb
 EndItemEffect = 0x0201EBAC; // thumb
 StartBombBlast = 0x0201EBD4; // thumb
@@ -134,7 +134,7 @@ DrawMapMarkers = 0x02019510; // thumb
 HighlightMapRooms = 0x02019CAC; // thumb
 // move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
 FollowMarkerFixedMap = 0x02019F5C; // thumb
-// the same for the streamed map (gMain.unk457 set): gGameState.mapX/Y, clamped to the map; ScrollMap follows
+// the same for the streamed map (gMain.mapImageMode set): gGameState.mapX/Y, clamped to the map; ScrollMap follows
 FollowMarkerStreamedMap = 0x0201A0A8; // thumb
 MarkerDistance = 0x0201A8AC; // thumb
 UpdateTargetCompass = 0x0201A944; // thumb
@@ -147,7 +147,7 @@ MapIconCursor = 0x0201AD90; // thumb
 UpdateMapIcons = 0x0201AF48; // thumb
 // sea chart markers for the pearl/Triangle Island/temple quest (flags byte 9)
 DrawQuestMarkers = 0x0201AFCC; // thumb
-DarkenUnchartedSquares = 0x0201B2C0; // thumb
+DarkenUnvisitedSquares = 0x0201B2C0; // thumb
 DrawMsgBoxRow = 0x0201BA2C; // thumb
 RestoreMsgBoxRow = 0x0201BA9C; // thumb
 // fill the text canvas (VRAM 0x0600F100, 12 tiles a row) with colour 1
@@ -156,13 +156,13 @@ TextClearCanvas = 0x0201BAD8; // thumb
 TextBlitGlyph = 0x0201BAF8; // thumb
 // scale a glyph 2x into the EWRAM buffer below the program (PROG_BASE - 0x540)
 TextScaleGlyph = 0x0201BC0C; // thumb
-// draw an 8x8 glyph (VRAM 0x0600A000) on the text canvas, 2x when unk15A
+// draw an 8x8 glyph (VRAM 0x0600A000) on the text canvas, 2x when textBig
 TextDrawGlyph = 0x0201BCC0; // thumb
-// draw an 8x4 glyph (VRAM 0x0600A010) on the text canvas, 2x when unk15A
+// draw an 8x4 glyph (VRAM 0x0600A010) on the text canvas, 2x when textBig
 TextDrawSmallGlyph = 0x0201BDE4; // thumb
 DrawMsgBoxFrame = 0x0201BEA0; // thumb
 MsgNewPage = 0x0201C0E8; // thumb
-// the choice menu's animated cursor (gSprite_0202C130), at y = unk14F * 12 + unk150 + 52
+// the choice menu's animated cursor (gSprite_0202C130), at y = choiceCursor * 12 + choiceY + 52
 DrawChoiceCursor = 0x0201C164; // thumb
 // Up/Down/A in the choice menu; returns 1 while waiting, 0 after a pick, 3 when the pick is 0xFFFF
 ChoiceMenuUpdate = 0x0201C204; // thumb
@@ -199,7 +199,7 @@ MsgStartSilent = 0x0201DA24; // thumb
 DrawSlotCursor = 0x0201DA78; // thumb
 DrawItemSprite = 0x0201DB50; // thumb
 SetSelectedItem = 0x0201DCEC; // thumb
-// dungeon chest counter animation (gGameState.unk1E0 states 2-3)
+// dungeon chest counter animation (gGameState.chestState states 2-3)
 ChestCounterMain = 0x0201DDA0; // thumb
 // item menu row 2: one icon per flags.dungeonChests bit
 DrawChestRow = 0x0201E2FC; // thumb
@@ -471,7 +471,7 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
-// x/y offsets (s16[8]) by marker direction (MapMarker.unk4 >> 5), for marker type 9.
+// x/y offsets (s16[8]) by marker direction (MapMarker.angle >> 5), for marker type 9.
 // port_symbols maps these and gSprite_0202BE28 wrong (the US DrawMapMarkers has one pool
 // entry fewer); the US files pin them.
 gMarkerDirOfsX = 0x020241D4; // data
@@ -500,7 +500,7 @@ gTable_02024274 = 0x02024274; // data
 gMsgIds_02024278 = 0x02024278; // data
 // u32 per text colour, ANDed with the glyph's 4bpp rows
 gTextColorMasks = 0x0202429C; // data
-// message code 0xF5 argument -> Tingle animation (gGameState.unk226)
+// message code 0xF5 argument -> Tingle animation (gGameState.tingleAnim)
 gMsgTingleAnims = 0x02024354; // data
 gGlyphRunStart = 0x02024376; // data
 gGlyphRunLength = 0x02024386; // data
@@ -523,7 +523,7 @@ gTingleAnims = 0x02024424; // data
 gShopItemsInit = 0x02024460; // data
 // id per dungeon chest (flags.dungeonChests bit) for the item menu's third row, passed to MsgStartSilent
 gChestRowIds = 0x020244C0; // data
-// first tile of the left HUD panel per gGameState.unk0FC (UpdateHudPanels)
+// first tile of the left HUD panel per gGameState.aButtonAction (UpdateHudPanels)
 gHudPanelTiles = 0x020244CA; // data
 gShopRequests = 0x020244D0; // data
 gBobOffsets_020244DA = 0x020244DA; // data

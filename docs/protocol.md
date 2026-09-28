@@ -117,7 +117,7 @@ Slots 3, 11 and 14 have GBA handlers, but no `mDoGac_SendDataSet`/`mDoGaC_SendEn
 TWW decomp uses them, so they look like leftovers of cut features.
 
 - **3** is the map-marker list, and it is copied: `Mode1RecvMarkers` (`020160C8`) takes a count
-  byte, one more byte (`gGameState.unk133`, which also drives `unk104`), then 8-byte markers
+  byte, one more byte (`gGameState.gcActive`, which also drives `active`), then 8-byte markers
   (`struct MapMarker`: `x`, `y`, a 6-bit `type` at +5) into `gGameState.markers`. It looks up
   the type-1 marker, and if the high byte of its x or y changed it resets a set of game-state fields
   (the US builds test the new position against `0x6FF` where JP tests the old one).
@@ -127,11 +127,11 @@ TWW decomp uses them, so they look like leftovers of cut features.
 - **14** is a boot-time payload: `Mode0State3` copies 0xC4 bytes of it to IWRAM `0x03002FB0`
   (`gSlot14Data`): 49 `struct SeaChartEntry` `{x, y, big, square}`, one spot per sea chart
   square (`square` = row * 7 + column). `HighlightMapRooms` marks each spot of the rooms shown
-  (2x2 tiles, 4x4 when `big`; square 25 only once `flags.unkA_4` is set), `MapIconCursor`
+  (2x2 tiles, 4x4 when `big`; square 25 only once `flags.towerRaised` is set), `MapIconCursor`
   names the square under the cursor, and `UpdateSelection` checks whether the player marker is
   within 8 pixels of its square's spot (32 when `big`). `MainMode1` doesn't touch it.
-- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.unk0F4`) and reset: a
-  7x7 bitmap, one bit per sea chart square. `DarkenUnchartedSquares` draws squares whose bit is clear
+- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.visitedSquares`) and reset: a
+  7x7 bitmap, one bit per sea chart square. `DarkenUnvisitedSquares` draws squares whose bit is clear
   darkened (palette 6), `MapIconCursor` only names a square whose bit is set, and
   `UpdateChartOverlay` tests square 25 for one map tile. It looks like the "charted" squares.
 
@@ -149,7 +149,7 @@ Two sides gate a Tingle Tuner item:
   `GbaFlg.unk3 = 1` ("active") only in mode 1 state 2 with no message or menu open. The GC
   copies it to `field_0x673`, and `modeMove` calls `GbaItemUse` only when `isActive()` (or
   for item `0x15`). On a relink the GBA goes through mode 2 to `Mode1State0`, which keeps
-  the old map (`unk10E = 1`) when `noMap` is 0.
+  the old map (`mapLoaded = 1`) when `noMap` is 0.
 - **GC**: `uploadInitCheck` refuses rooms with `CheckAgbCom` or, off the sea, no map display;
   `GbaItemUse` answers items 3-5, 0x11 and 0x12 with a deny message in `CheckAgbHover` rooms
   while `mBombDeny` is set.
@@ -165,11 +165,11 @@ can't be displayed never get there. So the GC sends `noMap` = 1 and the GBA wait
    `agbMapNoSetCall` directly (d_map.cpp ~1511), skipping the map-display check:
    `MapNoSet(8, 1, 0)`, `field_0x670` = 1, and `noMap` = 0 from the next `FlagsSend` (~0.1 s
    after the relink). But the GBA re-entered mode 1 while `noMap` was still 1, so
-   `Mode1State0` set `unk10E = 0` ("no map loaded"). In a dungeon (`dungeonNo` 17 here),
-   `Mode1State4` only moves on once `unk10E` is set by a received map image (slot 2), which
+   `Mode1State0` set `mapLoaded = 0` ("no map loaded"). In a dungeon (`dungeonNo` 17 here),
+   `Mode1State4` only moves on once `mapLoaded` is set by a received map image (slot 2), which
    this room never sends. The GBA stays stuck on the wait screen.
 2. **Second reconnect**: the GBA goes through mode 2 into `Mode1State0` again. Now `noMap` = 0,
-   so it sets `unk10E = 1` (it keeps the old map) and `unk457 = inDungeon`. It runs the intro
+   so it sets `mapLoaded = 1` (it keeps the old map) and `mapImageMode = inDungeon`. It runs the intro
    (`Mode1State1`) into state 2, sends "active" (~7 s after the relink), and items go through
    (`GbaItemUse`, e.g. a Tingle Bomb).
 
@@ -187,10 +187,10 @@ from the last room that sent them. The effect then takes 3 * (marker.y + 152) fr
 walked. Normal: 3.1 s + 1.6 s (view y 107, marker y 175: 92 px, 3.07 s predicted).
 
 **Which map survives.** `InitMapView` zeroes the whole map/message buffer when it runs with
-`unk457 != 0` (dungeon) and `unk10E == 0` (no map), which is what the first of two GT
+`mapImageMode != 0` (dungeon) and `mapLoaded == 0` (no map), which is what the first of two GT
 reconnects does. Disconnecting once in the overworld instead leaves `mReConnect` set for good,
 so entering GT already sends `noMap` = 0. The fade out on entering GT still runs `InitMapView`
-with the overworld's `unk457` = 0 (no wipe), and the single GT reconnect then uses the last map
+with the overworld's `mapImageMode` = 0 (no wipe), and the single GT reconnect then uses the last map
 image the Tuner received (measured: Windfall's 392x472 map drawn in GT, view (256, 107), marker
 (324, 175), potion 3.07 s + 1.58 s, i.e. Windfall speed). With a real map the view is clamped at
 `mapY` >= 0, so a stale marker within 60 px of that map's top edge shortens the effect to

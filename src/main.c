@@ -61,7 +61,7 @@ void VBlankIntr(void)
         gMain.frameCount++;
         if (gGameState.shake)
             shake = (gGameState.shake >> 1) & 1;
-        if (gMain.mode == 1 && !gMain.unk457)
+        if (gMain.mode == 1 && !gMain.mapImageMode)
             Mode1VBlank();
         CpuFastCopy(gOamBuffer, (void *)OAM, sizeof(gOamBuffer));
         REG_DISPCNT = gMain.dispcnt;
@@ -154,7 +154,7 @@ void InitSystem(void)
     SeedRandom();
     CpuCopy16(__data_lma_start, (void *)IWRAM_START, __data_lma_end - __data_lma_start);
     SoundInit();
-    CpuFill16(0, gMain.unk40C, sizeof(gMain.unk40C));
+    CpuFill16(0, gMain.soundParams, sizeof(gMain.soundParams));
     REG_IME = 0;
     REG_IE |= INTR_FLAG_VBLANK;
     REG_DISPSTAT = DISPSTAT_VBLANK_INTR;
@@ -178,8 +178,8 @@ void InitOamBuffer(void)
         *p++ = entry;
         *p++ = entry;
     }
-    gMain.unk450 = 0;
-    gMain.unk451 = 0;
+    gMain.oamCount = 0;
+    gMain.affineCount = 0;
 }
 
 // The buffer fields are written through byte offsets from the constant buffer addresses:
@@ -198,7 +198,7 @@ void MainLoop(void)
             *(u16 *)(GBACOM_BUF_GBA_FLG + 4) = gMain.bgOfs[3][0] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 6) = gMain.bgOfs[3][1] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 0) = gMain.heldKeys;
-            if (*(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0
+            if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0
              && gMain.modeState == 2)
                 *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = TRUE;
             else
@@ -208,7 +208,7 @@ void MainLoop(void)
         gGameState.timer = gGameState.flags.timer;
         gGameState.dungeonChests = gGameState.flags.dungeonChests;
         gGameState.isFree = gGameState.flags.isFree;
-        gGameState.unk238 = gGameState.flags.unkB_7;
+        gGameState.hasMagic = gGameState.flags.hasMagic;
         if (GbaComRecvStatusCheck(GBACOM_SLOT_FLAGS))
         {
             // Ignore an all-zero packet.
@@ -225,7 +225,7 @@ void MainLoop(void)
         gMain.inDungeon = gGameState.flags.dungeonNo != 0;
         gGameState.rupeeDelta = gGameState.flags.rupees - gGameState.rupees;
         if (gGameState.flags.busy)
-            gGameState.unk104 = 0;
+            gGameState.active = 0;
         ReadKeys();
         InitOamBuffer();
         UpdateRandom();

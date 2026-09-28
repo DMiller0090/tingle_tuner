@@ -115,7 +115,7 @@ What the range does, in address order (names in symbols.txt):
 
 - `02018884-020190A8`: easing/step helpers (`EaseToward*`, `StepToward*`, `CountDown*`),
   `DrawSprite`/`DrawSpriteAt` (sprites are `struct SpriteFrame` lists of OAM parts;
-  `gMain.unk450`/`unk451` count the OAM entries and affine matrices used this frame).
+  `gMain.oamCount`/`affineCount` count the OAM entries and affine matrices used this frame).
 - `020190A8-0201AFCC`: the map screen. BG3 map streaming (`CopyMapColumn/Row`,
   `ScrollMap`), `DrawMapMarkers`, `HighlightMapRooms`, the view following a marker, the
   sea chart (`UpdateMap`, the 7x7 squares and their tile animation), the floor number, the
@@ -223,16 +223,16 @@ Loop IDs (`SoundPlayLoop`, same in all builds; SE index US = JP - 1):
 
 | ID | SE | what keeps it playing |
 |----|----|-----------------------|
-| 0 | 12 | `MsgStep` while `unk159` is set and no message loop runs |
+| 0 | 12 | `MsgStep` while `charLoopSound` is set and no message loop runs |
 | 1 | 15 | item effects 8-10 while the title sprite waits over the marker; msg `21` |
 | 2 | 16 | the link-lost screen (`Mode2State1`); msg `20` |
-| 3 | 18 | status icon 2 (`DrawStatusIcon`, `unk1F5`) |
+| 3 | 18 | status icon 2 (`DrawStatusIcon`, `enemyHighlighted`) |
 | 4 | 19 | status icon while `flags.followTarget` |
 | 5 | 37 | title screen while the boot data comes in (`Mode0State1-3`); msg `22` |
-| 6 | 38 | `Mode1State2` while `unk156` runs (the random reaction of `ExamineSelection` result 1) |
-| 7 | 44 | `Mode1State2`: `flags.unk5_2` set and `flags.isFree` |
+| 6 | 38 | `Mode1State2` while `reactionTimer` runs (the random reaction of `ExamineSelection` result 1) |
+| 7 | 44 | `Mode1State2`: `flags.moveSpeed` set and `flags.isFree` |
 | 8 | 45 | `UpdateMap` while the D-pad pans the map (L held) |
-| 9 | 0 | `Mode1State2`: `flags.unk5_2` set, not free, not following; tempo from `(unk5_2 - 1) ^ 3` |
+| 9 | 0 | `Mode1State2`: `flags.moveSpeed` set, not free, not following; tempo from `(moveSpeed - 1) ^ 3` |
 | 10 | 0 | unused |
 
 The message codes `F6 20`-`F6 22` pick loop IDs (`gSoundIds_0202430E[0x20-0x22]`). The US table

@@ -62,7 +62,7 @@ void Mode0State0(void)
     map = (u16 *)0x06006294;
     for (i = 9; i != 0; i--)
         *map++ = tile++;
-    gGameState.unk14A = 6;
+    gGameState.textColor = 6;
     gGameState.glyphWidth = 6;
     DrawString(gMode0UsString, 0, 0, 0);
 #endif
@@ -77,8 +77,8 @@ void Mode0State0(void)
     gMode0Work.timer = 1;
     gMode0Work.fadingOut = 0;
     gMode0Work.linkTimeout = 120;
-    gGameState.unk034 = 0x20;
-    gGameState.unk032 = -24;
+    gGameState.spriteY = 0x20;
+    gGameState.spriteX = -24;
     SoundPlay(SE_TITLE, 0);
 }
 // The title sprite scrolls right (every other frame) and bobs.
@@ -88,10 +88,10 @@ void Mode0DrawTitleSprite(void)
 
     if (gMain.frameCount & 1)
     {
-        if (++gGameState.unk032 > 0xFF)
-            gGameState.unk032 = -24;
+        if (++gGameState.spriteX > 0xFF)
+            gGameState.spriteX = -24;
     }
-    DrawSpriteAt(gSprite_0202C938, 0, gGameState.unk032, bob + gGameState.unk034, 0, 0, 0);
+    DrawSpriteAt(gSprite_0202C938, 0, gGameState.spriteX, bob + gGameState.spriteY, 0, 0, 0);
 }
 // Every other frame, step the title's blend (gMode0Work.blend, 1-16) toward the end it is
 // heading for (gMode0Work.fadingOut); hold for 8 frames at full.
@@ -148,7 +148,7 @@ void Mode0State2(void)
     Mode0UpdateBlend();
     if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
     {
-        gGameState.unk10E = 0;
+        gGameState.mapLoaded = 0;
         GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
     }
     if (!gGameState.flags.noMap)
@@ -163,7 +163,7 @@ void Mode0State2(void)
             if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE) && GbaComRecvStatusCheck(GBACOM_SLOT_NAME)
              && GbaComRecvStatusCheck(GBACOM_SLOT_14))
             {
-                gGameState.unk10E = 1;
+                gGameState.mapLoaded = 1;
                 LoadMapImage();
                 gMode0Work.linkTimeout = 120;
                 gMain.modeState++;
@@ -186,7 +186,7 @@ void Mode0State3(void)
 {
     if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
     {
-        gGameState.unk10E = 0;
+        gGameState.mapLoaded = 0;
         GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
     }
     if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
@@ -196,13 +196,13 @@ void Mode0State3(void)
         GbaComRecvDataGet(gSlot14Data, GBACOM_SLOT_14, sizeof(gSlot14Data));
         gMain.mode = 1;
         gMain.modeState = 0;
-        gGameState.unk10E = 1;
+        gGameState.mapLoaded = 1;
         gGameState.rupees = gGameState.flags.rupees;
         gGameState.rupeeDelta = 0;
-        gGameState.unk138_2 = 1;
-        gGameState.unk138_3 = gGameState.flags.unkA_6;
-        gGameState.unk138_4 = gGameState.flags.unk7_6;
-        gGameState.unk138_5 = gGameState.flags.unk7_7;
+        gGameState.appeared = 1;
+        gGameState.shopUnlocked = gGameState.flags.shopUnlocked;
+        gGameState.balloonDiscount = gGameState.flags.balloonDiscount;
+        gGameState.tingDiscount = gGameState.flags.tingDiscount;
         SoundPlay(SE_LINKED, 0);
     }
     else
