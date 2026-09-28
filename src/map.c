@@ -1725,6 +1725,15 @@ INCLUDE_ASM(Func_0201B3A4);
 // global-alloc puts idx in r0 and the unk135 value in r1 (someone prefers r0); idx types,
 // a `sel` local, a GameState pointer and nested/early-return forms of the unk135 case
 // didn't change that.
+// Diagnosis (2026-09-28, prio.py + global.c): with `u8 idx = gGameState.unk119;` at the top
+// the code shape is right (the gGameState copy that the original keeps in r4 appears) but
+// global-alloc goes unk135 -> r1, base -> r2, idx -> r0 (62 lines; original: unk135 r0,
+// base r1, idx r2, &unk135 r3, copy r4). unk135 skips r0 because idx (lower priority,
+// conflicting) prefers r0 via `idx << 3` (local-alloc'd to r0), and find_reg's first pass
+// avoids regs in regs_someone_prefers. &unk119/&unk135 are global pseudos (REG_EQUIV
+// gGameState+off). Tried at the top: idx u8/u16/u32/s32, split decl, a u8/u32/s32 sel local,
+// switch on unk135, `!= 0x21 ||` and nested/early-return forms, a GameState pointer (drops
+// the r4 copy), a marker pointer, `u8 *p = &unk119`: all 56-76 lines.
 /*
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
