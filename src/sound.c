@@ -1874,8 +1874,6 @@ void VoiceStop(struct SoundVoice *voice)
     }
 }
 
-extern const u8 *gCgbWaveLoaded;  // the wave data in wave RAM
-
 // Start a note on a GB channel voice with the envelope byte nr2 (the wave channel: output
 // level index): duty (from the duty list's first entry with flags bit 0), frequency, trigger.
 void CgbVoiceStart(struct SoundVoice *voice, u8 nr2)

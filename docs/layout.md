@@ -326,12 +326,16 @@ big-endian when bit 7 is set):
 | `D0–DF k l [d]` | pitch sweep to key `k` over `l` (delay `d` if bit 0) |
 | `E0`–`E3 b` | volume, bend (s8), bend range, +0x4C |
 | `E4 vl` | player tempo |
-| `E5`–`E7 b` | vibrato delay, depth, speed |
+| `E5`–`E7 b` | vibrato delay, speed (+0x14), depth (+0x18) |
 | `E8` | sweep off |
-| `E9 b` `EA b` | transpose, player volume |
-| `F0 u16` / `F4 u16` | jump / call (offsets from the SE offset table) |
+| `E9 b` `EA b` | transpose, player volume (+0x40) |
+| `F0 u16` / `F4 u16` | jump / call (little-endian offsets from the SE offset table) |
 | `F8 n u16` | start track `n` of the player at the offset |
 | `FF` | return, or end the track |
+
+`TrackExecute` returns 1 when the track or its player is missing, 2 when the track ended
+(`FF` with an empty call stack), else 0. `TracksInit`/`VoicesInit` write the work areas' list
+pointers through `__attribute__((packed))` copies of the structs, hence the byte-wise stores.
 
 ## Version differences
 
