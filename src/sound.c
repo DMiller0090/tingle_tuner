@@ -2515,14 +2515,18 @@ void PlayerSetPause(u32 index, u8 on)
 }
 
 // FAKEMATCH: the original adds the state offset to the table address after scaling the index
-// and before adding it; `gSoundPlayers[index].state` adds it last.
+// and before adding it; `gSoundPlayers[index].state` (any index type, pointer local or
+// `(gSoundPlayers + index)->state`) adds it last, `&gSoundPlayers->state` folds into one
+// sym+0x42 pool constant, and a state pointer taken before `index *=` gets reassociated.
+// Only a pointer local assigned after the scaling keeps the order (permuter: no gain).
 u32 PlayerGetState(u32 index)
 {
-    u8 *p = (u8 *)gSoundPlayers;
+    struct SoundPlayer *player = gSoundPlayers;
+    u8 *state;
 
     index *= sizeof(struct SoundPlayer);
-    p += 0x42;  // state
-    return p[index];
+    state = &player->state;
+    return state[index];
 }
 
 
