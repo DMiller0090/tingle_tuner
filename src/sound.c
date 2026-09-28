@@ -302,6 +302,9 @@ extern struct SoundVoice gCgbVoices[4];
 extern s16 gPcmMixBuffer[PCM_FRAME_SAMPLES * 2];
 
 typedef void (*PcmClipFunc)(s16 *mix, s8 *dest, s16 *mixEnd);
+// Returns the new position.
+typedef u32 (*PcmMixFunc)(s8 *data, s16 *mixL, s16 *mixR, s16 *mixEnd, u32 pos, u32 step,
+                          u32 volL, u32 volR);
 extern struct SoundVoice *gPcmActiveVoices;
 extern struct SoundVoice *gPcmFreeVoices;
 extern struct SoundVoice *gPcmDisabledVoices;
@@ -881,7 +884,75 @@ void SoundDmaStart(void)
     gPcmEnabled = TRUE;
 }
 
-INCLUDE_ASM(PcmMixVoice);
+// Mix PCM_FRAME_SAMPLES of a voice into gPcmMixBuffer; a looped sample wraps as often as it
+// needs to. TRUE when a one-shot sample ran out.
+u8 PcmMixVoice(struct SoundVoice *voice, u32 volume, u32 step, u8 pan)
+{
+    u32 pos = voice->pos;
+    u16 vol = volume;
+    u8 done = FALSE;
+    u32 left = PCM_FRAME_SAMPLES;
+    s16 *mixL;
+    s16 *mixR;
+    u32 volL;
+    s8 *data = voice->sample->data;
+    u32 end;
+    s16 *mixEnd;
+    u32 loopLen;
+
+    mixL = gPcmMixBuffer;
+    mixR = mixL + PCM_FRAME_SAMPLES;
+    volL = (u16)(vol * (127 - pan)) >> 8;
+    vol = (u16)(vol * pan) >> 8;  // now the right channel's
+    end = voice->sample->loopEnd;
+    if (end == 0)
+        end = voice->sample->length;
+    // Reaching the end within this frame: mix only the samples up to it (rounded up).
+    if ((pos + left * step) >> 8 < end)
+    {
+        mixEnd = mixL + left;
+    }
+    else
+    {
+        mixEnd = mixL + Div((end << 8) - pos - (1 - step), step);
+        done = TRUE;
+    }
+    if (voice->sample->loopEnd == 0 || !done)
+    {
+        pos = ((PcmMixFunc)gPcmMixFunc)(data, mixL, mixR, mixEnd, pos, step, volL, vol);
+        if (done)
+            return TRUE;
+    }
+    else
+    {
+        loopLen = voice->sample->loopEnd - voice->sample->loopStart;
+        loopLen <<= 8;
+        pos = ((PcmMixFunc)gPcmMixFunc)(data, mixL, mixR, mixEnd, pos, step, volL, vol);
+        pos -= loopLen;
+        left -= mixEnd - mixL;
+        while (left != 0)
+        {
+            mixL = mixEnd;
+            mixR = mixL + PCM_FRAME_SAMPLES;
+            if ((pos + left * step) >> 8 < end)
+            {
+                mixEnd += left;
+                done = FALSE;
+            }
+            else
+            {
+                mixEnd += Div((end << 8) - pos - (1 - step), step);
+                done = TRUE;
+            }
+            pos = ((PcmMixFunc)gPcmMixFunc)(data, mixL, mixR, mixEnd, pos, step, volL, vol);
+            if (done)
+                pos -= loopLen;
+            left -= mixEnd - mixL;
+        }
+    }
+    voice->pos = pos;
+    return FALSE;
+}
 
 // The instrument of a drum kit key: PCM, default envelope, played at its natural pitch.
 void DrumInstrumentInit(void)
