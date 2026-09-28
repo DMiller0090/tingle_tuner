@@ -242,6 +242,16 @@ it sends 0x14, which went out at 18.739, after the timer ran out (16.337), and w
 is from the GC reading the request to the reply landing, about one GC frame; earlier loses the
 request (no bomb), later lets the reply through.
 
+**Clearing the GC timer too** (watched live 2026-09-28). A drop long enough for the third probe
+to fail makes `mDoGaC_GbaLink` return 0 for one frame, and `field_0x65c` went 117 -> 0 with the
+bomb reply lost as well, while the GBA's `idleFrames` peaked at 7 (no link-lost screen). The
+window is narrow: the probes run at the GC's 30 fps, so the same hold length gives 2 or 3 failed
+probes depending on its phase, and one attempt reached 3 probes at `idleFrames` 8 but hit 10
+before the handshake finished (mode 2). It also costs a map reload: with `GbaLink` 0,
+`dMap_c::mapAGBSendMapMain` resets `mAGBMapSendStatus` (d_map.cpp ~1497), the GBA fades out
+(`Mode1State3`), waits for the map (`Mode1State4`) and fades back in: about 214 GBA frames
+(3.6 s), about as long as the 180-frame blast it replaces. So it doesn't speed up bomb chains.
+
 **Other items.** The drop only removes a GBA wait that starts when the reply arrives and lasts
 longer than the GC's own lock:
 
