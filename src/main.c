@@ -43,18 +43,6 @@ void AgbMain(void)
     MainLoop();
 }
 
-// Near-miss: everything matches except that the original picks r2, not r1, for the
-// gMain.intrCheck offset in the last statement. That 0x414 is a reload (greg dump:
-// "Spilling for insn ... Spilling reg 1"), not a pseudo, so r1 must be busy at that insn in
-// the original (maybe the address is reloaded at the dummy ldrh, whose output is r1). REG_IF
-// forms, the DMA0CNT store form, a shared u16/u32 flag and a gMain pointer don't change it.
-// Still 4 lines after the s16 bgOfs retype. Cause (reload1.c order_regs_for_reload): the
-// 0x414 reload for insn `r0 = gMain + 0x414` takes the lowest call-clobbered reg with no
-// pseudo live before/after that insn, so r1; the original needs some pseudo sitting in r1
-// across the add. Also tried: REG_IF = REG_IF | 1, (u32)1, a vu16 * to REG_IF, the gMain
-// pointer only at the end, intrCheck = (intrCheck & 0) | 1 and a u16 temp read (both add an
-// ldrh), shake/vofs reused as the flag, REG_DMA0CNT = shake = 0.
-/*
 void VBlankIntr(void)
 {
     s32 shake = 0;
@@ -117,10 +105,11 @@ void VBlankIntr(void)
     }
     SoundVSyncProc();
     REG_IF |= INTR_FLAG_VBLANK;
+    // FAKEMATCH: this self-assignment (found with decomp-permuter) emits nothing, but it
+    // makes reload take r2, not r1, for the 0x414 offset below.
+    gGameState.scrollTableNext = gGameState.scrollTableNext;
     gMain.intrCheck = INTR_FLAG_VBLANK;
 }
-*/
-INCLUDE_ASM(VBlankIntr);
 
 void DummyCallback_02014CA0(void)
 {
