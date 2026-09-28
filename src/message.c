@@ -824,15 +824,15 @@ bool32 DrawChar(u8 ch)
 #else
 // The US font has accented letters: the base glyph, then a small accent glyph over it (the
 // accent only outside the link-lost screen; 0x9E/0x9F draw the small glyph first).
-// Near-miss: identical but for the accent's table address in the 7 accent branches, which the
-// original forms as (index * 2 + 1) + table and this as index * 2 + (table + 1).
-/*
+// The accent offset is read as table[0][index * 2 + 1]: with table[index][1], agbcc folds the
+// + 1 into the table address instead of the index.
 #define DRAW_ACCENTED(table, first, accent)                                                   \
     {                                                                                         \
         TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A,                  \
                       table[ch - first][0]);                                                  \
         if (gMain.mode != 2)                                                                  \
-            TextDrawSmallGlyph(gGameState.textX, gGameState.textY + table[ch - first][1],     \
+            TextDrawSmallGlyph(gGameState.textX,                                              \
+                               gGameState.textY + table[0][(ch - first) * 2 + 1],             \
                                gGameState.unk14A, accent);                                    \
     }
 
@@ -875,8 +875,6 @@ bool32 DrawChar(u8 ch)
     return TRUE;
 }
 #undef DRAW_ACCENTED
-*/
-INCLUDE_ASM(DrawChar);
 #endif
 
 #ifndef VERSION_GZLJ01
