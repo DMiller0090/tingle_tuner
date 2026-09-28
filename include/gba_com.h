@@ -121,13 +121,13 @@ extern u8 gGbaComBufSE[0x10];
 // The game code addresses the buffers by constant address rather than by symbol: agbcc
 // then loads each address it needs (buf, buf + 1, ...) from the pool, where with a symbol
 // it would derive buf + 1 from buf.
-#define GBACOM_BUF_MARKERS      ((u8 *)(PROG_BASE - 0x800))
-#define GBACOM_BUF_GBA_FLG ((u8 *)(PROG_BASE - 0x700))
-#define GBACOM_BUF_MAIL   ((u8 *)(PROG_BASE - 0x6F0))
-#define GBACOM_BUF_SWITCH ((u8 *)(PROG_BASE - 0x6E0))
-#define GBACOM_BUF_FLAGS  ((u8 *)(PROG_BASE - 0x6A0))
-#define GBACOM_BUF_VISITED     ((u8 *)(PROG_BASE - 0x680))
-#define GBACOM_BUF_SE     ((u8 *)(PROG_BASE - 0x550))
+#define GBACOM_BUF_MARKERS      ((u8 *)(WORK_TOP - 0x800))
+#define GBACOM_BUF_GBA_FLG ((u8 *)(WORK_TOP - 0x700))
+#define GBACOM_BUF_MAIL   ((u8 *)(WORK_TOP - 0x6F0))
+#define GBACOM_BUF_SWITCH ((u8 *)(WORK_TOP - 0x6E0))
+#define GBACOM_BUF_FLAGS  ((u8 *)(WORK_TOP - 0x6A0))
+#define GBACOM_BUF_VISITED     ((u8 *)(WORK_TOP - 0x680))
+#define GBACOM_BUF_SE     ((u8 *)(WORK_TOP - 0x550))
 
 extern void *const gGbaComBuffers[GBACOM_SLOT_COUNT];
 extern u8 gGbaComDataStatus[GBACOM_SLOT_COUNT];
