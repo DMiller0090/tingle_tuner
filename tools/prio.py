@@ -33,6 +33,9 @@ def section(text, name):
     """The part of a dump file for function name."""
     m = re.search(r'^;; Function ' + re.escape(name) + r'\n', text, re.M)
     if not m:
+        # `T F_(...) asm("F")` definitions: the dump uses the C name.
+        m = re.search(r'^;; Function ' + re.escape(name) + r'_\n', text, re.M)
+    if not m:
         raise SystemExit(f'{name} not in the dump')
     end = text.find('\n;; Function ', m.end())
     return text[m.end():end if end >= 0 else len(text)]
