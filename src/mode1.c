@@ -166,13 +166,11 @@ void LoadMode1Graphics(void)
     InitMapBgs();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
-// FAKEMATCH? The original computes &gGameState.squareMsgPending right after the hudRightSlide
-// store (into r6) though squareMsgPending is stored much later: a pointer assigned there
-// reproduces it.
+// squareMsgPending is cleared twice, like msgLoopSound and nextMsg: flow deletes the first
+// store as dead, but its address (computed there, into r6) is what the second one uses.
 void Mode1State0(void)
 {
     s32 i;
-    u8 *squareMsgPending;
 
     if (!gGameState.flagsReceived)
         return;
@@ -191,7 +189,7 @@ void Mode1State0(void)
     gGameState.aButtonAction = 1;
     gGameState.hudLeftSlide = 0;
     gGameState.hudRightSlide = 0;
-    squareMsgPending = &gGameState.squareMsgPending;
+    gGameState.squareMsgPending = 0;
     gGameState.targetDir = 0xFF;
     gGameState.hudLeftHidden = 0;
     gGameState.hudRightHidden = 0;
@@ -210,7 +208,7 @@ void Mode1State0(void)
     gGameState.revealedType13 = 0;
     gGameState.revealedType5 = 0;
     gGameState.revealedType12 = 0;
-    *squareMsgPending = 0;
+    gGameState.squareMsgPending = 0;
     gGameState.squareMsgTimer = 0;
     gGameState.viewLocked = 0;
     gGameState.switchMsg = -1;
@@ -623,21 +621,21 @@ void Mode1State3(void)
 }
 // Slot 3: the map markers. Byte 0 is the count, byte 1 goes to gcActive and active, then
 // 8-byte markers (struct MapMarker, unaligned here so read as bytes).
-// The US builds check the new marker position instead of the old one.
+// The US builds check the new marker position instead of the old one. (The gcActive flag's
+// setcc insns, gone after combine, still lengthen gGameState's live range: without it the
+// US build gives m and gGameState each other's registers.)
 void Mode1RecvMarkers(void)
 {
     u8 count = GBACOM_BUF_MARKERS[0];
     u8 *m;
     s32 i;
     s32 j;
-#ifndef VERSION_GZLJ01
-    s16 time;
-    u16 time2;
-#endif
+    bool32 gcActive;
 
     if (gMain.mode == 1)
     {
-        if (GBACOM_BUF_MARKERS[1] != 0)
+        gcActive = GBACOM_BUF_MARKERS[1] != 0;
+        if (gcActive)
         {
             // Both searches' results are unused. (do/while (1): a for or while loop
             // gets its exit test copied to the bottom, the original's doesn't.)
@@ -692,11 +690,7 @@ void Mode1RecvMarkers(void)
                 if ((u16)x <= 0x6FF && *(u16 *)(m + 2) <= 0x6FF)
                 {
                     gGameState.squareMsgPending = 1;
-                    // FAKEMATCH: the two temporaries lengthen gGameState's live range just
-                    // enough that m gets r5 and gGameState r6 (a tie in allocation priority).
-                    time = (gMain.random % 6 + 3) * 60;
-                    time2 = time;
-                    gGameState.squareMsgTimer = time2;
+                    gGameState.squareMsgTimer = (gMain.random % 6 + 3) * 60;
                 }
 #endif
                 gGameState.revealedType16 = 0;
@@ -717,7 +711,8 @@ void Mode1RecvMarkers(void)
         gGameState.active = 0;
     else if (gGameState.gcActive == 0)
     {
-        if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0)
+        if (gGameState.inMessage == 0 && gGameState.selectWinOpen == 0 && gGameState.chartOpen == 0
+         && gGameState.menuOpen == 0)
             gGameState.active = 1;
         else
             gGameState.active = GBACOM_BUF_MARKERS[1];
@@ -895,9 +890,11 @@ void MainMode1(void)
 #ifdef VERSION_GZLJ01
     if (gGameState.chestState == 1 && gGameState.inMessage == 0 && gGameState.active != 0)
 #else
-    // The US builds wait for no menu or event instead. FAKEMATCH: `!flags.busy` gives the
-    // same code but puts chest in r8 (the extra insns before combine shift the priorities).
-    if (gGameState.chestState == 1 && !*(u16 *)&gGameState.inMessage && !((gGameState.flags.busy << 1) & 6))
+    // The US builds wait for no message, Select window, menu or event instead. agbcc's
+    // fold_truthop merges the two adjacent byte tests into one halfword load (written as
+    // `!*(u16 *)&inMessage`, the code is the same but chest ends up in r8).
+    if (gGameState.chestState == 1 && gGameState.inMessage == 0 && gGameState.selectWinOpen == 0
+     && !gGameState.flags.busy)
 #endif
     {
         gGameState.chestTimer = 0;
@@ -1079,7 +1076,8 @@ void MainMode1(void)
                 if (gGameState.switchType == 5 || gGameState.switchType == 6
                  || gGameState.switchType == 9 || gGameState.switchType == 7
                  || gGameState.switchType == 11 || gGameState.switchType == 12
-                 || (gGameState.switchType == 13 && !(((u16 *)&gGameState.flags)[5] & 0x180)))
+                 || (gGameState.switchType == 13 && !gGameState.flags.isFree
+                     && !gGameState.flags.followTarget))
                 {
                     if (gGameState.switchType == 12)
                     {
@@ -1270,7 +1268,8 @@ void MainMode1(void)
     {
         if (gGameState.squareMsgTimer != 0)
             gGameState.squareMsgTimer--;
-        else if (gGameState.menuOpen == 0 && *(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0)
+        else if (gGameState.menuOpen == 0 && gGameState.inMessage == 0 && gGameState.selectWinOpen == 0
+              && gGameState.chartOpen == 0)
         {
             gGameState.squareMsgPending = 0;
             i = 0;

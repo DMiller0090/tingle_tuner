@@ -106,7 +106,11 @@ void VBlankIntr(void)
     SoundVSyncProc();
     REG_IF |= INTR_FLAG_VBLANK;
     // FAKEMATCH: this self-assignment (found with decomp-permuter) emits nothing, but it
-    // makes reload take r2, not r1, for the 0x414 offset below.
+    // makes reload take r2, not r1, for the 0x414 offset below. Its load and store survive
+    // until reload (the .greg shows an extra "Spilling reg 1" for them, before the 0x414
+    // reload's) and are dropped afterwards, so the original needs something else there that
+    // occupies r1 during reload and then vanishes. Priorities and hard-reg use counts don't
+    // explain it (r1 has more uses than r2 either way).
     gGameState.scrollTableNext = gGameState.scrollTableNext;
     gMain.intrCheck = INTR_FLAG_VBLANK;
 }
@@ -187,7 +191,9 @@ void InitOamBuffer(void)
 // the original does (struct field access gives base + offset instead).
 void MainLoop(void)
 {
-    u8 unused[4];  // FAKEMATCH: the original has an unused stack slot
+    // The original reserves 4 bytes of stack it never touches: most likely a leftover local
+    // buffer (agbcc only gives stack to unused aggregates, never to unused scalars).
+    u8 unused[4];
 
     while (TRUE)
     {
@@ -198,8 +204,8 @@ void MainLoop(void)
             *(u16 *)(GBACOM_BUF_GBA_FLG + 4) = gMain.bgOfs[3][0] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 6) = gMain.bgOfs[3][1] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 0) = gMain.heldKeys;
-            if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0
-             && gMain.modeState == 2)
+            if (gGameState.inMessage == 0 && gGameState.selectWinOpen == 0 && gGameState.chartOpen == 0
+             && gGameState.menuOpen == 0 && gMain.modeState == 2)
                 *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = TRUE;
             else
                 *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = FALSE;
