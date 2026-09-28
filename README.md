@@ -103,6 +103,8 @@ from the extracted binary on every build.
    the original asm, `tools/permuter/compile.sh`); add `--run -j 4 -- --better-only
    --stop-on-zero` to start it. Improvements land in `output-<score>-<n>/` there (`diff.txt`
    against base.c); check them with scratch.py.
+7. When combine drops or keeps an extension for no visible reason, `tools/agbcc_dbg/` has a
+   patch for an agbcc that traces combine's decisions (see its README).
 
 Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `build/<ver>/asm/funcs/`, written for every function in a C range). A second line
@@ -111,9 +113,9 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 
 In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c`,
 `src/mode1.c`, `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c`,
-`src/heap.c` (all but `HeapAlloc`), `src/libc/rand.c`, and
-most of the game code from `02018884` to the sound driver (in GZLJ01, 133 of its 141 functions;
-the US `TextDrawGlyph` is still asm), in five objects: `src/sprite.c`, `src/map.c`,
+`src/heap.c`, `src/libc/rand.c`, and
+the game code from `02018884` to the sound driver (in GZLJ01, 138 of its 141 functions;
+`DrawSpriteParts`, `DrawMapMarkers` and `HighlightMapRooms` are still asm), in five objects: `src/sprite.c`, `src/map.c`,
 `src/message.c`, `src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where
 they do), and `src/sound.c`. These
 and main.c, mode0.c, mode1.c, gba_com.c, multi_sio.c and sound.c define their `.rodata` in C.
@@ -137,6 +139,8 @@ tools/port_symbols.py      copy GZLJ01's names to another version by matching fu
 tools/progress.py          share of .text built from C, per version
 tools/scratch.py, vary.py  compile one function against the last build; score variants
 tools/prio.py              agbcc's register-allocation priorities for one function
+tools/permuter/            decomp-permuter import script and agbcc compile script
+tools/agbcc_dbg/           combine-tracing agbcc patch and runner
 docs/                      layout.md (sections, modules), protocol.md (GC<->GBA link)
 ```
 
