@@ -63,7 +63,7 @@ void Mode0State0(void)
     for (i = 9; i != 0; i--)
         *map++ = tile++;
     gGameState.unk14A = 6;
-    gGameState.unk157 = 6;
+    gGameState.glyphWidth = 6;
     DrawString(gMode0UsString, 0, 0, 0);
 #endif
     CpuCopy16(gMode1BgPalette, (void *)0x05000000, sizeof(gMode1BgPalette));

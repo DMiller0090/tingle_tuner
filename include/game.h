@@ -151,7 +151,7 @@ struct ItemSlot
 // 0x152 u8 unk152
 // 0x153 u8 unk153
 // 0x156 u8 unk156
-// 0x157 u8 unk157
+// 0x157 u8 glyphWidth
 // 0x158 u8 unk158
 // 0x159 u8 unk159
 // 0x15A u8 unk15A
@@ -350,7 +350,7 @@ struct GameState
     /*0x153*/ u8 unk153;
     /*0x154*/ u8 filler154[0x156 - 0x154];
     /*0x156*/ u8 unk156;
-    /*0x157*/ u8 unk157;
+    /*0x157*/ u8 glyphWidth;
     /*0x158*/ u8 unk158;
     /*0x159*/ u8 unk159;
     /*0x15A*/ u8 unk15A;
@@ -779,7 +779,7 @@ void Func_0201E584(void);
 
 // ---- GZLJ01 0201C660-0201DEAC: message.c, start of item_menu.c ----
 // Text: glyphs are drawn at gGameState.textX/textY (pixels) in a window 0x60 wide and 0x50
-// high; unk157 is the glyph width (6 or 8) and unk15A doubles the size.
+// high; glyphWidth is the glyph width in pixels (6 or 8) and unk15A doubles the size.
 bool32 Func_0201C60C(void);  // wraps the cursor to the next line; FALSE when the window is full
 void DrawChestRow(void);
 bool32 SendItemUse(u8 a, u8 b);

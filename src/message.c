@@ -292,7 +292,7 @@ void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
     n = 8 - y;
     m = rows - n;
     mask = gTextColorMasks[color];
-    if (gGameState.unk157 == 8)
+    if (gGameState.glyphWidth == 8)
         mask2 = -1;
     else
         mask2 = 0x11FFFFFF;
@@ -410,10 +410,10 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         col = (x >> 3) * 32 + 0x0600F100;
         dst = (u32 *)(row + col);
         TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
-        TextBlitGlyph(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+        TextBlitGlyph(x + gGameState.glyphWidth, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
         y2 = y + 8;
         TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
-        TextBlitGlyph(x + gGameState.unk157, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x68);
+        TextBlitGlyph(x + gGameState.glyphWidth, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x68);
     }
     else
     {
@@ -424,12 +424,12 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 #else
-// US near-miss (102 masked diff lines): the right halves go where x + unk157 falls (as in
+// US near-miss (102 masked diff lines): the right halves go where x + glyphWidth falls (as in
 // TextDrawSmallGlyph), and the link-lost screen (mode 2) has a 30-tile-wide canvas. Same code
 // shape, but the original spills gGameState's address to the stack and allocates the other
 // registers differently. Writing row/col in both mode arms gives the original's duplicated
 // arms. A separate dst2 for the right halves gets the high registers right (x r9, color r10,
-// &unk157 r8, gGameState spilled to sp+8) but not the low ones (original: row r4, x << 24 r5,
+// &glyphWidth r8, gGameState spilled to sp+8) but not the low ones (original: row r4, x << 24 r5,
 // y r6, dst r7).
 /*
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
@@ -452,11 +452,11 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
         y2 = y + 8;
         TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
-        x2 = x + gGameState.unk157;
+        x2 = x + gGameState.glyphWidth;
         col2 = (x2 >> 3) * 32 + 0x0600F100;
         dst = (u32 *)(row + col2);
         TextBlitGlyph(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
-        TextBlitGlyph(x + gGameState.unk157, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x60);
+        TextBlitGlyph(x + gGameState.glyphWidth, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 24, dst + 0x60);
     }
     else
     {
@@ -498,10 +498,10 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
         TextScaleGlyph(16, (u8 *)glyph);
         TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
 #ifdef VERSION_GZLJ01
-        TextBlitGlyph(x + gGameState.unk157, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
+        TextBlitGlyph(x + gGameState.glyphWidth, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst + 8);
 #else
-        // The right half goes where x + unk157 falls, not simply the next tile.
-        x2 = x + gGameState.unk157;
+        // The right half goes where x + glyphWidth falls, not simply the next tile.
+        x2 = x + gGameState.glyphWidth;
         col2 = (x2 >> 3) * 32 + 0x0600F100;
         dst = (u32 *)(row + col2);
         TextBlitGlyph(x2, y, color, 8, (u32 *)TEXT_GLYPH_BUF + 8, dst);
@@ -765,12 +765,12 @@ void DrawGlyphRun(u8 id)
 #ifndef VERSION_GZLJ01
     // The US builds draw the run 8 pixels per glyph (the width is not restored on an early
     // return).
-    u8 width = gGameState.unk157;
+    u8 width = gGameState.glyphWidth;
 #endif
     s32 i;
 
 #ifndef VERSION_GZLJ01
-    gGameState.unk157 = 8;
+    gGameState.glyphWidth = 8;
 #endif
     for (i = 0; i < n; i++)
     {
@@ -779,12 +779,12 @@ void DrawGlyphRun(u8 id)
         TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
         ch++;
         if (gGameState.unk15A)
-            gGameState.textX += gGameState.unk157 * 2;
+            gGameState.textX += gGameState.glyphWidth * 2;
         else
-            gGameState.textX += gGameState.unk157;
+            gGameState.textX += gGameState.glyphWidth;
     }
 #ifndef VERSION_GZLJ01
-    gGameState.unk157 = width;
+    gGameState.glyphWidth = width;
 #endif
 }
 
@@ -827,9 +827,9 @@ bool32 DrawChar(u8 ch)
     }
     TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
     if (gGameState.unk15A)
-        gGameState.textX += gGameState.unk157 * 2;
+        gGameState.textX += gGameState.glyphWidth * 2;
     else
-        gGameState.textX += gGameState.unk157;
+        gGameState.textX += gGameState.glyphWidth;
     if ((u16)gGameState.unk140 == 0xFFFF)
         SoundPlay(0x28, 0);
     return TRUE;
@@ -880,9 +880,9 @@ bool32 DrawChar(u8 ch)
     else
         TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
     if (gGameState.unk15A)
-        gGameState.textX += gGameState.unk157 * 2;
+        gGameState.textX += gGameState.glyphWidth * 2;
     else
-        gGameState.textX += gGameState.unk157;
+        gGameState.textX += gGameState.glyphWidth;
     if ((u16)gGameState.unk140 == 0xFFFF)
         SoundPlay(0x28 - SOUND_ID_SHIFT, 0);
     return TRUE;
@@ -979,7 +979,7 @@ void DrawHour(void)
     }
     else
     {
-        gGameState.textX += gGameState.unk157;
+        gGameState.textX += gGameState.glyphWidth;
     }
     DRAW_CHAR(gGameState.flags.hour % 10 + GLYPH_DIGIT_0);
 #else
@@ -1047,12 +1047,12 @@ void MsgCmd0F(void)
 
 void MsgCmd10(void)
 {
-    gGameState.unk157 = 6;
+    gGameState.glyphWidth = 6;
 }
 
 void MsgCmd11(void)
 {
-    gGameState.unk157 = 8;
+    gGameState.glyphWidth = 8;
 }
 
 void MsgCmd12(void)
@@ -1129,9 +1129,9 @@ s32 MsgStep(void)
             space:
                 gGameState.msgPtr++;
                 if (gGameState.unk15A)
-                    gGameState.textX += gGameState.unk157 * 2;
+                    gGameState.textX += gGameState.glyphWidth * 2;
                 else
-                    gGameState.textX += gGameState.unk157;
+                    gGameState.textX += gGameState.glyphWidth;
                 return 0;
             }
             if (ch == 0xFA || ch == 0xFE)  // 0xFA: wait, 0xFE: new line
@@ -1753,7 +1753,7 @@ void DrawString(const u8 *str, u8 x, u8 y, u8 lineHeight)
         {
             if (ch == 0xFD || ch == 0xF4)
             {
-                gGameState.textX += gGameState.unk157;
+                gGameState.textX += gGameState.glyphWidth;
             }
             else if (ch == 0xFA || ch == 0xFE)
             {
@@ -1781,7 +1781,7 @@ void DrawString(const u8 *str, u8 x, u8 y, u8 lineHeight)
                 s32 i;
 
                 for (i = 0; i < n; i++)
-                    gGameState.textX += gGameState.unk157;
+                    gGameState.textX += gGameState.glyphWidth;
             }
             else if (ch == 0xFC)
             {

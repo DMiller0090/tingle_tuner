@@ -975,7 +975,7 @@ void Mode2State0(void)
     gGameState.msgPtr = MSG_DATA + *(u16 *)(MSG_DATA + *(u16 *)MSG_DATA + 0x3E);
     gGameState.unk14A = 6;
     gGameState.unk14B = 0;
-    gGameState.unk157 = 6;
+    gGameState.glyphWidth = 6;
     gGameState.unk15A = 0;
     DrawString(gMode2UsString, 0, 0, 8);
 #endif

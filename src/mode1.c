@@ -192,9 +192,9 @@ void Mode1State0(void)
     gGameState.unk220 = 0;
     gGameState.dungeonChests = gGameState.flags.dungeonChests;
 #ifdef VERSION_GZLJ01
-    gGameState.unk157 = 8;
+    gGameState.glyphWidth = 8;
 #else
-    gGameState.unk157 = 6;
+    gGameState.glyphWidth = 6;
 #endif
     gGameState.unk0FD = 0;
     gGameState.unk140 = 0xFFFF;
