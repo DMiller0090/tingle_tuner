@@ -20,105 +20,96 @@ void HeapInit(struct Heap *heap, u32 size)
 
 // First fit, merging free neighbours on the way. A multiple-of-4 request gets a 4-aligned
 // payload: a block whose payload isn't aligned is split into an empty block and the rest.
-// Near-miss (112 masked diff lines): same code, but avail/block get r2/r4 where the original
-// has r4/r5 (and the registers derived from them). The header `size | 1` is written at the
-// store so loop.c hoists it after the 0xFFFE mask, as in the original. Keeping `total - need`
-// in len (a global pseudo, so local-alloc can't tie it to the `- 2` result) moves rest to r2
-// and total to r3 as in the original; avail still takes r2 (the original's avail must
-// conflict with an r2 pseudo, maybe the `& 3` constant). Temporaries for `total - need`, the
-// avail if/else forms and the align-split forms don't help.
-// greg (2026-09-28): avail (pseudo 45) doesn't conflict with rest (93, r2), so it takes r2
-// after len r1 / rest r2 / total r3. In the original's align split, block + 1 is in r1 and
-// copied to r2 (`adds r2, r1, #0`) before `total - 2`; that r2 copy lives while the old avail
-// is still live (the `need <= total - 2` test can fall to `need <= avail`), which is what
-// would push avail to r4 and block to r5. Tried to get that copy: a `u16 *b = block + 1`
-// local before/after the & 3 test, a `t = total - 2` temp, `*block++ = 0`, `avail = total
-// -= 2`, `((u32)block + 2) & 3`, `(u8 *)block + 2`: all 112 lines.
-//     void *HeapAlloc(struct Heap *heap, u32 size)
-//     {
-//         bool32 align4 = FALSE;
-//         u32 need;
-//         u16 *block;
-//         u16 *firstFree;
-//
-//         if ((size & 3) == 0)
-//             align4 = TRUE;
-//         size = (size + 1) & ~HEAP_BLOCK_USED;
-//         need = size + 2;
-//         if (need > heap->size)
-//             return NULL;
-//         block = heap->blocks;
-//         firstFree = heap->firstFree;
-//         if (firstFree != NULL)
-//             block = firstFree;
-//         if (*block == HEAP_END)
-//             return NULL;
-//         do
-//         {
-//             u32 len = *block & ~HEAP_BLOCK_USED;
-//             u32 total = len + 2;
-//             u32 avail;
-//             u16 *next;
-//
-//             if (align4)
-//             {
-//                 avail = total;
-//                 if (((u32)block & 3) == 0)
-//                     avail = len;
-//             }
-//             else
-//             {
-//                 avail = total;
-//             }
-//             next = (u16 *)((u8 *)block + total);
-//             if (!(*block & HEAP_BLOCK_USED))
-//             {
-//                 if (need > avail)
-//                 {
-//                     if (!(*next & HEAP_BLOCK_USED))
-//                     {
-//                         do
-//                         {
-//                             u32 n = (*next & ~HEAP_BLOCK_USED) + 2;
-//
-//                             total += n;
-//                             avail += n;
-//                             next = (u16 *)((u8 *)block + total);
-//                         } while (need > avail && !(*next & HEAP_BLOCK_USED));
-//                         *block = (total - 2) & ~HEAP_BLOCK_USED;
-//                     }
-//                     if (need > avail)
-//                         goto next;
-//                 }
-//                 if (align4 && ((u32)(block + 1) & 3) && need <= total - 2)
-//                 {
-//                     *block = 0;
-//                     block[1] = (total - 4) & ~HEAP_BLOCK_USED;
-//                     block++;
-//                     total -= 2;
-//                     avail = total;
-//                 }
-//                 if (need <= avail)
-//                 {
-//                     if (need < total)
-//                     {
-//                         u16 *rest = (u16 *)((u8 *)block + need);
-//
-//                         len = total - need;
-//                         *rest = (len - 2) & ~HEAP_BLOCK_USED;
-//                         if (firstFree > rest)
-//                             heap->firstFree = rest;
-//                     }
-//                     *block = size | HEAP_BLOCK_USED;
-//                     return block + 1;
-//                 }
-//             }
-//         next:
-//             block = next;
-//         } while (*block != HEAP_END);
-//         return NULL;
-//     }
-INCLUDE_ASM(HeapAlloc);
+// One pointer p serves both the split's new block and the remainder after the allocation:
+// sharing it makes it conflict with avail, which puts avail/block in r4/r5.
+void *HeapAlloc(struct Heap *heap, u32 size)
+{
+    bool32 align4 = FALSE;
+    u32 need;
+    u16 *block;
+    u16 *firstFree;
+    u16 *p;
+
+    if ((size & 3) == 0)
+        align4 = TRUE;
+    size = (size + 1) & ~HEAP_BLOCK_USED;
+    need = size + 2;
+    if (need > heap->size)
+        return NULL;
+    block = heap->blocks;
+    firstFree = heap->firstFree;
+    if (firstFree != NULL)
+        block = firstFree;
+    if (*block == HEAP_END)
+        return NULL;
+    do
+    {
+        u32 len = *block & ~HEAP_BLOCK_USED;
+        u32 total = len + 2;
+        u32 avail;
+        u16 *next;
+
+        if (align4)
+        {
+            avail = total;
+            if (((u32)block & 3) == 0)
+                avail = len;
+        }
+        else
+        {
+            avail = total;
+        }
+        next = (u16 *)((u8 *)block + total);
+        if (!(*block & HEAP_BLOCK_USED))
+        {
+            if (need > avail)
+            {
+                if (!(*next & HEAP_BLOCK_USED))
+                {
+                    do
+                    {
+                        u32 n = (*next & ~HEAP_BLOCK_USED) + 2;
+
+                        total += n;
+                        avail += n;
+                        next = (u16 *)((u8 *)block + total);
+                    } while (need > avail && !(*next & HEAP_BLOCK_USED));
+                    *block = (total - 2) & ~HEAP_BLOCK_USED;
+                }
+                if (need > avail)
+                    goto next;
+            }
+            if (align4 && ((u32)(block + 1) & 3))
+            {
+                p = block + 1;
+                if (need <= total - 2)
+                {
+                    *block = 0;
+                    *p = (total - 4) & ~HEAP_BLOCK_USED;
+                    block = p;
+                    total -= 2;
+                    avail = total;
+                }
+            }
+            if (need <= avail)
+            {
+                if (need < total)
+                {
+                    p = (u16 *)((u8 *)block + need);
+                    len = total - need;
+                    *p = (len - 2) & ~HEAP_BLOCK_USED;
+                    if (firstFree > p)
+                        heap->firstFree = p;
+                }
+                *block = size | HEAP_BLOCK_USED;
+                return block + 1;
+            }
+        }
+    next:
+        block = next;
+    } while (*block != HEAP_END);
+    return NULL;
+}
 
 // The header is cleared through a u32 temporary: its zero-extending load keeps the loaded
 // value as the AND's destination (a u16 `&=` ties the -2 constant's register instead).
