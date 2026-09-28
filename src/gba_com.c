@@ -83,19 +83,13 @@ void GbaComDataStatusReset(u8 slot)
     }
 }
 
-// FAKEMATCH? The original is probably an index loop that GCC strength-reduced to this
-// pointer loop (signed compare), but agbcc doesn't reduce any index form tried so far.
+// Written counting up: agbcc reverses the loop into the original's pointer countdown.
 void GbaComClearDataStatus(void)
 {
-    u8 *status = gGbaComDataStatus;
-    u8 idle = GBACOM_STATUS_IDLE;
-    u8 *p = status + GBACOM_SLOT_COUNT - 1;
+    s32 i;
 
-    do
-    {
-        *p = idle;
-        p--;
-    } while ((s32)p >= (s32)status);
+    for (i = 0; i < GBACOM_SLOT_COUNT; i++)
+        gGbaComDataStatus[i] = GBACOM_STATUS_IDLE;
 }
 
 bool32 GbaComRequestData(u8 slot)
