@@ -91,7 +91,7 @@ void Mode0DrawTitleSprite(void)
         if (++gGameState.spriteX > 0xFF)
             gGameState.spriteX = -24;
     }
-    DrawSpriteAt(gSprite_0202C938, 0, gGameState.spriteX, bob + gGameState.spriteY, 0, 0, 0);
+    DrawSpriteAt(gTitleSprite, 0, gGameState.spriteX, bob + gGameState.spriteY, 0, 0, 0);
 }
 // Every other frame, step the title's blend (gMode0Work.blend, 1-16) toward the end it is
 // heading for (gMode0Work.fadingOut); hold for 8 frames at full.

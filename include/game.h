@@ -17,7 +17,7 @@ struct MapMarker
     /*0x2*/ s16 y;
     /*0x4*/ u8 angle;    // the point's angle >> 8 (DrawSprite rotation; >> 5 is a direction)
     /*0x5*/ u8 type:6;
-            u8 highlight:2;  // enemies (type 2) only: draw the ring (gSprite_0202BE28), 1 or 2
+            u8 highlight:2;  // enemies (type 2) only: draw the ring (gMarkerHighlightSprite), 1 or 2
     /*0x6*/ u8 param;    // per type: player/friend: the character (0: Link; icon under the
                          //   marker, the status icon); types 5/16: its bit in revealedType5/16
     /*0x7*/ u8 gbaName;  // the GC's gbaName: which message ShowSelectionMsg shows (0: none)
@@ -84,7 +84,7 @@ struct ItemSlot
 // 0x0F4 u8 visitedSquares[8] size=8  // slot 11: one bit per sea chart square (7x7) Link has arrived at (GC dComIfGs_isSaveArriveGridForAgb)
 // 0x0FC u8 aButtonAction  // what A does, and the left HUD panel label: 0 examine the selection, 1 item 16 (look at the cursor), 2 sea chart open
 // 0x0FD u8 hudChartLabel  // the right HUD panel shows the chart label instead of the item (chart open)
-// 0x0FF u8 windArrowTimer  // frames left in the frame of the wind arrow (gSprite_0202C400, while flags.showWind)
+// 0x0FF u8 windArrowTimer  // frames left in the frame of the wind arrow (gWindArrowSprite, while flags.showWind)
 // 0x100 u8 windArrowFrame  // its frame (0-3)
 // 0x101 u8 targetBlinkOn
 // 0x102 u8 targetDir  // direction (0-7) last announced by UpdateTargetCompass; 0xFF: none
@@ -116,7 +116,7 @@ struct ItemSlot
 // 0x11E u8 placeTargetAtCursor  // choice message 0x1A7 picked: Mode1State2 puts the target on the cursor
 // 0x11F u8 mapScrolling  // L pressed to scroll the map (UpdateMap)
 // 0x120 u8 viewLocked  // the streamed map view stops following the marker (item effects)
-// 0x121 u8 holdState  // the cursor held by the GC (mail type 12): 1 gSprite_0202CA08 loops, 2 gSprite_0202CA40 plays out, then a switch record
+// 0x121 u8 holdState  // the cursor held by the GC (mail type 12): 1 gCursorHeldSprite loops, 2 gCursorReleaseSprite plays out, then a switch record
 // 0x122 u8 holdMsgIndex  // item effect 16 while holding: message 0x60 + this (up to 3)
 // 0x123 u8 holdTimer
 // 0x124 u8 holdFrame
@@ -127,7 +127,7 @@ struct ItemSlot
 // 0x129 u8 char3Timer
 // 0x12A u8 char3Frame
 // 0x12B u8 effectStep  // item effect step (the balloon/shield, Effect5, Effect8, Effect12)
-// 0x12C u8 introTimer  // StartEffectIntro animation (gSprite_0202C950): frame timer and frame
+// 0x12C u8 introTimer  // StartEffectIntro animation (gEffectIntroSprite): frame timer and frame
 // 0x12D u8 introFrame
 // 0x12E u8 balloonTimer  // DrawBalloonShield: balloon and shield frame timers and frames
 // 0x12F u8 balloonFrame
@@ -155,7 +155,7 @@ struct ItemSlot
 // 0x14F u8 choiceCursor  // choice menu cursor, 0xFF: none
 // 0x150 u8 choiceY  // text y of the first option
 // 0x151 u8 choiceMenu  // 1: two choices, 2: three
-// 0x152 u8 choiceCursorTimer  // choice cursor sprite (gSprite_0202C130) frame timer and frame
+// 0x152 u8 choiceCursorTimer  // choice cursor sprite (gChoiceCursorSprite) frame timer and frame
 // 0x153 u8 choiceCursorFrame
 // 0x156 u8 reactionTimer  // ExamineSelection's thinking pause before the selection's message (loop sound 6)
 // 0x157 u8 glyphWidth
@@ -274,7 +274,7 @@ struct GameState
     /*0x0FC*/ u8 aButtonAction;               // what A does, and the left HUD panel label: 0 examine the selection, 1 item 16 (look at the cursor), 2 sea chart open
     /*0x0FD*/ u8 hudChartLabel;               // the right HUD panel shows the chart label instead of the item (chart open)
     /*0x0FE*/ u8 filler0FE[0x0FF - 0x0FE];
-    /*0x0FF*/ u8 windArrowTimer;              // frames left in the frame of the wind arrow (gSprite_0202C400, while flags.showWind)
+    /*0x0FF*/ u8 windArrowTimer;              // frames left in the frame of the wind arrow (gWindArrowSprite, while flags.showWind)
     /*0x100*/ u8 windArrowFrame;              // its frame (0-3)
     /*0x101*/ u8 targetBlinkOn;
     /*0x102*/ u8 targetDir;                   // direction (0-7) last announced by UpdateTargetCompass; 0xFF: none
@@ -307,7 +307,7 @@ struct GameState
     /*0x11E*/ u8 placeTargetAtCursor;         // choice message 0x1A7 picked: Mode1State2 puts the target on the cursor
     /*0x11F*/ u8 mapScrolling;                // L pressed to scroll the map (UpdateMap)
     /*0x120*/ u8 viewLocked;                  // the streamed map view stops following the marker (item effects)
-    /*0x121*/ u8 holdState;                   // the cursor held by the GC (mail type 12): 1 gSprite_0202CA08 loops, 2 gSprite_0202CA40 plays out, then a switch record
+    /*0x121*/ u8 holdState;                   // the cursor held by the GC (mail type 12): 1 gCursorHeldSprite loops, 2 gCursorReleaseSprite plays out, then a switch record
     /*0x122*/ u8 holdMsgIndex;                // item effect 16 while holding: message 0x60 + this (up to 3)
     /*0x123*/ u8 holdTimer;
     /*0x124*/ u8 holdFrame;
@@ -318,7 +318,7 @@ struct GameState
     /*0x129*/ u8 char3Timer;
     /*0x12A*/ u8 char3Frame;
     /*0x12B*/ u8 effectStep;                  // item effect step (the balloon/shield, Effect5, Effect8, Effect12)
-    /*0x12C*/ u8 introTimer;                  // StartEffectIntro animation (gSprite_0202C950): frame timer and frame
+    /*0x12C*/ u8 introTimer;                  // StartEffectIntro animation (gEffectIntroSprite): frame timer and frame
     /*0x12D*/ u8 introFrame;
     /*0x12E*/ u8 balloonTimer;                // DrawBalloonShield: balloon and shield frame timers and frames
     /*0x12F*/ u8 balloonFrame;
@@ -353,7 +353,7 @@ struct GameState
     /*0x14F*/ u8 choiceCursor;                // choice menu cursor, 0xFF: none
     /*0x150*/ u8 choiceY;                     // text y of the first option
     /*0x151*/ u8 choiceMenu;                  // 1: two choices, 2: three
-    /*0x152*/ u8 choiceCursorTimer;           // choice cursor sprite (gSprite_0202C130) frame timer and frame
+    /*0x152*/ u8 choiceCursorTimer;           // choice cursor sprite (gChoiceCursorSprite) frame timer and frame
     /*0x153*/ u8 choiceCursorFrame;
     /*0x154*/ u8 filler154[0x156 - 0x154];
     /*0x156*/ u8 reactionTimer;               // ExamineSelection's thinking pause before the selection's message (loop sound 6)
@@ -468,8 +468,8 @@ extern const u8 gMode1SeaMap[];
 extern const u8 gMode2BgMap[];
 extern const u8 gMode1ObjTiles[];
 extern const u16 gMode1ObjPalette[0x100];
-extern const u8 gSprite_0202C438[];
-extern const u8 gSprite_0202C938[];
+extern const u8 gWaitSprite[];
+extern const u8 gTitleSprite[];
 extern const u8 *const gSpriteTable[];
 
 void Mode1VBlank(void);
@@ -571,8 +571,8 @@ void StartRandomEffect(void);
 void StartShopEffect(void);
 void StartBombCountdown(void);
 void UpdateItemEffect(void);
-extern const u8 gSprite_0202CA08[];
-extern const u8 gSprite_0202CA40[];
+extern const u8 gCursorHeldSprite[];
+extern const u8 gCursorReleaseSprite[];
 
 // ---- GZLJ01 02018884-0201A224: sprite.c, start of map.c ----
 
@@ -647,29 +647,29 @@ struct SpriteFrame
 extern const s16 gSinTable[];
 
 // Sprites that only the .rodata tables point at (gSpriteTable, gMapIconSprites, gTingleAnims).
-extern const u8 gSprite_0202BD88[];
-extern const u8 gSprite_0202BD98[];
-extern const u8 gSprite_0202BDA8[];
-extern const u8 gSprite_0202BDD8[];
-extern const u8 gSprite_0202BDE8[];
-extern const u8 gSprite_0202BE00[];
-extern const u8 gSprite_0202BE30[];
-extern const u8 gSprite_0202BE38[];
-extern const u8 gSprite_0202C128[];
-extern const u8 gSprite_0202C140[];
-extern const u8 gSprite_0202C148[];
-extern const u8 gSprite_0202C188[];
-extern const u8 gSprite_0202C190[];
-extern const u8 gSprite_0202C1A0[];
-extern const u8 gSprite_0202C1A8[];
-extern const u8 gSprite_0202C1B0[];
-extern const u8 gSprite_0202C1E0[];
-extern const u8 gSprite_0202C1E8[];
-extern const u8 gSprite_0202C1F0[];
-extern const u8 gSprite_0202C1F8[];
-extern const u8 gSprite_0202C208[];
-extern const u8 gSprite_0202C3E8[];
-extern const u8 gSprite_0202C4C0[];
+extern const u8 gMarkerType1Sprite[];
+extern const u8 gMarkerType3Sprite[];
+extern const u8 gMarkerType2Sprite[];
+extern const u8 gMarkerType19Sprite[];
+extern const u8 gMarkerType17Sprite[];
+extern const u8 gMarkerType18Sprite[];
+extern const u8 gMarkerType4Sprite[];
+extern const u8 gMarkerType11Sprite[];
+extern const u8 gMarkerType10Sprite[];
+extern const u8 gMarkerType8Sprite[];
+extern const u8 gMarkerType5Sprite[];
+extern const u8 gMarkerType7Sprite[];
+extern const u8 gMarkerType9Sprite[];
+extern const u8 gMarkerType6Sprite[];
+extern const u8 gMarkerType12Sprite[];
+extern const u8 gMarkerType13Sprite[];
+extern const u8 gMarkerType21Sprite[];
+extern const u8 gMarkerType15Sprite[];
+extern const u8 gMarkerType14Sprite[];
+extern const u8 gMapCursorIconSprite[];
+extern const u8 gFollowIconSprite[];
+extern const u8 gMarkerType16Sprite[];
+extern const u8 gMarkerType20Sprite[];
 extern const u8 gSprite_0202C788[];
 extern const u8 gSprite_0202C7C8[];
 extern const u8 gSprite_0202C850[];
@@ -677,16 +677,16 @@ extern const u8 gSprite_0202CAE0[];
 
 // Sprites (struct SpriteFrame[]) and tables in .rodata used by DrawMapMarkers.
 extern const struct SpriteFrame gSprite_0202BD80[];
-extern const struct SpriteFrame gSprite_0202BE28[];
-extern const struct SpriteFrame gSprite_0202C130[];
-extern const struct SpriteFrame gSprite_0202C200[];
-extern const struct SpriteFrame gSprite_0202C420[];
-extern const struct SpriteFrame gSprite_0202C440[];
-extern const struct SpriteFrame gSprite_0202C448[];
-extern const struct SpriteFrame gSprite_0202C498[];
-extern const struct SpriteFrame gSprite_0202C4A8[];
-extern const struct SpriteFrame gSprite_0202C4B8[];
-extern const struct SpriteFrame gSprite_0202CAD8[];
+extern const struct SpriteFrame gMarkerHighlightSprite[];
+extern const struct SpriteFrame gChoiceCursorSprite[];
+extern const struct SpriteFrame gTargetSprite[];
+extern const struct SpriteFrame gCharIcon0[];
+extern const struct SpriteFrame gCharIcon1[];
+extern const struct SpriteFrame gCharIcon2[];
+extern const struct SpriteFrame gCharIcon4[];
+extern const struct SpriteFrame gCharIcon3[];
+extern const struct SpriteFrame gFriendIcon0[];
+extern const struct SpriteFrame gCursorSelectSprite[];
 extern const s16 gMarkerDirOfsX[8];
 extern const s16 gMarkerDirOfsY[8];
 
@@ -722,8 +722,8 @@ void UpdateMapIcons(void);
 extern void (*const gMapIconFuncs[])(struct MapIcon *icon);
 extern const u8 *const gMapIconSprites[];
 extern const u8 gTargetBlinkPeriods[5];
-extern const u8 gSprite_0202C3F8[];
-extern const u8 gSprite_0202BDC8[];
+extern const u8 gCompassArrowSprite[];
+extern const u8 gMapScrollCursorSprite[];
 extern const u16 gSeaQuadrantOffsets[4][2];
 extern const u8 gSeaSquareTileSets[49];
 extern const u8 gSeaAnimFrames[5];
@@ -748,8 +748,8 @@ void DrawChoiceCursor(void);
 // A 4bpp pixel pair doubled horizontally: 0xAB -> 0xAABB.
 #define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))
 extern const u32 gTextColorMasks[];
-extern const u16 gSoundIds_0202430E[];
-extern const s16 gMsgIds_02024278[];
+extern const u16 gMsgSoundIds[];
+extern const s16 gFriendMsgIds[];
 void DrawQuestMarkers(void);
 // One OAM entry as bitfields (gOamBuffer holds 128 of them).
 struct OamData16
@@ -774,7 +774,7 @@ struct OamData16
 extern const u8 gPearlMarkerPos[6];
 extern const u8 gTriangleIslandPos[6];
 extern const u8 gTempleMarkerPos[4];
-extern const u16 gTable_02024274[2];
+extern const u16 gTowerChartTiles[2];
 s32 ChoiceMenuUpdate(void);  // the definition returns u8
 // Per question (msgId): the ids, then the sound per choice (0xFFFF: none).
 extern const u16 gTwoChoiceIds[];
@@ -821,7 +821,7 @@ struct ItemMenu
 extern const u16 gMsgTingleAnims[];  // message code 0xF5: argument -> gGameState.tingleAnim
 extern const u16 gGlyphRunStart[];   // DrawGlyphRun: first glyph of each run
 extern const u8 gGlyphRunLength[];
-extern const u8 gGlyphTable_0202438E[];  // DrawChar: glyphs for codes 0xE0-0xE5 and 0xEB-
+extern const u8 gVoicedKanaGlyphs[];  // DrawChar: glyphs for codes 0xE0-0xE5 and 0xEB-
 extern const u8 gDayNameChars[7 * 2];    // two glyphs per weekday (flags.dayOfWeek), JP only
 extern void (*const gMsgCmdFuncs[])(void);  // message code 0xF3: MsgCmd00 ... MsgCmd12
 void MsgCmd00(void);
@@ -843,16 +843,16 @@ void MsgCmd0F(void);
 void MsgCmd10(void);
 void MsgCmd11(void);
 void MsgCmd12(void);
-extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
-extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
+extern const u8 gSlotCursorSprite[];  // menu slot cursor (DrawSlotCursor)
+extern const u8 gMsgNextArrowSprite[];  // "more text" arrow (MsgStep)
 
 void Mode1StartFadeOut(void);
 void DrawMsgBoxFrame(s8 pos);
 // Tingle's animations (gGameState.tingleAnim), each a list of sprites (gGameState.tingleAnimPart picks one).
 extern const u8 *const *const gTingleAnims[15];
-extern const u8 gSprite_0202C400[];
+extern const u8 gWindArrowSprite[];
 extern const u8 gSprite_0202C650[];
-extern const u8 gSprite_0202C740[];
+extern const u8 gTingleSprite[];
 
 // ---- GZLJ01 0201DEAC-0201F308: item_menu.c, start of effect.c ----
 
@@ -861,10 +861,10 @@ extern const struct ItemSlot gShopItemsInit[12];
 #define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
 
 // Animations (they overlap: each starts somewhere in one frame table).
-extern const struct SpriteFrame gSprite_0202C928[];
-extern const struct SpriteFrame gSprite_0202C940[];
-extern const struct SpriteFrame gSprite_0202C950[];
-extern const u8 gSprite_0202CC60[];
+extern const struct SpriteFrame gBalloonSprite[];
+extern const struct SpriteFrame gShieldSprite[];
+extern const struct SpriteFrame gEffectIntroSprite[];
+extern const u8 gBombBlastSprite[];
 
 void EffectBombBlast(void);
 void StartEffectIntro(void);
@@ -895,7 +895,7 @@ void ObjFall(struct Obj *obj, s16 gravity);
 void ObjUpdateAll(void);
 s32 ObjFindFree(void);
 bool32 ObjSpawn(u8 type);
-extern const u8 gSprite_0202BD78[];
+extern const u8 gSelectWindowEdgeSprite[];
 extern const u8 gSprite_0202C848[];
 void Mode2State0(void);
 void Mode2State1(void);
@@ -907,7 +907,7 @@ extern const s16 gObjBurstOfsY[5];
 extern const s16 gObjBurstVelX[5];
 extern const s16 gObjBurstVelY[5];
 extern void (*const gObjBurstStateFuncs[])(struct Obj *obj);
-extern const u8 gSprite_0202C150[];
+extern const u8 gBurstPieceSprite[];
 void ObjBurstInit(struct Obj *obj);
 void ObjBurstFly(struct Obj *obj);
 void ObjBurst(struct Obj *obj);
@@ -928,15 +928,15 @@ void SelectWindowWipe(u8 open);
 #define GBACOM_BUF_ITEM_BUY ((u8 *)(PROG_BASE - 0x560))
 // Shop purchase requests (slot 12), 3 bytes each.
 extern const u8 gShopRequests[9];
-extern const s16 gBobOffsets_020244DA[4];
-extern const u8 gSprite_0202C490[];
+extern const s16 gEffectBobOffsets[4];
+extern const u8 gTingSprite[];
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
 void DrawTitleSpriteOnMap(s16 x, s16 y, u8 kind);
 void StartEffectDrop(void);
 void DrawTimerCount(s16 x, s16 y);
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
-extern const u8 gSprite_0202CC50[];
-extern const u8 gSprite_0202C428[];
-extern const u8 gSprite_0202C430[];
+extern const u8 gBombSprite[];
+extern const u8 gStatusHighlightSprite[];
+extern const u8 gStatusFrameSprite[];
 
 #endif // GUARD_GAME_H

@@ -89,7 +89,7 @@ ends, so this only ever puts functions together:
 |-----------|----------|
 | `UpdateMap` (`0201A224`) ... `Mode1VBlank` (`0201ABDC`) | `Mode1VBlank` uses `gSeaAnimFrames` (`02024235`), before `UpdateMap`'s `gSeaAnimPeriods` (`0202423A`) |
 | `MapIconFollowMarker` (`0201AC94`) ... `UpdateMapIcons` (`0201AF48`) | pointer table `gMapIconFuncs` (`02024244`), used by `UpdateMapIcons` |
-| `ChoiceMenuUpdate` (`0201C204`) ... `MsgStep` (`0201CB10`) | `MsgStep`'s pointer table `gMsgCmdFuncs` makes its block 4-aligned. In the US builds `gMsgTingleAnims` (`0202AFBA`) and `gSoundIds_0202430E` (`0202AF76`) are not, so the block starts at `gTwoChoiceIds` (`ChoiceMenuUpdate`) or earlier |
+| `ChoiceMenuUpdate` (`0201C204`) ... `MsgStep` (`0201CB10`) | `MsgStep`'s pointer table `gMsgCmdFuncs` makes its block 4-aligned. In the US builds `gMsgTingleAnims` (`0202AFBA`) and `gMsgSoundIds` (`0202AF76`) are not, so the block starts at `gTwoChoiceIds` (`ChoiceMenuUpdate`) or earlier |
 | `DrawGlyphRun` (`0201C660`) ... `MsgStep` (`0201CB10`) | `MsgStep` uses `gMsgTingleAnims` (`02024354`), before `DrawGlyphRun`'s `gGlyphRunStart` (`02024376`); `gMsgCmdFuncs` (`020243A4`) lists the 19 handlers `MsgCmd00-12` |
 | `ItemMenuUpdate` (`0201DEAC`) ... `ItemMenuInit` (`0201E190`) | `ItemMenuUpdate` uses `gChestRowIds` (`020244C0`), after `ItemMenuInit`'s `gShopItemsInit` (`02024460`) |
 | `EffectBombBlast` ... `ObjBurst` (`0202081C`) | `gItemEffectFuncs` (`020244E4`, 18 handlers `0201EC10-02020190`, run by `UpdateItemEffect`), `gMode2StateFuncs` (`0202452C`, `Mode2State0-1`), `gObjFuncs` (`02024534`, entry 0 `ObjBurst`) and `gObjBurstStateFuncs` (`02024560`) |
@@ -102,7 +102,7 @@ within the range the tables allow, made by who calls the functions in between:
   `InitMapView`). The easing helpers have no `.rodata` and nothing separates them from
   `DrawSprite`, so they share `sprite.c`.
 - `map.c` / `message.c` at `DrawMsgBoxRow`: the text renderer's functions are only called
-  from the message code; `ExamineSelection` calls `ShowSelectionMsg` (whose `gMsgIds_02024278`
+  from the message code; `ExamineSelection` calls `ShowSelectionMsg` (whose `gFriendMsgIds`
   ends the map block) and both are cursor messages from `Mode1State2`.
 - `message.c` / `item_menu.c` at `DrawSlotCursor`: the item menu's first table is
   `gShopItemsInit`; `MsgReset` ... `MsgClose` are message functions.
@@ -174,8 +174,8 @@ plays SE index `entry + 1` when restarted within 150 frames of stopping. `SoundP
 **Sound IDs** (every `SoundPlay`/`SoundPlayLoop` call in the three builds, found by scanning
 the disassembly for `bl`; the US calls are the JP ones with `SOUND_ID_SHIFT` applied). "SE"
 is the sequence index in the SE set, "msg" the `F6 xx` message codes (`PlayMsgSound`, via
-`gSoundIds_0202430E`) that play the ID in JP. Voice clips (player 4) are Tingle's sampled
-voice. Tables passed to `ShowMessage` (`gDungeonMsgIds`, `gChestMsgIds`, `gMsgIds_02024278`,
+`gMsgSoundIds`) that play the ID in JP. Voice clips (player 4) are Tingle's sampled
+voice. Tables passed to `ShowMessage` (`gDungeonMsgIds`, `gChestMsgIds`, `gFriendMsgIds`,
 the choice tables, `switchMsg`) hold message numbers, not sound IDs.
 
 | JP | US | SE | pl. | what plays it |
@@ -235,7 +235,7 @@ Loop IDs (`SoundPlayLoop`, same in all builds; SE index US = JP - 1):
 | 9 | 0 | `Mode1State2`: `flags.moveSpeed` set, not free, not following; tempo from `(moveSpeed - 1) ^ 3` |
 | 10 | 0 | unused |
 
-The message codes `F6 20`-`F6 22` pick loop IDs (`gSoundIds_0202430E[0x20-0x22]`). The US table
+The message codes `F6 20`-`F6 22` pick loop IDs (`gMsgSoundIds[0x20-0x22]`). The US table
 lost entry 27 (voice clip 6), but `PlayMsgSound`'s ranges (`0C-0F` random, `20-22` loop, `16`
 skipped) are unchanged, so in the US every code from `1B` reads the next entry, and `F6 22`
 reads past the table into `gMsgTingleAnims[0]` (2). Unless the US message data renumbered its

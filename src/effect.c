@@ -13,7 +13,7 @@ const u8 gShopRequests[9] =
     0x2, 0x1, 0x14, 0x1, 0xA, 0x28, 0x0, 0xA, 0x32
 };
 
-const s16 gBobOffsets_020244DA[4] =
+const s16 gEffectBobOffsets[4] =
 {
     0, -1, 0, 1
 };
@@ -110,7 +110,7 @@ void EffectBombBlast(void)
     gGameState.shake = gGameState.effectTimer;
     unk = gGameState.selectWinStep;
     if (unk == 0)
-        DrawSpriteParts(gSprite_0202CC60, gGameState.markers[i].x - gMain.bgOfs[3][0],
+        DrawSpriteParts(gBombBlastSprite, gGameState.markers[i].x - gMain.bgOfs[3][0],
                       gGameState.markers[i].y - gMain.bgOfs[3][1], mosaic, unk);
 }
 
@@ -119,7 +119,7 @@ void StartEffectIntro(void)
     gGameState.introFrame = 0;
     gGameState.viewLocked = 1;
     gGameState.spriteY = gGameState.spriteX = 0x44;
-    gGameState.introTimer = gSprite_0202C950[0].duration;
+    gGameState.introTimer = gEffectIntroSprite[0].duration;
     gGameState.effectStep = 1;
 }
 
@@ -140,13 +140,13 @@ void DrawEffectIntro(void)
             gGameState.effectDelay = 10;
             gGameState.msgWaitTimer = 300;
         }
-        gGameState.introTimer = gSprite_0202C950[gGameState.introFrame].duration;
-        anim = gSprite_0202C950;
+        gGameState.introTimer = gEffectIntroSprite[gGameState.introFrame].duration;
+        anim = gEffectIntroSprite;
     }
     else
     {
         gGameState.introTimer--;
-        anim = gSprite_0202C950;
+        anim = gEffectIntroSprite;
     }
     DrawSpriteAt(anim, gGameState.introFrame, gGameState.spriteX, gGameState.spriteY, mosaic, 0, 1);
 }
@@ -154,12 +154,12 @@ void DrawEffectIntro(void)
 void StartBalloonEffect(void)
 {
     StartEffectIntro();
-    gGameState.balloonTimer = gSprite_0202C928[0].duration;
+    gGameState.balloonTimer = gBalloonSprite[0].duration;
     gGameState.balloonFrame = 0;
     ShowMessage(0x23, 1);
 }
 
-// Draw the item effect sprite (kind 0: gSprite_0202C928, else gSprite_0202C940) at a map
+// Draw the item effect sprite (kind 0: gBalloonSprite, else gShieldSprite) at a map
 // position. The scroll is subtracted as an s16, which keeps the arithmetic in int (x and y
 // get sign-extended after the scroll load).
 void DrawBalloonShield(s16 x, s16 y, u8 kind)
@@ -173,13 +173,13 @@ void DrawBalloonShield(s16 x, s16 y, u8 kind)
         if (gGameState.balloonTimer == 0)
         {
             gGameState.balloonFrame ^= 1;
-            gGameState.balloonTimer = gSprite_0202C928[gGameState.balloonFrame].duration;
-            anim = gSprite_0202C928;
+            gGameState.balloonTimer = gBalloonSprite[gGameState.balloonFrame].duration;
+            anim = gBalloonSprite;
         }
         else
         {
             gGameState.balloonTimer--;
-            anim = gSprite_0202C928;
+            anim = gBalloonSprite;
         }
         if (gGameState.effect[0] == 12)
             flip = 16;
@@ -193,13 +193,13 @@ void DrawBalloonShield(s16 x, s16 y, u8 kind)
         if (gGameState.shieldTimer == 0)
         {
             gGameState.shieldFrame ^= 1;
-            gGameState.shieldTimer = gSprite_0202C940[gGameState.shieldFrame].duration;
-            anim = gSprite_0202C940;
+            gGameState.shieldTimer = gShieldSprite[gGameState.shieldFrame].duration;
+            anim = gShieldSprite;
         }
         else
         {
             gGameState.shieldTimer--;
-            anim = gSprite_0202C940;
+            anim = gShieldSprite;
         }
         if (gGameState.effect[0] == 12)
             flip = 8;
@@ -314,7 +314,7 @@ void EffectBalloonShield(void)
 void StartShieldEffect(void)
 {
     StartEffectIntro();
-    gGameState.shieldTimer = gSprite_0202C940[0].duration;
+    gGameState.shieldTimer = gShieldSprite[0].duration;
     gGameState.shieldFrame = 0;
     ShowMessage(0x25, 1);
 }
@@ -580,23 +580,23 @@ void StartTingEffect(void)
     StartEffectIntro();
     gGameState.itemsEnabled = 0;
     gGameState.effectActive = 1;
-    gGameState.balloonTimer = gSprite_0202C928[0].duration;
+    gGameState.balloonTimer = gBalloonSprite[0].duration;
     gGameState.balloonFrame = 0;
     ShowMessage(0x27, 1);
 }
 
-// Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gSprite_0202C490 with a
-// palette per effect, kind 2 flips it and adds gSprite_0202C928 at (sprite2X, sprite2Y). One
+// Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gTingSprite with a
+// palette per effect, kind 2 flips it and adds gBalloonSprite at (sprite2X, sprite2Y). One
 // variable holds the flip flags and then the palette.
 void DrawTitleSpriteOnMap(s16 x, s16 y, u8 kind)
 {
-    s16 bob = gBobOffsets_020244DA[(gMain.frameCount & 0x30) >> 4];
+    s16 bob = gEffectBobOffsets[(gMain.frameCount & 0x30) >> 4];
     u8 mosaic = gMain.mosaic != 0;
     u8 flags = 0;
 
     if (kind == 2)
         flags = 8;
-    DrawSpriteAt(gSprite_0202C938, 0, x - gMain.bgOfs[3][0] + bob,
+    DrawSpriteAt(gTitleSprite, 0, x - gMain.bgOfs[3][0] + bob,
                  y - gMain.bgOfs[3][1], mosaic, flags, 1);
     if (kind == 1)
     {
@@ -606,13 +606,13 @@ void DrawTitleSpriteOnMap(s16 x, s16 y, u8 kind)
             flags = 15;
         else
             flags = 4;
-        DrawSprite(gSprite_0202C490, 0, x - gMain.bgOfs[3][0] + (s16)(bob + 11),
+        DrawSprite(gTingSprite, 0, x - gMain.bgOfs[3][0] + (s16)(bob + 11),
                    y - gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, flags);
     }
     else if (kind == 2)
     {
         flags = 16;
-        DrawSpriteAt(gSprite_0202C928, 0, gGameState.sprite2X - gMain.bgOfs[3][0] + bob,
+        DrawSpriteAt(gBalloonSprite, 0, gGameState.sprite2X - gMain.bgOfs[3][0] + bob,
                      gGameState.sprite2Y - gMain.bgOfs[3][1], mosaic, flags, 1);
     }
 }
@@ -936,7 +936,7 @@ void Effect14(void)
             SoundPlay(0xC - SOUND_ID_SHIFT, 0);
         }
         m = FindMarker(3);
-        DrawSpriteParts(gSprite_0202CC50, gGameState.markers[m].x - gMain.bgOfs[3][0],
+        DrawSpriteParts(gBombSprite, gGameState.markers[m].x - gMain.bgOfs[3][0],
                       gGameState.markers[m].y - gMain.bgOfs[3][1], mosaic, 0);
     }
 }
@@ -1212,7 +1212,7 @@ void ObjBurst(struct Obj *obj)
     {
         x = (obj->x >> 8) - (u16)gMain.bgOfs[3][0];  // the one unsigned read of the scroll
         y = ((obj->y + obj->z) >> 8) - (u16)gMain.bgOfs[3][1];
-        DrawSprite(gSprite_0202C150, 0, x, y, obj->angle, mosaic, obj->scale, obj->ofsX,
+        DrawSprite(gBurstPieceSprite, 0, x, y, obj->angle, mosaic, obj->scale, obj->ofsX,
                    obj->ofsY, 0, 0);
     }
 }
@@ -1266,7 +1266,7 @@ void SelectWindowWipe(u8 open)
 
 void SelectWindowDrawEdge(void)
 {
-    DrawSprite(gSprite_0202BD78, 0, gGameState.selectWinX, gGameState.selectWinY, 0, 0, 0, 0, 0, 0, 0);
+    DrawSprite(gSelectWindowEdgeSprite, 0, gGameState.selectWinX, gGameState.selectWinY, 0, 0, 0, 0, 0, 0, 0);
 }
 
 // Select (in mode 1 state 2, when nothing else is up) wipes a window across the screen
@@ -1404,16 +1404,16 @@ void DrawStatusIcon(void)
     if (gGameState.statusIcon == 0)
         return;
     if (gGameState.statusIcon == 1)
-        DrawSprite(gSprite_0202C420, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
+        DrawSprite(gCharIcon0, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
     else if (gGameState.statusIcon == 2)
-        DrawSprite(gSprite_0202C428, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
+        DrawSprite(gStatusHighlightSprite, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
     else if (gGameState.statusIcon == 3)
-        DrawSpriteAt(gSprite_0202C440, 0, 0xE8, 0x80, 0, 0, 0);
+        DrawSpriteAt(gCharIcon1, 0, 0xE8, 0x80, 0, 0, 0);
     else if (gGameState.statusIcon == 4)
-        DrawSpriteAt(gSprite_0202C448, gGameState.char2Frame, 0xE8, 0x80, 0, 0, 0);
+        DrawSpriteAt(gCharIcon2, gGameState.char2Frame, 0xE8, 0x80, 0, 0, 0);
     else if (gGameState.statusIcon == 5)
-        DrawSpriteAt(gSprite_0202C4A8, gGameState.char3Frame, 0xE8, 0x80, 0, 0, 0);
+        DrawSpriteAt(gCharIcon3, gGameState.char3Frame, 0xE8, 0x80, 0, 0, 0);
     else if (gGameState.statusIcon == 6)
-        DrawSpriteAt(gSprite_0202C498, gGameState.char4Frame, 0xE8, 0x80, 0, 0, 0);
-    DrawSprite(gSprite_0202C430, 0, 0xE0, blink + 0x80, 0, 0, 0, 0, 0, 0, 0);
+        DrawSpriteAt(gCharIcon4, gGameState.char4Frame, 0xE8, 0x80, 0, 0, 0);
+    DrawSprite(gStatusFrameSprite, 0, 0xE0, blink + 0x80, 0, 0, 0, 0, 0, 0, 0);
 }

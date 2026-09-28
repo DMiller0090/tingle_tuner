@@ -24,7 +24,7 @@ void ResetMapState(void);
 // codes (see MsgStep).
 const u8 gMode1Unused_02023E38[12] = {0x7D, 0x7A, 0x01, 0x00, 0xB2, 0xB3, 0x00, 0x2B, 0x00, 0x00, 0x00, 0xFF};
 
-// Sound per dungeon number (gGameState.flags.dungeonNo), played by Mode1State1.
+// Message per dungeon number (gGameState.flags.dungeonNo), shown by Mode1State1.
 const s16 gDungeonMsgIds[18] = {50, 51, 52, 53, 54, 55, 82, 83, 84, 85, 86, 86, 138, 142, 135, 137, 141, 57};
 
 void (*const gMode1StateFuncs[])(void) =
@@ -39,7 +39,7 @@ void (*const gMode1StateFuncs[])(void) =
 
 // BG map entry of the rupee icon (tile 0x44) per wallet size: the palette gives its colour.
 const u16 gRupeeIconTiles[3] = {0xC044, 0xA044, 0x4044};
-// Sound per dungeon chest bit (flags.dungeonChests: WT, ET, TOTG, FW, DRC).
+// Message per dungeon chest bit (flags.dungeonChests: WT, ET, TOTG, FW, DRC).
 const s16 gChestMsgIds[5] = {0xE6, 0xE7, 0xE8, 0xEA, 0xE9};
 
 void Mode1SendSwitch(u8 soundArg);
@@ -856,7 +856,7 @@ void Mode1State4(void)
             }
         }
     }
-    DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
+    DrawSprite(gWaitSprite, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
     UpdateMsgAndTingle();
 }
 void Mode1StartFadeOut(void)
@@ -1086,13 +1086,13 @@ void MainMode1(void)
                             gGameState.holdState = 1;
                             gGameState.holdMsgIndex = 0;
                             gGameState.holdFrame = 0;
-                            gGameState.holdTimer = gSprite_0202CA08[4];
+                            gGameState.holdTimer = gCursorHeldSprite[4];
                         }
                         else if (gGameState.holdState == 1)
                         {
                             gGameState.holdState = 2;
                             gGameState.holdFrame = 0;
-                            gGameState.holdTimer = gSprite_0202CA40[4];
+                            gGameState.holdTimer = gCursorReleaseSprite[4];
                             ShowMessage(0x5B, 0);
                         }
                     }
@@ -1239,7 +1239,7 @@ void MainMode1(void)
         {
             gMain.bldcnt = 0x2FEF;
             gMain.bldy = 7;
-            DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
+            DrawSprite(gWaitSprite, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
         }
         else
         {

@@ -50,11 +50,11 @@ void DrawSlotCursor(u8 slot)
     bool32 mosaic = gMain.mosaic != 0;
 
     if (row <= 1)
-        DrawSprite(gSprite_0202BDB8, (gMain.frameCount >> 4) & 1,
+        DrawSprite(gSlotCursorSprite, (gMain.frameCount >> 4) & 1,
                    gMain.bgOfs[1][0] + (s16)(col * 24 + 24), row * 40 + 20, 0, mosaic, 0, 0, 0,
                    0, 0);
     else
-        DrawSprite(gSprite_0202BDB8, (gMain.frameCount >> 4) & 1,
+        DrawSprite(gSlotCursorSprite, (gMain.frameCount >> 4) & 1,
                    gMain.bgOfs[1][0] + (s16)(col * 16 + 0x27), 0x6C, 0, mosaic, 0, 0, 0, 0, 0);
 }
 

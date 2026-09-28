@@ -59,10 +59,10 @@ void (*const gMapIconFuncs[4])(struct MapIcon *icon) =
 
 const u8 *const gMapIconSprites[4] =
 {
-    gSprite_0202C208,
-    gSprite_0202C208,
-    gSprite_0202C1F8,
-    (const u8 *)gSprite_0202C200
+    gFollowIconSprite,
+    gFollowIconSprite,
+    gMapCursorIconSprite,
+    (const u8 *)gTargetSprite
 };
 
 const u8 gPearlMarkerPos[6] =
@@ -80,12 +80,12 @@ const u8 gTempleMarkerPos[4] =
     0x3C, 0x4, 0x2C, 0x6C
 };
 
-const u16 gTable_02024274[2] =
+const u16 gTowerChartTiles[2] =
 {
     0xCC, 0xE0
 };
 
-const s16 gMsgIds_02024278[18] =
+const s16 gFriendMsgIds[18] =
 {
     0x13, 0x38, 0x5E, 0x0, 0x3D, 0x3E, 0x3E, 0x3E, 0x3E,
     0x3E, 0x3E, 0x3E, 0x3E, 0x3E, 0x3E, 0x3F, 0x40, 0x0
@@ -265,7 +265,7 @@ void DrawMapMarkers(void)
         {
             if (++gGameState.char2Frame > 8)
                 gGameState.char2Frame = 0;
-            gGameState.char2Timer = gSprite_0202C448[gGameState.char2Frame].duration;
+            gGameState.char2Timer = gCharIcon2[gGameState.char2Frame].duration;
         }
         else
         {
@@ -274,7 +274,7 @@ void DrawMapMarkers(void)
         if (gGameState.char3Timer == 0)
         {
             gGameState.char3Frame ^= 1;
-            gGameState.char3Timer = gSprite_0202C498[gGameState.char3Frame].duration;
+            gGameState.char3Timer = gCharIcon4[gGameState.char3Frame].duration;
         }
         else
         {
@@ -283,7 +283,7 @@ void DrawMapMarkers(void)
         if (gGameState.char4Timer == 0)
         {
             gGameState.char4Frame ^= 1;
-            gGameState.char4Timer = gSprite_0202C498[gGameState.char4Frame].duration;
+            gGameState.char4Timer = gCharIcon4[gGameState.char4Frame].duration;
         }
         else
         {
@@ -309,7 +309,7 @@ void DrawMapMarkers(void)
                     {
                         if (gGameState.holdFrame > 6)
                             gGameState.holdFrame = 0;
-                        frames = &SPRITE_FRAMES(gSprite_0202CA08)[gGameState.holdFrame];
+                        frames = &SPRITE_FRAMES(gCursorHeldSprite)[gGameState.holdFrame];
                         gGameState.holdTimer = frames->duration;
                     }
                     else if (gGameState.holdFrame > 18)
@@ -319,7 +319,7 @@ void DrawMapMarkers(void)
                     }
                     else
                     {
-                        frames = &SPRITE_FRAMES(gSprite_0202CA40)[gGameState.holdFrame];
+                        frames = &SPRITE_FRAMES(gCursorReleaseSprite)[gGameState.holdFrame];
                         gGameState.holdTimer = frames->duration;
                     }
                 }
@@ -420,19 +420,19 @@ void DrawMapMarkers(void)
         if (marker->type == 1)
         {
             if (marker->param == 0)
-                DrawSpriteAt(gSprite_0202C420, 0, dx, dy, mosaic, pal, 1);
+                DrawSpriteAt(gCharIcon0, 0, dx, dy, mosaic, pal, 1);
             else if (marker->param == 1)
-                DrawSpriteAt(gSprite_0202C440, 0, dx, dy, mosaic, pal, 1);
+                DrawSpriteAt(gCharIcon1, 0, dx, dy, mosaic, pal, 1);
             else if (marker->param == 2)
-                DrawSpriteAt(gSprite_0202C448, gGameState.char2Frame, dx, dy, mosaic, pal, 1);
+                DrawSpriteAt(gCharIcon2, gGameState.char2Frame, dx, dy, mosaic, pal, 1);
             else if (marker->param == 3)
 #ifdef VERSION_GZLJ01
-                DrawSpriteAt(gSprite_0202C4A8, gGameState.char3Frame, dx, dy, mosaic, pal, 1);
+                DrawSpriteAt(gCharIcon3, gGameState.char3Frame, dx, dy, mosaic, pal, 1);
 #else
-                DrawSpriteAt(gSprite_0202C4A8, gGameState.char3Frame, dx, dy, mosaic, 12, 1);
+                DrawSpriteAt(gCharIcon3, gGameState.char3Frame, dx, dy, mosaic, 12, 1);
 #endif
             else if (marker->param == 4)
-                DrawSpriteAt(gSprite_0202C498, gGameState.char4Frame, dx, dy, mosaic, pal, 1);
+                DrawSpriteAt(gCharIcon4, gGameState.char4Frame, dx, dy, mosaic, pal, 1);
             scale = 0x80;
             frame = gGameState.playerFrame;
         }
@@ -440,14 +440,14 @@ void DrawMapMarkers(void)
         {
             if (gGameState.holdState != 0)
             {
-                frames = gSprite_0202CA40;
+                frames = gCursorReleaseSprite;
                 if (gGameState.holdState == 1)
-                    frames = gSprite_0202CA08;
+                    frames = gCursorHeldSprite;
                 frame = gGameState.holdFrame;
             }
             else if (gGameState.selection != 0)
             {
-                frames = gSprite_0202CAD8;
+                frames = gCursorSelectSprite;
                 frame = 0;
             }
             else if (gGameState.flags.busy == 0 && (gGameState.inMessage != 0 || gGameState.active != 0))
@@ -456,7 +456,7 @@ void DrawMapMarkers(void)
             }
             else
             {
-                frames = gSprite_0202C130;
+                frames = gChoiceCursorSprite;
                 frame = 1;
             }
         }
@@ -510,7 +510,7 @@ void DrawMapMarkers(void)
                 }
                 else
                 {
-                    frames = gSprite_0202C130;
+                    frames = gChoiceCursorSprite;
                     frame = 1;
                 }
             }
@@ -535,22 +535,22 @@ void DrawMapMarkers(void)
         {
             if (marker->param == 0)
             {
-                frames = gSprite_0202C4B8;
+                frames = gFriendIcon0;
                 frame = 0;
             }
             else if (marker->param == 1)
             {
-                frames = gSprite_0202C440;
+                frames = gCharIcon1;
                 frame = 0;
             }
             else if (marker->param == 2)
             {
-                frames = gSprite_0202C448;
+                frames = gCharIcon2;
                 frame = gGameState.char2Frame;
             }
             else if (marker->param == 3)
             {
-                frames = gSprite_0202C4A8;
+                frames = gCharIcon3;
                 frame = gGameState.char3Frame;
             }
             else
@@ -569,7 +569,7 @@ void DrawMapMarkers(void)
                 pal2 = 3;
             else
                 pal2 = 2;
-            DrawSprite(gSprite_0202BE28, 0, dx, dy - 8, marker->angle + 0x80, mosaic, 0, 0, 0, pal, pal2 + 1);
+            DrawSprite(gMarkerHighlightSprite, 0, dx, dy - 8, marker->angle + 0x80, mosaic, 0, 0, 0, pal, pal2 + 1);
         }
         DrawSprite(frames, frame, dx, dy, marker->angle + 0x80, mosaic, scale, 0, 0, pal, 0);
     }
@@ -581,9 +581,9 @@ void DrawMapMarkers(void)
 
         if ((u16)(dx + 0x40) <= 0xFF && (u16)(dy + 0x40) <= 0xFF)
 #ifdef VERSION_GZLJ01
-            DrawSpriteAt(gSprite_0202C200, gGameState.icons[2].frame, dx, dy, mosaic, 0, 1);
+            DrawSpriteAt(gTargetSprite, gGameState.icons[2].frame, dx, dy, mosaic, 0, 1);
 #else
-            DrawSpriteAt(gSprite_0202C200, 0, dx, dy, mosaic, 0, 1);
+            DrawSpriteAt(gTargetSprite, 0, dx, dy, mosaic, 0, 1);
 #endif
     }
 }
@@ -871,7 +871,7 @@ void UpdateMap(void)
             else if (gMain.heldKeys & 0x10)
                 dx = 4;
             mosaic = gMain.mosaic != 0;
-            sprite = gSprite_0202BDC8;
+            sprite = gMapScrollCursorSprite;
             frame = 0;
             if (!(gMain.frameCount & 0xC))
                 frame = 1;
@@ -1181,7 +1181,7 @@ void UpdateTargetCompass(void)
         }
     }
     gGameState.targetScale = (gGameState.targetBlinkTimer << 7) / gTargetBlinkPeriods[level] + 0x100;
-    DrawSprite(gSprite_0202C3F8, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
+    DrawSprite(gCompassArrowSprite, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
     if (gGameState.chartOpen == 0 && gGameState.flags.hasTact && level > 1
      && (u8)(gGameState.flags.windDir - angle + 9) > 18)
     {
@@ -1419,21 +1419,21 @@ void DrawQuestMarkers(void)
     {
         for (i = 0; i < 3; i++)
             if ((gGameState.flags.pearlToFind >> i) & 1)
-                DrawSprite(gSprite_0202C200, 0, gPearlMarkerPos[i * 2] + 12,
+                DrawSprite(gTargetSprite, 0, gPearlMarkerPos[i * 2] + 12,
                            gPearlMarkerPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
     }
     else if (gGameState.flags.pearlsToPlace)
     {
         for (i = 0; i < 3; i++)
             if ((gGameState.flags.pearlsToPlace >> i) & 1)
-                DrawSprite(gSprite_0202C200, 0, gTriangleIslandPos[i * 2] + 12,
+                DrawSprite(gTargetSprite, 0, gTriangleIslandPos[i * 2] + 12,
                            gTriangleIslandPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
     }
     else if (gGameState.flags.bossesToBeat)
     {
         for (i = 0; i < 2; i++)
             if ((gGameState.flags.bossesToBeat >> i) & 1)
-                DrawSprite(gSprite_0202C200, 0, gTempleMarkerPos[i * 2] + 12,
+                DrawSprite(gTargetSprite, 0, gTempleMarkerPos[i * 2] + 12,
                            gTempleMarkerPos[i * 2 + 1] + 12, 0, mosaic, 0, 0, 0, 0, 8);
     }
 }
@@ -1476,7 +1476,7 @@ void UpdateChartOverlay(void)
             if (gGameState.icons[2].type)
                 InitTargetIcon();
             map = (u16 *)0x060075D2;
-            tile = gTable_02024274[gGameState.flags.towerRaised];
+            tile = gTowerChartTiles[gGameState.flags.towerRaised];
             if (!(gGameState.visitedSquares[3] & 2))
                 tile |= 0x6000;
             if (gGameState.flags.towerRaised)
@@ -1734,7 +1734,7 @@ none:
 }
 
 // Show the message for what the cursor is on: the square's name (0x14E + square; square 32,
-// the Private Oasis, has 0x13E once Link has the Cabana Deed), a friend's (gMsgIds_02024278), or
+// the Private Oasis, has 0x13E once Link has the Cabana Deed), a friend's (gFriendMsgIds), or
 // the marker's by its gbaName.
 // The ids are computed in the shifted domain, ((v << 16) + (c << 16)) >> 16, which agbcc only
 // emits for an explicit shift pair (ID below).
@@ -1755,7 +1755,7 @@ void ShowSelectionMsg(void)
             ShowMessage(gGameState.selectedSquare + 0x14D, 1);
     }
     else if (gGameState.markers[idx].type == 0x13)
-        ShowMessage(gMsgIds_02024278[gGameState.markers[idx].param - 1], 1);
+        ShowMessage(gFriendMsgIds[gGameState.markers[idx].param - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
         ShowMessage(0x5D, 1);
     else if (gGameState.markers[idx].gbaName <= 0x23)
