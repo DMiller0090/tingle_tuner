@@ -1783,65 +1783,62 @@ void TrackNoteOn(struct SoundTrack *track, u8 key, u8 velocity, u32 length)
 
 // Release a note: a PCM voice (and the wave channel) decays in software, the other GB
 // channels get their hardware envelope (release / 32 as the step, or off).
-// Near-miss: with the type local, only the switch differs: the original reads voice->type again.
-// Without it (and the switch reading it anyway) type and freq swap r2/r3.
-//     void VoiceNoteOff(struct SoundVoice *voice)
-//     {
-//         if (voice->state == 1 && !voice->track->tie)
-//         {
-//                     u8 type = voice->type;
-//
-//             if (type == 0)
-//
-//             {
-//                 VoiceListRemove(voice, &gPcmActiveVoices);
-//                 voice->state = 2;
-//                 VoiceListInsert(voice);
-//             }
-//             else
-//             {
-//                             u16 freq = voice->freq.cgb;
-//                 u8 step = voice->release;
-//
-//                             if (type == 3)
-//                 {
-//                     voice->state = 2;
-//                 }
-//                 else
-//                 {
-//                     u8 env;
-//
-//                     step >>= 5;
-//                     if (step == 0)
-//      env = 0;
-//      else
-//      env = step | (voice->volume << 4);
-//                     switch (voice->type)
-//                     {
-//                     case 1:
-//                         REG_NR12 = env;
-//                         REG_SOUND1CNT_X = freq | 0x8000;
-//                         REG_NR11 &= 0xC0;
-//                         break;
-//                     case 2:
-//                         REG_NR22 = env;
-//                         REG_SOUND2CNT_H = freq | 0x8000;
-//                         REG_NR21 &= 0xC0;
-//                         break;
-//                     case 4:
-//                         REG_NR42 = env;
-//                         REG_NR44 = 0x80;
-//                         break;
-//                     }
-//                     voice->state = 0;
-//                 }
-//             }
-//             if (voice->fixedPan == 0)
-//                 voice->pan = voice->track->pan;
-//             TrackRemoveVoice(voice->track, voice);
-//         }
-//     }
-INCLUDE_ASM(VoiceNoteOff);
+// The switch re-reads voice->type (the volatile read keeps cse from reusing `type`).
+void VoiceNoteOff(struct SoundVoice *voice)
+{
+    if (voice->state == 1 && !voice->track->tie)
+    {
+        u8 type = voice->type;
+
+        if (voice->type == 0)
+        {
+            VoiceListRemove(voice, &gPcmActiveVoices);
+            voice->state = 2;
+            VoiceListInsert(voice);
+        }
+        else
+        {
+            u16 freq = voice->freq.cgb;
+            u8 step = voice->release;
+
+            if (type == 3)
+            {
+                voice->state = 2;
+            }
+            else
+            {
+                u8 env;
+
+                step >>= 5;
+                if (step == 0)
+                    env = 0;
+                else
+                    env = step | (voice->volume << 4);
+                switch (*(volatile u8 *)&voice->type)
+                {
+                case 1:
+                    REG_NR12 = env;
+                    REG_SOUND1CNT_X = freq | 0x8000;
+                    REG_NR11 &= 0xC0;
+                    break;
+                case 2:
+                    REG_NR22 = env;
+                    REG_SOUND2CNT_H = freq | 0x8000;
+                    REG_NR21 &= 0xC0;
+                    break;
+                case 4:
+                    REG_NR42 = env;
+                    REG_NR44 = 0x80;
+                    break;
+                }
+                voice->state = 0;
+            }
+        }
+        if (voice->fixedPan == 0)
+            voice->pan = voice->track->pan;
+        TrackRemoveVoice(voice->track, voice);
+    }
+}
 
 void VoiceStop(struct SoundVoice *voice)
 {
