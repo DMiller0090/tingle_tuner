@@ -711,41 +711,42 @@ u16 SoundVolumeFromY(struct SoundParams *params)
 
 #define SOUND_PRIORITY(entry) ((entry) & SOUND_HIGH_PRIORITY ? 2 : !((entry) & SOUND_LOW_PRIORITY))
 
-// Near-miss: identical but for one register copy in the volume product (`volume * y >> 7`
-// shifts a copy instead of the product's register) and so 4 bytes longer.
-//     void SoundPlay_(u16 id, struct SoundParams *params) asm("SoundPlay");
-//     void SoundPlay_(u16 id, struct SoundParams *params)
-//     {
-//         u8 player = (gSoundTable[id] & 0xFF0000) >> 16;
-//         u32 entry = gSoundTable[id];
-//         u32 volume = 0x80;
-//         u16 index;
-//         u32 cur;
-//
-//         if (gSoundPlayerSoundId[player] != -1)
-//         {
-//             if ((entry & SOUND_NO_RESTART) && id == gSoundPlayerSoundId[player])
-//                 return;
-//             cur = gSoundTable[gSoundPlayerSoundId[player]];
-//             if (SOUND_PRIORITY(entry) < SOUND_PRIORITY(cur))
-//                 return;
-//         }
-//         index = entry;
-//         if (entry & SOUND_ADD_ARG)
-//             index += params->arg;
-//         SoundCmdStartSe(player, 0, index);
-//         gSoundPlayerSoundId[player] = id;
-//         gSoundStarted[player] = TRUE;
-//         if (entry & SOUND_PAN_X)
-//         {
-//             SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
-//             volume = SoundVolumeFromX(params);
-//         }
-//         if (entry & SOUND_VOLUME_Y)
-//             volume = volume * SoundVolumeFromY(params) >> 7;
-//         SoundCmdSetTrackVolume(player, 1, volume);
-//     }
-INCLUDE_ASM(SoundPlay);
+// The volume product and its shift are separate statements (one expression shifts a copy).
+void SoundPlay_(u16 id, struct SoundParams *params) asm("SoundPlay");
+void SoundPlay_(u16 id, struct SoundParams *params)
+{
+    u8 player = (gSoundTable[id] & 0xFF0000) >> 16;
+    u32 entry = gSoundTable[id];
+    u32 volume = 0x80;
+    u16 index;
+    u32 cur;
+
+    if (gSoundPlayerSoundId[player] != -1)
+    {
+        if ((entry & SOUND_NO_RESTART) && id == gSoundPlayerSoundId[player])
+            return;
+        cur = gSoundTable[gSoundPlayerSoundId[player]];
+        if (SOUND_PRIORITY(entry) < SOUND_PRIORITY(cur))
+            return;
+    }
+    index = entry;
+    if (entry & SOUND_ADD_ARG)
+        index += params->arg;
+    SoundCmdStartSe(player, 0, index);
+    gSoundPlayerSoundId[player] = id;
+    gSoundStarted[player] = TRUE;
+    if (entry & SOUND_PAN_X)
+    {
+        SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
+        volume = SoundVolumeFromX(params);
+    }
+    if (entry & SOUND_VOLUME_Y)
+    {
+        volume = volume * SoundVolumeFromY(params);
+        volume >>= 7;
+    }
+    SoundCmdSetTrackVolume(player, 1, volume);
+}
 
 bool32 SoundIsPlaying(u16 id)
 {
@@ -789,50 +790,54 @@ s16 SoundLoop9Tempo(struct SoundParams *params)
         return -30 * params->arg;
 }
 
-// Near-miss: the volume and the slot index (spilled) swap stack slots, and the volume
-// product multiplies into the other register.
-//     void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params) asm("SoundPlayLoop");
-//     void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params)
-//     {
-//         u32 volume = 0x80;
-//         u32 entry = gSoundLoopTable[id];
-//         u16 index = *(u16 *)&gSoundLoopTable[id];
-//         s8 i = SoundFindLoopSlot(owner);
-//
-//         if (i >= 0)
-//         {
-//             u32 player = i + 16;
-//
-//             if (owner != gSoundLoopSlots[i].owner)
-//             {
-//                 if (id == 9)
-//                 {
-//                     gSoundLoop9Player = player;
-//                     gSoundLoop9Active = TRUE;
-//                     index += SoundLoop9Recent();
-//                 }
-//                 SoundCmdStartSe(player, 0, index);
-//                 gSoundLoopSlots[i].owner = owner;
-//             }
-//             if (id == 9)
-//             {
-//                 if (params->arg != gSoundLoop9Param)
-//                     gSoundLoop9TempoOfs = SoundLoop9Tempo(params);
-//                 SoundCmdSetTempo(player, gSoundLoop9TempoOfs);
-//             }
-//             gSoundPlayerSoundId[player] = id;
-//             if (entry & SOUND_PAN_X)
-//             {
-//                 SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
-//                 volume = SoundVolumeFromX(params);
-//             }
-//             if (entry & SOUND_VOLUME_Y)
-//                 volume = volume * SoundVolumeFromY(params) >> 7;
-//             SoundCmdSetTrackVolume(player, 1, volume);
-//             gSoundLoopSlots[i].refreshed = TRUE;
-//         }
-//     }
-INCLUDE_ASM(SoundPlayLoop);
+// i is declared first so it gets the first stack slot; the volume product and its shift are
+// separate statements (one expression shifts a copy).
+void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params) asm("SoundPlayLoop");
+void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params)
+{
+    s8 i;
+    u32 volume = 0x80;
+    u32 entry = gSoundLoopTable[id];
+    u16 index = *(u16 *)&gSoundLoopTable[id];
+
+    i = SoundFindLoopSlot(owner);
+
+    if (i >= 0)
+    {
+        u32 player = i + 16;
+
+        if (owner != gSoundLoopSlots[i].owner)
+        {
+            if (id == 9)
+            {
+                gSoundLoop9Player = player;
+                gSoundLoop9Active = TRUE;
+                index += SoundLoop9Recent();
+            }
+            SoundCmdStartSe(player, 0, index);
+            gSoundLoopSlots[i].owner = owner;
+        }
+        if (id == 9)
+        {
+            if (params->arg != gSoundLoop9Param)
+                gSoundLoop9TempoOfs = SoundLoop9Tempo(params);
+            SoundCmdSetTempo(player, gSoundLoop9TempoOfs);
+        }
+        gSoundPlayerSoundId[player] = id;
+        if (entry & SOUND_PAN_X)
+        {
+            SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
+            volume = SoundVolumeFromX(params);
+        }
+        if (entry & SOUND_VOLUME_Y)
+        {
+            volume = volume * SoundVolumeFromY(params);
+            volume >>= 7;
+        }
+        SoundCmdSetTrackVolume(player, 1, volume);
+        gSoundLoopSlots[i].refreshed = TRUE;
+    }
+}
 
 void SoundDriverInit(const struct SoundBankHeader *header)
 {
