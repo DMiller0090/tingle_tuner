@@ -126,7 +126,7 @@ void Func_0201ECC4(void)
 void Func_0201ED08(void)
 {
     u32 mosaic = gMain.mosaic != 0;
-    const struct SpriteAnimFrame *anim;
+    const struct SpriteFrame *anim;
 
     if (gGameState.unk12C == 0)
     {
@@ -166,7 +166,7 @@ void Func_0201EDC4(void)
 //     void Func_0201EDF8(s16 x, s16 y, u8 kind)
 //     {
 //         u32 mosaic = gMain.mosaic != 0;
-//         const struct SpriteAnimFrame *anim;
+//         const struct SpriteFrame *anim;
 //         u8 flip;
 //
 //         if (kind == 0)

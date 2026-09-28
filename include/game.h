@@ -852,17 +852,10 @@ extern const struct ItemSlot gShopItemsInit[12];
 
 #define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
 
-// One frame of a sprite animation: the sprite data and how many frames it shows.
-struct SpriteAnimFrame
-{
-    /*0x0*/ const void *sprite;
-    /*0x4*/ u8 duration;
-};
-
 // Animations (they overlap: each starts somewhere in one frame table).
-extern const struct SpriteAnimFrame gSprite_0202C928[];
-extern const struct SpriteAnimFrame gSprite_0202C940[];
-extern const struct SpriteAnimFrame gSprite_0202C950[];
+extern const struct SpriteFrame gSprite_0202C928[];
+extern const struct SpriteFrame gSprite_0202C940[];
+extern const struct SpriteFrame gSprite_0202C950[];
 extern const u8 gSprite_0202CC60[];
 
 void Func_0201EC10(void);
