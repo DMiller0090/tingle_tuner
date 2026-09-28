@@ -185,3 +185,13 @@ only arrive with the map send, which never runs in these rooms, so the Tuner kee
 from the last room that sent them. The effect then takes 3 * (marker.y + 152) frames
 (2x down, 1x up). Measured in `GanonA` (marker y 82): 7.8 s + 4.0 s, the same wherever Link
 walked. Normal: 3.1 s + 1.6 s (view y 107, marker y 175: 92 px, 3.07 s predicted).
+
+**Which map survives.** `InitMapView` zeroes the whole map/message buffer when it runs with
+`unk457 != 0` (dungeon) and `unk10E == 0` (no map), which is what the first of two GT
+reconnects does. Disconnecting once in the overworld instead leaves `mReConnect` set for good,
+so entering GT already sends `noMap` = 0. The fade out on entering GT still runs `InitMapView`
+with the overworld's `unk457` = 0 (no wipe), and the single GT reconnect then uses the last map
+image the Tuner received (measured: Windfall's 392x472 map drawn in GT, view (256, 107), marker
+(324, 175), potion 3.07 s + 1.58 s, i.e. Windfall speed). With a real map the view is clamped at
+`mapY` >= 0, so a stale marker within 60 px of that map's top edge shortens the effect to
+`marker.y + 32` px: faster than normal.
