@@ -558,13 +558,13 @@ gSprite_0202BE28 = 0x020326A8; // data
 // the Japanese font tables that the US DrawChar doesn't have
 // absent: gGlyphTable_0202438E gDayNameChars
 // US DrawChar: u16 lists of message IDs (first entry a count?) after gGlyphRunLength
-gUsMsgIds_0202AFF4 = 0x0202B228; // data
-gUsMsgIds_0202AFF8 = 0x0202B22C; // data
-gUsMsgIds_0202AFFC = 0x0202B230; // data
-gUsMsgIds_0202B014 = 0x0202B248; // data
-gUsMsgIds_0202B020 = 0x0202B254; // data
-gUsMsgIds_0202B034 = 0x0202B268; // data
-gUsMsgIds_0202B04C = 0x0202B280; // data
+gAccentGlyphs_0202AFF4 = 0x0202B228; // data
+gAccentGlyphs_0202AFF8 = 0x0202B22C; // data
+gAccentGlyphs_0202AFFC = 0x0202B230; // data
+gAccentGlyphs_0202B014 = 0x0202B248; // data
+gAccentGlyphs_0202B020 = 0x0202B254; // data
+gAccentGlyphs_0202B034 = 0x0202B268; // data
+gAccentGlyphs_0202B04C = 0x0202B280; // data
 // pinned: the sound bank is outside the program, where port_symbols keeps the JP address
 gSoundBankSeBankMaps = 0x02034E00; // data
 gSoundBankSeSets = 0x02034E10; // data

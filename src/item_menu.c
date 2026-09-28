@@ -193,12 +193,11 @@ void ChestCounterMain(void)
     }
 }
 
-#ifdef VERSION_GZLE01_ud
-// This version adds a sound test (L toggles it; see docs/layout.md).
-INCLUDE_ASM(ItemMenuUpdate);
-#else
 // Item menu: move the cursor over the 5 x 3 slots with the d-pad (with key repeat); B picks
 // the item under it, and the cursor sprite slides there.
+// GZLE01_ud adds a message test: L toggles it, then Up/Down step the message ID by 1,
+// Left/Right by 10 and R by 100 (wrapping in 0-0x437), shown as four digits at the rupee
+// counter (see docs/layout.md).
 void ItemMenuUpdate(void)
 {
     s32 col = (u8)(gGameState.menuCursor % 5);
@@ -206,6 +205,12 @@ void ItemMenuUpdate(void)
     u16 keys = gMain.heldKeys;
     u8 item;
     struct ItemSlot *entry;
+#ifdef VERSION_GZLE01_ud
+    u16 *map;
+    s16 id;
+    s32 n;
+    s32 t;
+#endif
 
 #ifdef VERSION_GZLJ01
     if (gGameState.unk1E0 != 0)
@@ -216,6 +221,79 @@ void ItemMenuUpdate(void)
         ChestCounterMain();
         return;
     }
+#ifdef VERSION_GZLE01_ud
+    map = (u16 *)0x06006464;
+    if (gMain.newKeys & 0x200)
+    {
+        gGameState.msgTest ^= 1;
+        if (gGameState.msgTest)
+        {
+            MsgStartSilent(0);
+            gGameState.unk142 = 0;
+        }
+    }
+    if (gGameState.msgTest)
+    {
+        if (gMain.newKeys & keys & 0x1F0)
+        {
+            gGameState.menuKeyRepeat = 16;
+            keys = gMain.newKeys;
+        }
+        else if (CountDownU8(&gGameState.menuKeyRepeat))
+        {
+            keys = 0;
+        }
+        else if (keys & 0xF0)
+        {
+            gGameState.menuKeyRepeat = 4;
+        }
+        id = gGameState.unk142;
+        if (keys & 0x40)
+        {
+            if (++id > 0x437)
+                id = 0;
+        }
+        else if (keys & 0x80)
+        {
+            if (--id < 0)
+                id = 0x437;
+        }
+        else if (keys & 0x20)
+        {
+            id += 10;
+            if (id > 0x437)
+                id -= 0x438;
+        }
+        else if (keys & 0x10)
+        {
+            id -= 10;
+            if (id < 0)
+                id += 0x438;
+        }
+        else if (gMain.newKeys & 0x100)
+        {
+            id += 100;
+            if (id > 0x437)
+                id -= 0x438;
+        }
+        n = id;
+        MsgStartSilent(n);
+        map[0] = n / 1000 * 2 + 0xB030;
+        map[0x20] = n / 1000 * 2 + 0xB031;
+        map++;
+        t = (s16)(n / 100);
+        map[0] = t % 10 * 2 + 0xB030;
+        map[0x20] = t % 10 * 2 + 0xB031;
+        map++;
+        t = (s16)(n / 10);
+        map[0] = t % 10 * 2 + 0xB030;
+        map[0x20] = t % 10 * 2 + 0xB031;
+        map++;
+        map[0] = n % 10 * 2 + 0xB030;
+        map[0x20] = n % 10 * 2 + 0xB031;
+        return;
+    }
+#endif
     if (gGameState.unk1E5_0)
     {
         gGameState.menuCursorX += gGameState.menuCursorDX;
@@ -305,7 +383,6 @@ void ItemMenuUpdate(void)
     }
     DrawSlotCursor(gGameState.menuCursor);
 }
-#endif
 
 // Set up the item menu: reset the item table, adjust prices and the dungeon item, and draw
 // the ten slots.

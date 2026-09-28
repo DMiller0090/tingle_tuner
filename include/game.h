@@ -174,7 +174,7 @@ struct ItemSlot
 // 0x1E2 u8 unk1E2  // item effect step (Effect7, Effect11)
 // 0x1E3 u8 unk1E3  // chests opened
 // 0x1E4 u8 unk1E4
-// 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 unk1E5_5:3
+// 0x1E5 bits u8 unk1E5_0:1 unk1E5_1:1 unk1E5_2:1 unk1E5_3:1 unk1E5_4:1 msgTest:1 unk1E5_6:2  // msgTest (bit 5): GZLE01_ud message test on
 // 0x1E8 u16 unk1E8  // select window edge x (0xF8 closed, 0xFFF8 fully across)
 // 0x1EA s16 unk1EA  // select window edge y
 // 0x1EE u8 unk1EE  // UpdateSelectWindow step (0: closed)
@@ -375,12 +375,13 @@ struct GameState
     /*0x1E2*/ u8 unk1E2;                      // item effect step (Effect7, Effect11)
     /*0x1E3*/ u8 unk1E3;                      // chests opened
     /*0x1E4*/ u8 unk1E4;
-    /*0x1E5*/ u8 unk1E5_0:1;
+    /*0x1E5*/ u8 unk1E5_0:1;                  // msgTest (bit 5): GZLE01_ud message test on
               u8 unk1E5_1:1;
               u8 unk1E5_2:1;
               u8 unk1E5_3:1;
               u8 unk1E5_4:1;
-              u8 unk1E5_5:3;
+              u8 msgTest:1;
+              u8 unk1E5_6:2;
     /*0x1E6*/ u8 filler1E6[0x1E8 - 0x1E6];
     /*0x1E8*/ u16 unk1E8;                     // select window edge x (0xF8 closed, 0xFFF8 fully across)
     /*0x1EA*/ s16 unk1EA;                     // select window edge y

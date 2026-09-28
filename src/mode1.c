@@ -620,19 +620,19 @@ void Mode1State3(void)
     Func_0201CFE8();
     StepToward((s16 *)&gMain.bgOfs[1][0], target, 16);
 }
-// Matches in GZLJ01. The US builds check the new marker position instead of the old one
-// (the #else below); that version has the right code but agbcc permutes its registers
-// (count, gGameState, m, i and the 0x3F mask), so they keep the asm for now.
-#ifndef VERSION_GZLJ01
-INCLUDE_ASM(Mode1RecvMarkers);
-#else
 // Slot 3: the map markers. Byte 0 is the count, byte 1 goes to unk133 and unk104, then
 // 8-byte markers (struct MapMarker, unaligned here so read as bytes).
+// The US builds check the new marker position instead of the old one.
 void Mode1RecvMarkers(void)
 {
     u8 count = GBACOM_BUF_3[0];
     u8 *m;
     s32 i;
+    s32 j;
+#ifndef VERSION_GZLJ01
+    s16 time;
+    u16 time2;
+#endif
 
     if (gMain.mode == 1)
     {
@@ -641,12 +641,12 @@ void Mode1RecvMarkers(void)
             // Both searches' results are unused. (do/while (1): a for or while loop
             // gets its exit test copied to the bottom, the original's doesn't.)
             m = GBACOM_BUF_3 + 2;
-            i = 0;
+            j = 0;
             do
             {
-                if ((m[5] & 0x3F) == 3 || i >= count)
+                if ((m[5] & 0x3F) == 3 || j >= count)
                     break;
-                i++;
+                j++;
                 m += 8;
             } while (1);
             i = 0;
@@ -662,12 +662,12 @@ void Mode1RecvMarkers(void)
             s16 x;
 
             m = GBACOM_BUF_3 + 2;
-            i = 0;
+            j = 0;
             do
             {
-                if ((m[5] & 0x3F) == 1 || i >= count)
+                if ((m[5] & 0x3F) == 1 || j >= count)
                     break;
-                i++;
+                j++;
                 m += 8;
             } while (1);
             i = 0;
@@ -683,14 +683,21 @@ void Mode1RecvMarkers(void)
             {
 #ifdef VERSION_GZLJ01
                 if (gGameState.markers[i].x <= 0x6FF && gGameState.markers[i].y <= 0x6FF)
-#else
-                // The US builds check the new position instead of the old one.
-                if ((u16)x <= 0x6FF && *(u16 *)(m + 2) <= 0x6FF)
-#endif
                 {
                     gGameState.unk106 = 1;
                     gGameState.unk030 = (gMain.random % 6 + 3) * 60;
                 }
+#else
+                if ((u16)x <= 0x6FF && *(u16 *)(m + 2) <= 0x6FF)
+                {
+                    gGameState.unk106 = 1;
+                    // FAKEMATCH: the two temporaries lengthen gGameState's live range just
+                    // enough that m gets r5 and gGameState r6 (a tie in allocation priority).
+                    time = (gMain.random % 6 + 3) * 60;
+                    time2 = time;
+                    gGameState.unk030 = time2;
+                }
+#endif
                 gGameState.unk026 = 0;
                 gGameState.unk11D = 0;
                 gGameState.unk010 = 0;
@@ -732,7 +739,6 @@ void Mode1RecvMarkers(void)
     }
     GbaComDataStatusReset(GBACOM_SLOT_3);
 }
-#endif
 
 // Reset the per-map state (Mode1State4 after a map change). The object loop counts up: agbcc
 // reverses it into the original's pointer countdown, a countdown in C keeps the counter.
