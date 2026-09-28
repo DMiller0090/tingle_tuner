@@ -889,9 +889,11 @@ void MainMode1(void)
 #ifdef VERSION_GZLJ01
     if (gGameState.chestState == 1 && gGameState.inMessage == 0 && gGameState.active != 0)
 #else
-    // The US builds wait for no menu or event instead. FAKEMATCH: `!flags.busy` gives the
-    // same code but puts chest in r8 (the extra insns before combine shift the priorities).
-    if (gGameState.chestState == 1 && !*(u16 *)&gGameState.inMessage && !((gGameState.flags.busy << 1) & 6))
+    // The US builds wait for no message, Select window, menu or event instead. agbcc's
+    // fold_truthop merges the two adjacent byte tests into one halfword load (written as
+    // `!*(u16 *)&inMessage`, the code is the same but chest ends up in r8).
+    if (gGameState.chestState == 1 && gGameState.inMessage == 0 && gGameState.selectWinOpen == 0
+     && !gGameState.flags.busy)
 #endif
     {
         gGameState.chestTimer = 0;
