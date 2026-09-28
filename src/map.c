@@ -1740,22 +1740,30 @@ none:
 // the Private Oasis, has 0x13E once Link has the Cabana Deed), a friend's (gFriendMsgIds), or
 // the marker's by its gbaName.
 // The ids are computed in the shifted domain, ((v << 16) + (c << 16)) >> 16, which agbcc only
-// emits for an explicit shift pair (ID below).
+// emits for an explicit shift pair (ID below). The square is tested with a switch: its index
+// is a separate int load of selectedSquare (an `if (== 0x21)` is narrowed and cse shares the
+// `!= 0` test's load), and that address register living into the switch gives idx r2.
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
 void ShowSelectionMsg(void)
 {
     u8 idx = gGameState.selectedMarker;
-    // FAKEMATCH: 0x21 in a variable (found with decomp-permuter) moves the selectedSquare value
-    // from r1 to r0 and idx to r2, as in the original; a literal gives idx the r0 preference.
-    s32 c = 0x21;
 
     if (gGameState.selectedSquare != 0)
     {
-        if (gGameState.selectedSquare == c && gGameState.flags.hasCabanaDeed)
-            ShowMessage(0x13E, 1);
-        else
+        switch (gGameState.selectedSquare)
+        {
+        case 0x21:
+            if (gGameState.flags.hasCabanaDeed)
+            {
+                ShowMessage(0x13E, 1);
+                break;
+            }
+            // fall through
+        default:
             ShowMessage(gGameState.selectedSquare + 0x14D, 1);
+            break;
+        }
     }
     else if (gGameState.markers[idx].type == 0x13)
         ShowMessage(gFriendMsgIds[gGameState.markers[idx].param - 1], 1);
