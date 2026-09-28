@@ -320,6 +320,11 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
 // live 226, 442) and the ~0xC mask (423); the original needs x between them (live 46-47).
 // Tried: u16/s32 x (asm label), for loops, part as the parameter, every order of the three
 // initialisations, shake as u8/u32/s16, operand orders of the x and y sums.
+// x (pseudo 23) lives from its narrowing (insn 10) to the hoisted `(s16)x` sign extension,
+// the last loop invariant before the loop. Also tried (2026-09-28), all still live 43 or
+// worse diffs: separate declarations/assignments, oam via a u8 index or `+ unk450`, shake in
+// two statements, ten spellings of the `end != 0xFFFF` test, `priority & 3`, `mosaic & 1`,
+// `paletteNum & 0xF`, (s16)/(u16)/(s32) casts in the x sum, `& 0x1FF`, an s16/s32 copy of x.
 /*
 void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
 {
