@@ -301,11 +301,11 @@ IDs freeze the Tuner (an `F3` handler index >= 0x13), and six run unlock command
 |---|---|---|
 | 0x263 | `F3 00` | `agbA` in `Siren` (Tower of the Gods) room 8 at (-806, -295, -12934), cursor hit, gone once switch 0x0D is set |
 | 0x26A | `F3 00` | `agbF` in `Siren` room 10 (condition 0x42: in a room with a `daNpc_Os`) |
-| 0x11E | `F3 01` | `ShowSelectionMsg` for a map point with `gbaName` 0xAF |
-| 0x11F | `F3 00` | `ShowSelectionMsg` for a map point with `gbaName` 0xB0 |
+| 0x11E | `F3 01` | `ShowSelectionMsg` for a map point with `gbaName` 0xAF, which nothing on the GC assigns (the object table tops out at 0x41) |
+| 0x11F | `F3 00` | `ShowSelectionMsg` for a map point with `gbaName` 0xB0, likewise unused |
 | 0x20E, 0x349 | `F3 00` | no source found |
 
-No message reaches `F3 05`, so the shop can't be unlocked this way. Measured with 0x263: the mail
+No reachable message runs `F3 05` or `F3 01`, so only the balloon discount can be unlocked this way. A later disconnect in the same phase gives the same state: the message data is unpacked in one BIOS call, so the area holds either the boot image or the real text. Measured with 0x263: the mail
 arrived as the cursor reached the switch, A started the message, 1.7 s later the report byte
 went to 0x10 (balloon discount) and 44 ms after that the GC's `mFlags` byte 7 showed
 `UNLOCK_TINGLE_BALLOON_DISCOUNT` set. It is kept once the game is saved.
