@@ -185,8 +185,8 @@ void Func_0201EDF8(s16 x, s16 y, u8 kind)
             flip = 16;
         else
             flip = 0;
-        DrawSpriteAt(anim, gGameState.unk12F, x - (s16)gMain.bgOfs[3][0] + 3,
-                     y - (s16)gMain.bgOfs[3][1] - 24, mosaic, flip, 1);
+        DrawSpriteAt(anim, gGameState.unk12F, x - gMain.bgOfs[3][0] + 3,
+                     y - gMain.bgOfs[3][1] - 24, mosaic, flip, 1);
     }
     else
     {
@@ -206,11 +206,11 @@ void Func_0201EDF8(s16 x, s16 y, u8 kind)
         else
             flip = 0;
         if (gGameState.unk131 == 0)
-            DrawSpriteAt(anim, gGameState.unk131, x - (s16)gMain.bgOfs[3][0] - 4,
-                         y - (s16)gMain.bgOfs[3][1], mosaic, flip, 1);
+            DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] - 4,
+                         y - gMain.bgOfs[3][1], mosaic, flip, 1);
         else
-            DrawSpriteAt(anim, gGameState.unk131, x - (s16)gMain.bgOfs[3][0] + 4,
-                         y - (s16)gMain.bgOfs[3][1], mosaic, flip, 1);
+            DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] + 4,
+                         y - gMain.bgOfs[3][1], mosaic, flip, 1);
     }
 }
 
@@ -596,8 +596,8 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind)
 
     if (kind == 2)
         flags = 8;
-    DrawSpriteAt(gSprite_0202C938, 0, x - (s16)gMain.bgOfs[3][0] + bob,
-                 y - (s16)gMain.bgOfs[3][1], mosaic, flags, 1);
+    DrawSpriteAt(gSprite_0202C938, 0, x - gMain.bgOfs[3][0] + bob,
+                 y - gMain.bgOfs[3][1], mosaic, flags, 1);
     if (kind == 1)
     {
         if (gGameState.effect[0] == 8)
@@ -606,8 +606,8 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind)
             flags = 15;
         else
             flags = 4;
-        DrawSprite(gSprite_0202C490, 0, x - (s16)gMain.bgOfs[3][0] + (s16)(bob + 11),
-                   y - (s16)gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, flags);
+        DrawSprite(gSprite_0202C490, 0, x - gMain.bgOfs[3][0] + (s16)(bob + 11),
+                   y - gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, flags);
     }
     else if (kind == 2)
     {
@@ -714,7 +714,7 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind)
 //         {
 //             gGameState.unk034--;
 //             Func_0201F8C4(gGameState.markers[m].x - 0x18, gGameState.unk034, 0);
-//             if (gGameState.unk034 < (s16)main->bgOfs[3][1] - 0x30)
+//             if (gGameState.unk034 < main->bgOfs[3][1] - 0x30)
 //             {
 //                 gGameState.unk12B = 0;
 //                 if (gGameState.unk1DE == 5)
@@ -888,13 +888,13 @@ void Effect12(void)
         gGameState.unk032 = gGameState.markers[m].x - 0x15;
         gGameState.unk036 = gGameState.markers[m].x + 0x11;
         Func_0201F8C4(gGameState.unk032, gGameState.unk034, 2);
-        if (gGameState.unk034 < (s16)main->bgOfs[3][1] - 0x30)
+        if (gGameState.unk034 < main->bgOfs[3][1] - 0x30)
         {
             ShowMessage(0x30, 1);
             gGameState.unk12B = 0;
             Func_0201EBAC();
         }
-        if (gGameState.unk038 < (s16)main->bgOfs[3][1] - 0x30)
+        if (gGameState.unk038 < main->bgOfs[3][1] - 0x30)
             gGameState.unk038 = main->bgOfs[3][1] - 0x30;
     }
 }
@@ -1215,8 +1215,8 @@ void ObjBurst(struct Obj *obj)
         gObjBurstStateFuncs[obj->active - 1](obj);
     if (obj->active)
     {
-        x = (obj->x >> 8) - gMain.bgOfs[3][0];
-        y = ((obj->y + obj->z) >> 8) - gMain.bgOfs[3][1];
+        x = (obj->x >> 8) - (u16)gMain.bgOfs[3][0];  // the one unsigned read of the scroll
+        y = ((obj->y + obj->z) >> 8) - (u16)gMain.bgOfs[3][1];
         DrawSprite(gSprite_0202C150, 0, x, y, obj->unk1E, mosaic, obj->unk16, obj->unk18,
                    obj->unk1A, 0, 0);
     }

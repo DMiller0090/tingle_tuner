@@ -684,22 +684,22 @@ void FollowMarkerFixedMap(void)
     gGameState.mapY += dy;
     gMain.bgOfs[2][0] = gGameState.mapX;
     gMain.bgOfs[2][1] = gGameState.mapY;
-    if (((s16)gMain.bgOfs[2][0] + 8) & 0x8000)
+    if ((gMain.bgOfs[2][0] + 8) & 0x8000)
     {
         gGameState.scrolling = FALSE;
         gMain.bgOfs[2][0] = -8;
     }
-    if ((s16)gMain.bgOfs[2][0] > 0x680)
+    if (gMain.bgOfs[2][0] > 0x680)
     {
         gGameState.scrolling = FALSE;
         gMain.bgOfs[2][0] = 0x680;
     }
-    if (((s16)gMain.bgOfs[2][1] + 8) & 0x8000)
+    if ((gMain.bgOfs[2][1] + 8) & 0x8000)
     {
         gGameState.scrolling = FALSE;
         gMain.bgOfs[2][1] = -8;
     }
-    if ((s16)gMain.bgOfs[2][1] > 0x680)
+    if (gMain.bgOfs[2][1] > 0x680)
     {
         gGameState.scrolling = FALSE;
         gMain.bgOfs[2][1] = 0x680;
@@ -803,10 +803,10 @@ void UpdateMap(void)
             s32 t;
             s32 row;
 
-            dx = (((s16)gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
+            dx = ((gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
             if (dx > 6)
                 dx = 7;
-            row = ((s16)gMain.bgOfs[2][1] + 8) >> 8;
+            row = (gMain.bgOfs[2][1] + 8) >> 8;
             t = j * 2;  // for seaAnimTimer[j] below, computed here as in the original
             dy = row + gSeaQuadrantOffsets[j][1];
             if (dy > 6)

@@ -20,7 +20,7 @@ struct Main
     /*0x41A*/ u16 dispcnt;
     /*0x41C*/ u16 bgcnt[4];
     /*0x424*/ u16 mosaic;
-    /*0x426*/ u16 bgOfs[4][2];      // [bg][0 = HOFS, 1 = VOFS]
+    /*0x426*/ s16 bgOfs[4][2];      // [bg][0 = HOFS, 1 = VOFS]
     /*0x436*/ u16 win0h;
     /*0x438*/ u16 win1h;
     /*0x43A*/ u16 win0v;
