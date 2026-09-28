@@ -619,7 +619,11 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind)
 
 // Item effects 8-10: the title sprite drops in over the type 1 marker and sends the item use.
 // Doesn't match by one instruction: in state 2 the original stores a fresh 0 to unk120 where this
-// reuses the register holding unk132 (known to be 0):
+// reuses the register holding unk132 (known to be 0). cse does that: byte stores go through
+// store_bit_field as (and mem 0), which folds to 0 and finds unk132's register in the jump
+// equivalence. Tried: !x, <1, u32/s8 casts, a local or pointer for unk132, != with swapped arms,
+// switch, goto, volatile/bitfield/cast stores to unk120, storing unk1FA or unk132*0, the unk1FA
+// test written other ways, a temp reassigned to 8 before the store:
 //     void Effect8(void)
 //     {
 //         struct Main *main = &gMain;
