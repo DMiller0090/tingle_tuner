@@ -122,6 +122,14 @@ struct SoundPlayer
     /*0x44*/ u8 flags;                // bit 0: notes go to gSoundNoteHook
 };
 
+// Sequence commands E5-E7; voices point at their track's.
+struct TrackVibrato
+{
+    /*0x0*/ u16 delay;
+    /*0x4*/ u32 speed;
+    /*0x8*/ u32 depth;
+};
+
 // A sequence track (gSoundTracks, 24), see docs/layout.md for the byte code.
 struct SoundTrack
 {
@@ -129,9 +137,7 @@ struct SoundTrack
     /*0x04*/ const u32 *sampleSet;
     /*0x08*/ struct SoundPlayer *player;  // NULL: free
     /*0x0C*/ struct SoundVoice *voices;
-    /*0x10*/ u16 vibratoDelay;
-    /*0x14*/ u32 vibratoSpeed;
-    /*0x18*/ u32 vibratoDepth;
+    /*0x10*/ struct TrackVibrato vibrato;
     /*0x1C*/ u8 sweep1C;
     /*0x1D*/ u8 sweep1D;
     /*0x1E*/ u8 sweep1E;
@@ -161,6 +167,23 @@ struct SoundTrack
 
 struct EnvelopeStep;
 
+struct VoiceVibrato
+{
+    /*0x0*/ u32 phase;  // gVibratoTable index * 2
+    /*0x4*/ u32 delay;
+    /*0x8*/ const struct TrackVibrato *params;
+};
+
+// Pitch sweep (sequence commands D0-DF): offset moves by step to target after delay.
+struct VoiceSweep
+{
+    /*0x00*/ u32 delay;
+    /*0x04*/ u32 frames;
+    /*0x08*/ s32 offset;
+    /*0x0C*/ u32 target;
+    /*0x10*/ s32 step;
+};
+
 struct VoiceEnvelope
 {
     /*0x00*/ u32 level;
@@ -180,14 +203,17 @@ struct SoundVoice
     /*0x08*/ u8 priority;
     /*0x09*/ u8 key;
     /*0x0A*/ u8 velocity;
-    /*0x0B*/ u8 unk0B[5];
+    /*0x0B*/ u8 unk0B;
+    /*0x0C*/ u32 baseFreq;
     /*0x10*/ union { u32 pcm; u16 cgb; } freq;  // PCM: 16.16 step; GB: the frequency register
     /*0x14*/ u32 volume;   // GB channels: 0-15
     /*0x18*/ u16 gate;     // frames until the note is released
     /*0x1A*/ u8 unk1A;     // the track's E3 value
     /*0x1B*/ u8 fixedPan;  // the instrument's key split sets pan
     /*0x1C*/ u8 pan;
-    /*0x1D*/ u8 unk1D[0x23];
+    /*0x1D*/ u8 unk1D[3];
+    /*0x20*/ struct VoiceVibrato vibrato;
+    /*0x2C*/ struct VoiceSweep sweep;
     /*0x40*/ struct VoiceEnvelope env;
     /*0x54*/ u8 unk54[4];
     /*0x58*/ u8 release;  // released: volume * (0xE6 + release) / 512 per frame
@@ -1187,6 +1213,113 @@ u32 PcmVoiceVolume(struct SoundVoice *voice)
 INCLUDE_ASM(CgbVoiceVolume);
 
 
+// This frame's frequency value: the base plus the pitch sweep, the track's bend (a PCM step
+// scales; a GB channel's register value counts down from 0x800), and vibrato.
+// Near-miss: same code shape; freq and the sweep pointer swap r2/r3, and the vibrato pointer
+// and depth take r7/r6 (one more saved register) where the original has r4/r3.
+//     u32 VoiceUpdatePitch(struct SoundVoice *voice)
+//     {
+//         u32 freq = voice->baseFreq;
+//         struct SoundTrack *track = voice->track;
+//         struct VoiceSweep *sweep = &voice->sweep;
+//         struct VoiceVibrato *vib;
+//         u32 depth;
+//
+//         if (sweep->delay != 0)
+//         {
+//             sweep->delay--;
+//         }
+//         else if (sweep->frames != 0)
+//         {
+//             sweep->offset += sweep->step;
+//             if (--sweep->frames == 0)
+//                 sweep->offset = sweep->target;
+//         }
+//         freq += sweep->offset;
+//         if (track->bend != 0)
+//         {
+//             u32 bend;
+//
+//             if (track->bend > 0)
+//             {
+//                 bend = track->bend;
+//                 bend *= gPcmPitchTable[track->bendRange + 0x30];
+//                 bend += 0x400000;
+//                 if (voice->type == 0)
+//                 {
+//                     bend >>= 7;
+//                     freq *= bend;
+//                     freq >>= 15;
+//                 }
+//                 else
+//                 {
+//                     freq = 0x800 - freq;
+//                     freq <<= 22;
+//                     freq /= bend;
+//                     freq = 0x800 - freq;
+//                 }
+//             }
+//             else
+//             {
+//                 bend = -track->bend;
+//                 bend *= gPcmPitchTable[track->bendRange + 0x30];
+//                 bend += 0x400000;
+//                 if (voice->type == 0)
+//                 {
+//                     freq <<= 15;
+//                     bend >>= 7;
+//                     freq /= bend;
+//                 }
+//                 else
+//                 {
+//                     freq = 0x800 - freq;
+//                     bend >>= 7;
+//                     freq *= bend;
+//                     freq >>= 15;
+//                     if (freq < 0x800)
+//                         freq = 0x800 - freq;
+//                     else
+//                         freq = 0;
+//                 }
+//             }
+//         }
+//         vib = &voice->vibrato;
+//         depth = vib->params->depth;
+//         if (depth != 0)
+//         {
+//             if (vib->delay == 0)
+//             {
+//                 s8 v = gVibratoTable[vib->phase >> 1];
+//
+//                 if (voice->type == 0)
+//                 {
+//                     if (v >= 0)
+//                         freq += v * freq * depth >> 19;
+//                     else
+//                     {
+//                         freq <<= 12;
+//                         freq /= (-v * depth >> 3) + 0x10000;
+//                         freq <<= 4;
+//                     }
+//                 }
+//                 else
+//                 {
+//                     if (v >= 0)
+//                         freq = 0x800 - ((0x800 - freq) << 19) / (v * depth + 0x80000);
+//                     else
+//                         freq = 0x800 - ((0x800 - freq) * (-v * depth + 0x80000) >> 19);
+//                 }
+//                 vib->phase += vib->params->speed;
+//                 if ((vib->phase >> 1) > 0xFF)
+//                     vib->phase -= 0x200;
+//             }
+//             else
+//             {
+//                 vib->delay--;
+//             }
+//         }
+//         return freq;
+//     }
 INCLUDE_ASM(VoiceUpdatePitch);
 
 // Mix every active PCM voice into gPcmMixBuffer, release the voices whose gate ran out, and
@@ -1414,9 +1547,9 @@ void TrackStart(struct SoundTrack *track, struct SoundPlayer *player, const u8 *
         track->voices = NULL;
         TrackSetBank(track, 0);
         track->pan = 0x40;
-        track->vibratoDelay = 0;
-        track->vibratoSpeed = 0x22;
-        track->vibratoDepth = 0;
+        track->vibrato.delay = 0;
+        track->vibrato.speed = 0x22;
+        track->vibrato.depth = 0;
         track->sweep1C = 0;
         track->sweep1D = 0;
         track->sweep1E = 0;
