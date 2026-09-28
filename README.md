@@ -132,6 +132,8 @@ See [docs/layout.md](docs/layout.md) for the program's sections and modules and
 tail block, `client_ud.bin`, `msg_LZ.bin` and the packer's copy are answered in layout.md,
 and so is the sound bank's format (see "Sound driver" and "Raw tail block" there).
 
-- Sound: which effect each sound ID is. (`E3` is dead: its value is copied to voices and
-  never read; layout.md.)
+- What `gMode1Unused_02023E38` is (12 unreferenced bytes; the readings ruled out are in
+  layout.md).
+- Whether the US message data renumbered its `F6` voice-clip codes; if not, the US lost an
+  entry of `gSoundIds_0202430E` without adjusting `Func_0201C484` (layout.md, sound IDs).
 - What slots 3, 11 and 14 were for; no GC code sends them (see protocol.md).
