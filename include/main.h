@@ -11,7 +11,7 @@ struct Main
     /*0x400*/ u32 gameCode;         // from the packer's header (0x020000AC)
     /*0x404*/ u32 unk404;
     /*0x408*/ s32 random;           // UpdateRandom
-    /*0x40C*/ u16 unk40C[4];        // cleared by InitSystem
+    /*0x40C*/ u16 soundParams[4];   // zeroed by InitSystem; the params Mode1State2 passes to SoundPlay
     /*0x414*/ vu16 intrCheck:16;    // VBlankIntr sets bit 0; MainLoop waits for it
     /*0x416*/ u16 heldKeys;
     /*0x418*/ u16 newKeys;
@@ -35,14 +35,15 @@ struct Main
     /*0x44D*/ u8 frameCount;        // counted by VBlankIntr
     /*0x44E*/ u8 soundDmaStop;      // VBlankIntr calls SoundDmaStop
     /*0x44F*/ u8 filler44F;
-    /*0x450*/ u8 unk450;
-    /*0x451*/ u8 unk451;
+    /*0x450*/ u8 oamCount;          // gOamBuffer entries used this frame (InitOamBuffer clears it)
+    /*0x451*/ u8 affineCount;       // affine matrices used this frame (DrawSprite)
     /*0x452*/ u8 mode;              // index into gMainModeFuncs; 2 when the link drops
     /*0x453*/ u8 modeState;
     /*0x454*/ u8 unk454;
     /*0x455*/ u8 hblankScroll;      // VBlankIntr runs the per-line BG scroll DMA
     /*0x456*/ u8 inDungeon;         // the GC's dungeon number is not 0
-    /*0x457*/ u8 unk457;
+    /*0x457*/ u8 mapImageMode;      // the map screen shows the slot 2 map image (a dungeon, or while
+                                    //   flags.noMap), not the sea chart
     /*0x458*/ u8 unk458;
     /*0x459*/ u8 linked:1;          // GbaComMain
     /*0x45C*/ union { struct Heap heap; u8 raw[0x1800]; } heap;

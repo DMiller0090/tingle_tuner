@@ -45,9 +45,9 @@ const u16 gThreeChoiceMsgIds[21] =
     0xDE, 0xDF, 0xE0
 };
 
-// Sound per message sound code (Func_0201C484); codes 0x20-0x22 are SoundPlayLoop IDs.
+// Sound per message sound code (PlayMsgSound); codes 0x20-0x22 are SoundPlayLoop IDs.
 #define SE(id) ((id) < 7 ? (id) : (id) - SOUND_ID_SHIFT)
-const u16 gSoundIds_0202430E[] =
+const u16 gMsgSoundIds[] =
 {
     SE(0x1F), SE(0x1A), SE(0x1B), SE(0x2B), SE(0x2A), SE(0x29), SE(0x1C), SE(0x1E),
     SE(0x1D), SE(0x23), 0, 0, SE(0x13), SE(0x13), SE(0x13), SE(0x13),
@@ -85,7 +85,7 @@ const u8 gGlyphRunLength[8] =
 };
 
 #ifdef VERSION_GZLJ01
-const u8 gGlyphTable_0202438E[6] =
+const u8 gVoicedKanaGlyphs[6] =
 {
     0x50, 0x51, 0x52, 0x1C, 0x53, 0x39
 };
@@ -168,76 +168,77 @@ void (*const gMsgCmdFuncs[19])(void) =
     MsgCmd12
 };
 
-const u8 *const gTingleFrames_020243F0[1] =
+const u8 *const gTingleAnim0[1] =
 {
-    gSprite_0202C740
+    gTingleSprite
 };
 
-const u8 *const gTingleFrames_020243F4[2] =
+const u8 *const gTingleAnim2[2] =
 {
-    gSprite_0202C650, gSprite_0202C740
+    gSprite_0202C650, gTingleSprite
 };
 
-const u8 *const gTingleFrames_020243FC[1] =
+const u8 *const gTingleAnim3[1] =
 {
-    gSprite_0202C740
+    gTingleSprite
 };
 
-const u8 *const gTingleFrames_02024400[2] =
+const u8 *const gTingleAnim4[2] =
 {
-    gSprite_0202C650, gSprite_0202C740
+    gSprite_0202C650, gTingleSprite
 };
 
-const u8 *const gTingleFrames_02024408[1] =
+const u8 *const gTingleAnim5[1] =
 {
     gSprite_0202C650
 };
 
-const u8 *const gTingleFrames_0202440C[1] =
+const u8 *const gTingleAnim7[1] =
 {
     gSprite_0202C788
 };
 
-const u8 *const gTingleFrames_02024410[1] =
+const u8 *const gTingleAnim8[1] =
 {
     gSprite_0202C7C8
 };
 
-const u8 *const gTingleFrames_02024414[1] =
+const u8 *const gTingleAnim9[1] =
 {
     gSprite_0202C848
 };
 
-const u8 *const gTingleFrames_02024418[2] =
+const u8 *const gTingleAnim10[2] =
 {
     gSprite_0202C850, gSprite_0202C650
 };
 
-const u8 *const gTingleFrames_02024420[1] =
+const u8 *const gTingleAnim11[1] =
 {
-    gSprite_0202CAE0
+    gSelectionIconSprite
 };
 
 const u8 *const *const gTingleAnims[15] =
 {
-    gTingleFrames_020243F0,
-    gTingleFrames_020243F0,
-    gTingleFrames_020243F4,
-    gTingleFrames_020243FC,
-    gTingleFrames_02024400,
-    gTingleFrames_02024408,
-    gTingleFrames_020243FC,
-    gTingleFrames_0202440C,
-    gTingleFrames_02024410,
-    gTingleFrames_02024414,
-    gTingleFrames_02024418,
-    gTingleFrames_02024420,
-    gTingleFrames_020243F0,
-    gTingleFrames_020243F0,
-    gTingleFrames_020243F0
+    gTingleAnim0,
+    gTingleAnim0,
+    gTingleAnim2,
+    gTingleAnim3,
+    gTingleAnim4,
+    gTingleAnim5,
+    gTingleAnim3,
+    gTingleAnim7,
+    gTingleAnim8,
+    gTingleAnim9,
+    gTingleAnim10,
+    gTingleAnim11,
+    gTingleAnim0,
+    gTingleAnim0,
+    gTingleAnim0
 };
 
-void Func_0201BA2C(s8 row)
+// Draw BG map row `row` of the message box: its border tiles and 12 text canvas tiles.
+void DrawMsgBoxRow(s8 row)
 {
     u16 *map = (u16 *)0x06006120 + row * 32;
     u16 tile = row * 12 + 0xF370;
@@ -254,7 +255,8 @@ void Func_0201BA2C(s8 row)
     map[0] = map[0x20] = 0xD024;
 }
 
-void Func_0201BA9C(s8 row)
+// Put back the two BG map rows under the message box row (from the copy at 0x06007800).
+void RestoreMsgBoxRow(s8 row)
 {
     u16 *src = (u16 *)0x06007800;
     s32 off = row * 32;
@@ -391,7 +393,7 @@ void TextScaleGlyph(s32 count, const u8 *src)
     }
 }
 
-// Draw an 8x8 glyph (from 0x0600A000) at pixel (x, y) of the text canvas; with unk15A set,
+// Draw an 8x8 glyph (from 0x0600A000) at pixel (x, y) of the text canvas; with textBig set,
 // scaled 2x into four tiles. TextDrawSmallGlyph is the same for the 4-row glyphs at 0x0600A010.
 #ifdef VERSION_GZLJ01
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
@@ -402,7 +404,7 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     u32 col;
     u8 y2;
 
-    if (gGameState.unk15A)
+    if (gGameState.textBig)
     {
         TextScaleGlyph(32, (u8 *)glyph);
         y += 4;
@@ -431,7 +433,7 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     u32 *glyph = (u32 *)0x0600A000 + ch * 8;
     u32 *dst;
 
-    if (gGameState.unk15A)
+    if (gGameState.textBig)
     {
         u32 row;
         u32 col;
@@ -491,7 +493,7 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
     row = (y >> 3) * 0x180 + (y & 7) * 4;
     col = (x >> 3) * 32 + 0x0600F100;
     dst = (u32 *)(row + col);
-    if (gGameState.unk15A)
+    if (gGameState.textBig)
     {
         TextScaleGlyph(16, (u8 *)glyph);
         TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
@@ -526,11 +528,11 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
     p->priority = 0;                         \
     p->paletteNum = 8;                       \
     p++;                                     \
-    gMain.unk450++;
+    gMain.oamCount++;
 
-void Func_0201BEA0(s8 row)
+void DrawMsgBoxFrame(s8 row)
 {
-    struct OamData16 *p = (struct OamData16 *)&gOamBuffer[gMain.unk450];
+    struct OamData16 *p = (struct OamData16 *)&gOamBuffer[gMain.oamCount];
     s32 y;
     s32 shake;
     s32 t;
@@ -551,7 +553,8 @@ void Func_0201BEA0(s8 row)
     }
 }
 
-void Func_0201C0E8(u8 playSound)
+// Clear the text canvas and home the text cursor; with playSound, a random voice blip.
+void MsgNewPage(u8 playSound)
 {
     u32 params[2];
     u32 mask;
@@ -583,20 +586,20 @@ void DrawChoiceCursor(void)
     u8 timer;
 
     mosaic = (gMain.bgcnt[0] >> 6) & 1;
-    timer = --gGameState.unk152;
-    sprite = (const u8 *)gSprite_0202C130;
+    timer = --gGameState.choiceCursorTimer;
+    sprite = (const u8 *)gChoiceCursorSprite;
     if (timer == 0)
     {
-        gGameState.unk153 ^= 1;
-        gGameState.unk152 = (sprite + gGameState.unk153 * 8)[4];
+        gGameState.choiceCursorFrame ^= 1;
+        gGameState.choiceCursorTimer = (sprite + gGameState.choiceCursorFrame * 8)[4];
     }
-    y = gGameState.unk150 + gGameState.unk14F * 12;
+    y = gGameState.choiceY + gGameState.choiceCursor * 12;
     y += 0x34;
-    DrawSprite(sprite, gGameState.unk153, 0x8C, y, 0, mosaic, 0, 0, 0, 0, 0);
+    DrawSprite(sprite, gGameState.choiceCursorFrame, 0x8C, y, 0, mosaic, 0, 0, 0, 0, 0);
 }
 
-// The choice menu after a question (unk14F: cursor; two choices when unk151 is 1, else
-// three). Up/Down move the cursor, A picks: the sound for (unk142, choice) from the tables
+// The choice menu after a question (choiceCursor: cursor; two choices when choiceMenu is 1, else
+// three). Up/Down move the cursor, A picks: the sound for (msgId, choice) from the tables
 // is played, or 0xFFFF closes the menu. Returns 1 while waiting, 0 after a pick, 3 for 0xFFFF.
 // The result is a u8 here; callers see s32 (the prototype in game.h; MsgStep returns it as is).
 u8 ChoiceMenuUpdate_(void) asm("ChoiceMenuUpdate");
@@ -604,14 +607,14 @@ u8 ChoiceMenuUpdate_(void)
 {
     s32 i;
 
-    if (gGameState.unk151 == 1)
+    if (gGameState.choiceMenu == 1)
     {
         if (gMain.newKeys & 0xC0)
         {
-            gGameState.unk14F ^= 1;
+            gGameState.choiceCursor ^= 1;
             SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
-            gGameState.unk153 = 0;
-            gGameState.unk152 = gSprite_0202C130[0].duration;
+            gGameState.choiceCursorFrame = 0;
+            gGameState.choiceCursorTimer = gChoiceCursorSprite[0].duration;
         }
     }
     else if (gMain.newKeys & 0xC0)
@@ -619,56 +622,56 @@ u8 ChoiceMenuUpdate_(void)
         SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
         if (gMain.newKeys & 0x80)
         {
-            if (++gGameState.unk14F > 2)
-                gGameState.unk14F = 0;
+            if (++gGameState.choiceCursor > 2)
+                gGameState.choiceCursor = 0;
         }
         else
         {
-            if (--gGameState.unk14F > 2)
-                gGameState.unk14F = 2;
+            if (--gGameState.choiceCursor > 2)
+                gGameState.choiceCursor = 2;
         }
-        gGameState.unk153 = 0;
-        gGameState.unk152 = gSprite_0202C130[0].duration;
+        gGameState.choiceCursorFrame = 0;
+        gGameState.choiceCursorTimer = gChoiceCursorSprite[0].duration;
     }
     DrawChoiceCursor();
     if (gMain.newKeys & 1)
     {
         i = 0;
-        if (gGameState.unk151 == 1)
+        if (gGameState.choiceMenu == 1)
         {
-            while (gTwoChoiceIds[i] != gGameState.unk142)
+            while (gTwoChoiceIds[i] != gGameState.msgId)
                 i++;
-            if (gTwoChoiceMsgIds[i * 2 + gGameState.unk14F] == 0xFFFF)
+            if (gTwoChoiceMsgIds[i * 2 + gGameState.choiceCursor] == 0xFFFF)
             {
-                gGameState.unk151 = 0;
-                gGameState.unk150 = 0;
-                gGameState.unk14F = 0xFF;
-                gGameState.unk14E = 0;
-                gGameState.unk13E = 300;
+                gGameState.choiceMenu = 0;
+                gGameState.choiceY = 0;
+                gGameState.choiceCursor = 0xFF;
+                gGameState.choiceIndex = 0;
+                gGameState.msgWaitTimer = 300;
                 return 3;
             }
-            if (gTwoChoiceMsgIds[i * 2 + gGameState.unk14F] == 0x1A7)
-                gGameState.unk11E = 1;
-            ShowMessage(gTwoChoiceMsgIds[i * 2 + gGameState.unk14F], gGameState.unk226);
+            if (gTwoChoiceMsgIds[i * 2 + gGameState.choiceCursor] == 0x1A7)
+                gGameState.placeTargetAtCursor = 1;
+            ShowMessage(gTwoChoiceMsgIds[i * 2 + gGameState.choiceCursor], gGameState.tingleAnim);
         }
         else
         {
-            while (gThreeChoiceIds[i] != gGameState.unk142)
+            while (gThreeChoiceIds[i] != gGameState.msgId)
                 i++;
-            if (gThreeChoiceMsgIds[i * 3 + gGameState.unk14F] == 0xFFFF)
+            if (gThreeChoiceMsgIds[i * 3 + gGameState.choiceCursor] == 0xFFFF)
             {
-                gGameState.unk151 = 0;
-                gGameState.unk150 = 0;
-                gGameState.unk14F = 0xFF;
-                gGameState.unk14E = 0;
+                gGameState.choiceMenu = 0;
+                gGameState.choiceY = 0;
+                gGameState.choiceCursor = 0xFF;
+                gGameState.choiceIndex = 0;
                 return 3;
             }
-            ShowMessage(gThreeChoiceMsgIds[i * 3 + gGameState.unk14F], gGameState.unk226);
+            ShowMessage(gThreeChoiceMsgIds[i * 3 + gGameState.choiceCursor], gGameState.tingleAnim);
         }
-        gGameState.unk151 = 0;
-        gGameState.unk150 = 0;
-        gGameState.unk14F = 0xFF;
-        gGameState.unk14E = 0;
+        gGameState.choiceMenu = 0;
+        gGameState.choiceY = 0;
+        gGameState.choiceCursor = 0xFF;
+        gGameState.choiceIndex = 0;
         gMain.newKeys ^= 1;
         SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
         return 0;
@@ -676,7 +679,10 @@ u8 ChoiceMenuUpdate_(void)
     return 1;
 }
 
-void Func_0201C484(u8 id)
+// Message code F6 (and the sound byte of slots 5 and 15): play gMsgSoundIds[id]. 0x0C-0x0F
+// are a random one of three voice blips, 0x20-0x22 a loop sound (msgLoopSound; a following
+// F9 sets the delay), 0x16 nothing.
+void PlayMsgSound(u8 id)
 {
     u32 params[2];
     u32 mask;
@@ -692,63 +698,65 @@ void Func_0201C484(u8 id)
             params[1] = (params[1] & mask) | 1;
         else
             params[1] = (params[1] & mask) | 2;
-        SoundPlay(gSoundIds_0202430E[id], params);
+        SoundPlay(gMsgSoundIds[id], params);
     }
     else if ((u8)(id - 0x20) <= 2)
     {
-        gGameState.unk140 = gSoundIds_0202430E[id];
-        SoundPlayLoop(gGameState.unk140, gGameState.unk140, 0);
+        gGameState.msgLoopSound = gMsgSoundIds[id];
+        SoundPlayLoop(gGameState.msgLoopSound, gGameState.msgLoopSound, 0);
         if (gGameState.msgPtr[1] == 0xF9)
         {
             gGameState.msgPtr++;
-            gGameState.unk14D = *++gGameState.msgPtr;
+            gGameState.textWait = *++gGameState.msgPtr;
         }
     }
     else if (id != 0x16)
     {
-        SoundPlay(gSoundIds_0202430E[id], 0);
+        SoundPlay(gMsgSoundIds[id], 0);
     }
 }
 
-void Func_0201C568(void)
+// Start Tingle's animation gGameState.tingleAnim from its first frame (with its scale).
+void StartTingleAnim(void)
 {
     u8 i;
     const u8 *const *const *entry;
 
-    gGameState.unk22A = 0;
-    if (gGameState.unk226 == 2)
+    gGameState.tingleScaleDir = 0;
+    if (gGameState.tingleAnim == 2)
     {
-        gGameState.unk206 = 0x300;
+        gGameState.tingleScale = 0x300;
     }
-    else if (gGameState.unk226 == 3)
+    else if (gGameState.tingleAnim == 3)
     {
-        gGameState.unk206 = 0x100;
+        gGameState.tingleScale = 0x100;
     }
-    else if (gGameState.unk226 == 11)
+    else if (gGameState.tingleAnim == 11)
     {
-        gGameState.unk206 = 0;
-        gGameState.unk22C = 0;
-        gGameState.unk208 = 0x100;
+        gGameState.tingleScale = 0;
+        gGameState.tinglePulseGrow = 0;
+        gGameState.tinglePulse = 0x100;
     }
     else
     {
-        gGameState.unk206 = 0;
+        gGameState.tingleScale = 0;
     }
-    gGameState.unk228 = 0;
-    gGameState.unk227 = 0;
-    i = gGameState.unk226;
+    gGameState.tingleFrame = 0;
+    gGameState.tingleAnimPart = 0;
+    i = gGameState.tingleAnim;
     entry = gTingleAnims + i;
-    gGameState.unk202 = (**entry)[4];
+    gGameState.tingleTimer = (**entry)[4];
 }
 
-bool32 Func_0201C60C(void)
+// Wrap the text cursor to the next line at the right edge; FALSE when the box is full.
+bool32 TextWrapLine(void)
 {
     u8 step;
 
     if (gGameState.textX < 0x60)
         return TRUE;
     gGameState.textX = 0;
-    if (gGameState.unk15A)
+    if (gGameState.textBig)
         step = 24;
     else
         step = 12;
@@ -776,11 +784,11 @@ void DrawGlyphRun(u8 id)
 #endif
     for (i = 0; i < n; i++)
     {
-        if (!Func_0201C60C())
+        if (!TextWrapLine())
             return;
-        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
+        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, ch);
         ch++;
-        if (gGameState.unk15A)
+        if (gGameState.textBig)
             gGameState.textX += gGameState.glyphWidth * 2;
         else
             gGameState.textX += gGameState.glyphWidth;
@@ -793,23 +801,23 @@ void DrawGlyphRun(u8 id)
 #ifdef VERSION_GZLJ01
 bool32 DrawChar(u8 ch)
 {
-    if (!Func_0201C60C())
+    if (!TextWrapLine())
         return FALSE;
     if (ch == 0xBC)
-        gGameState.unk159 = 1;
+        gGameState.charLoopSound = 1;
     else
-        gGameState.unk159 = 0;
+        gGameState.charLoopSound = 0;
     if (ch > 0xE5)
     {
-        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC4);
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, 0xC4);
         if (ch <= 0xEA)
             ch += 0x33;
         else
-            ch = gGlyphTable_0202438E[ch - 0xEB];
+            ch = gVoicedKanaGlyphs[ch - 0xEB];
     }
     else if (ch > 0xBC)
     {
-        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0xC2);
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, 0xC2);
         if (ch <= 0xC1)
             ch += 0x48;
         else if (ch <= 0xC6)
@@ -825,14 +833,14 @@ bool32 DrawChar(u8 ch)
         else if (ch <= 0xDF)
             ch += 0x6B;
         else
-            ch = gGlyphTable_0202438E[ch - 0xE0];
+            ch = gVoicedKanaGlyphs[ch - 0xE0];
     }
-    TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
-    if (gGameState.unk15A)
+    TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, ch);
+    if (gGameState.textBig)
         gGameState.textX += gGameState.glyphWidth * 2;
     else
         gGameState.textX += gGameState.glyphWidth;
-    if ((u16)gGameState.unk140 == 0xFFFF)
+    if ((u16)gGameState.msgLoopSound == 0xFFFF)
         SoundPlay(0x28, 0);
     return TRUE;
 }
@@ -843,27 +851,27 @@ bool32 DrawChar(u8 ch)
 // + 1 into the table address instead of the index.
 #define DRAW_ACCENTED(table, first, accent)                                                   \
     {                                                                                         \
-        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A,                  \
+        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.textColor,                  \
                       table[ch - first][0]);                                                  \
         if (gMain.mode != 2)                                                                  \
             TextDrawSmallGlyph(gGameState.textX,                                              \
                                gGameState.textY + table[0][(ch - first) * 2 + 1],             \
-                               gGameState.unk14A, accent);                                    \
+                               gGameState.textColor, accent);                                    \
     }
 
 bool32 DrawChar(u8 ch)
 {
     if (ch == 0x9F)
     {
-        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0x8A);
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, 0x8A);
         if (gMain.mode != 2)
-            TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0);
+            TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, 0);
     }
     else if (ch == 0x9E)
     {
-        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0x89);
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, 0x89);
         if (gMain.mode != 2)
-            TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0);
+            TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, 0);
     }
     else if (ch > 0x9B)
         DRAW_ACCENTED(gAccentGlyphs_0202AFF4, 0x9C, 0x84)
@@ -880,12 +888,12 @@ bool32 DrawChar(u8 ch)
     else if (ch > 0x67)
         DRAW_ACCENTED(gAccentGlyphs_0202B04C, 0x68, 0x87)
     else
-        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
-    if (gGameState.unk15A)
+        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.textColor, ch);
+    if (gGameState.textBig)
         gGameState.textX += gGameState.glyphWidth * 2;
     else
         gGameState.textX += gGameState.glyphWidth;
-    if ((u16)gGameState.unk140 == 0xFFFF)
+    if ((u16)gGameState.msgLoopSound == 0xFFFF)
         SoundPlay(0x28 - SOUND_ID_SHIFT, 0);
     return TRUE;
 }
@@ -895,16 +903,16 @@ bool32 DrawChar(u8 ch)
 #ifndef VERSION_GZLJ01
 bool32 UsDrawChar(u8 ch)
 {
-    if (!Func_0201C60C())
+    if (!TextWrapLine())
         return FALSE;
     if (ch == 0x3F)
     {
-        gGameState.unk159 = 1;
+        gGameState.charLoopSound = 1;
         ch = 0x18;
     }
     else
     {
-        gGameState.unk159 = 0;
+        gGameState.charLoopSound = 0;
     }
     return DrawChar(ch);
 }
@@ -914,7 +922,7 @@ void MsgCmd00(void)
 {
     u16 *map = (u16 *)0x0600704E;
 
-    gGameState.unk138_4 = 1;
+    gGameState.balloonDiscount = 1;
     gGameState.items[3].price = 20;
     DrawItemCount(3, map + 0x40);
     map += 3;
@@ -930,7 +938,7 @@ void MsgCmd01(void)
 {
     u16 *map = (u16 *)0x0600718E;
 
-    gGameState.unk138_5 = 1;
+    gGameState.tingDiscount = 1;
     gGameState.items[8].price = 10;
     DrawItemCount(8, map + 0x40);
     map += 3;
@@ -992,19 +1000,19 @@ void DrawHour(void)
 
 void DrawMinute(void)
 {
-    if (DRAW_CHAR(gGameState.flags.unk7_0 / 10 + GLYPH_DIGIT_0))
-        DRAW_CHAR(gGameState.flags.unk7_0 % 10 + GLYPH_DIGIT_0);
+    if (DRAW_CHAR(gGameState.flags.minute / 10 + GLYPH_DIGIT_0))
+        DRAW_CHAR(gGameState.flags.minute % 10 + GLYPH_DIGIT_0);
 }
 
 void MsgCmd05(void)
 {
-    gGameState.unk138_3 = 1;
+    gGameState.shopUnlocked = 1;
     SetSlotItem(6, 7);
 }
 
 void MsgCmd06(void)
 {
-    gGameState.unk138_3 = 0;
+    gGameState.shopUnlocked = 0;
     SetSlotItem(6, 0);
 }
 
@@ -1034,17 +1042,17 @@ void MsgCmd0C(void)
 
 void MsgCmd0D(void)
 {
-    gGameState.unk158 = 1;
+    gGameState.textFast = 1;
 }
 
 void MsgCmd0E(void)
 {
-    gGameState.unk158 = 0;
+    gGameState.textFast = 0;
 }
 
 void MsgCmd0F(void)
 {
-    gGameState.unk15A = 1;
+    gGameState.textBig = 1;
 }
 
 void MsgCmd10(void)
@@ -1060,7 +1068,7 @@ void MsgCmd11(void)
 void MsgCmd12(void)
 {
     SendItemUse(0x15, 0);
-    gGameState.unk1E5_1 = 0;
+    gGameState.itemsEnabled = 0;
 }
 
 // Message interpreter, one step per call: draws the next character of gGameState.msgPtr or
@@ -1073,55 +1081,55 @@ s32 MsgStep(void)
     bool32 repeat = FALSE;  // 0xFB: stay on the code for the next letter of the name
     u8 n;  // line height, then the argument byte of a code (one variable in the original)
 
-    if ((u16)gGameState.unk140 != 0xFFFF)
+    if ((u16)gGameState.msgLoopSound != 0xFFFF)
     {
-        if ((u8)(gGameState.unk14B - 2) > 1 || gGameState.unk14D != 0)
-            SoundPlayLoop((u16)gGameState.unk140, gGameState.unk140, 0);
+        if ((u8)(gGameState.msgStatus - 2) > 1 || gGameState.textWait != 0)
+            SoundPlayLoop((u16)gGameState.msgLoopSound, gGameState.msgLoopSound, 0);
         else
-            gGameState.unk140 = (u16)gGameState.unk140 | 0xFFFF;
+            gGameState.msgLoopSound = (u16)gGameState.msgLoopSound | 0xFFFF;
     }
-    if (gGameState.unk15A)
+    if (gGameState.textBig)
         n = 12;
     else
         n = 0;
-    if (gGameState.unk159 && (u16)gGameState.unk140 == 0xFFFF)
+    if (gGameState.charLoopSound && (u16)gGameState.msgLoopSound == 0xFFFF)
         SoundPlayLoop(0, 0, 0);
-    if (gGameState.unk14D != 0)
+    if (gGameState.textWait != 0)
     {
-        gGameState.unk14D--;  // delay (code 0xF9)
+        gGameState.textWait--;  // delay (code 0xF9)
     }
     else
     {
-        gGameState.unk14D = gGameState.unk14C;
-        if (gGameState.unk14B == 2 || gGameState.textY >= 0x50 - n)
+        gGameState.textWait = gGameState.textDelay;
+        if (gGameState.msgStatus == 2 || gGameState.textY >= 0x50 - n)
         {
             // Page full: show the arrow until A (or the timeout), then clear the window.
-            if (gGameState.flags.unk3_1)
-                gGameState.unk13E++;
-            if (gGameState.unk13E <= 0x12B && !(gMain.newKeys & 1))
+            if (gGameState.flags.gcInput)
+                gGameState.msgWaitTimer++;
+            if (gGameState.msgWaitTimer <= 0x12B && !(gMain.newKeys & 1))
             {
-                DrawSprite(gSprite_0202BDF0, (gMain.frameCount & 0xC) == 0, 0xE0, 0x84, 0, mosaic,
+                DrawSprite(gMsgNextArrowSprite, (gMain.frameCount & 0xC) == 0, 0xE0, 0x84, 0, mosaic,
                            0, 0, 0, 0, 0);
                 return 2;
             }
             gMain.newKeys &= ~1;
-            Func_0201C0E8(1);
-            gGameState.unk15A = 0;
-            gGameState.unk13E = 0;
-            gGameState.unk14B = 0;
+            MsgNewPage(1);
+            gGameState.textBig = 0;
+            gGameState.msgWaitTimer = 0;
+            gGameState.msgStatus = 0;
             return 0;
         }
-        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && gGameState.unk151 != 0)
+        if ((gGameState.msgStatus == 1 || gGameState.msgStatus == 3) && gGameState.choiceMenu != 0)
             return ChoiceMenuUpdate();
         while (ch > 0xF1)
         {
             if (ch == 0xFF)  // end
             {
-                gGameState.unk158 = 0;
-                gGameState.unk159 = 0;
-                gGameState.unk15A = 0;
+                gGameState.textFast = 0;
+                gGameState.charLoopSound = 0;
+                gGameState.textBig = 0;
                 #ifndef VERSION_GZLJ01
-                if (gGameState.unk151)
+                if (gGameState.choiceMenu)
                     return 1;
 #endif
                 return 3;
@@ -1130,7 +1138,7 @@ s32 MsgStep(void)
             {
             space:
                 gGameState.msgPtr++;
-                if (gGameState.unk15A)
+                if (gGameState.textBig)
                     gGameState.textX += gGameState.glyphWidth * 2;
                 else
                     gGameState.textX += gGameState.glyphWidth;
@@ -1138,7 +1146,7 @@ s32 MsgStep(void)
             }
             if (ch == 0xFA || ch == 0xFE)  // 0xFA: wait, 0xFE: new line
             {
-                if (gGameState.unk15A)
+                if (gGameState.textBig)
                     n = 24;
                 else
                     n = 12;
@@ -1177,7 +1185,7 @@ s32 MsgStep(void)
             }
             else if (ch == 0xF9)  // delay
             {
-                gGameState.unk14D = *++gGameState.msgPtr;
+                gGameState.textWait = *++gGameState.msgPtr;
                 gGameState.msgPtr++;
                 // (A return here would be laid out differently.)
                 goto end;
@@ -1185,50 +1193,50 @@ s32 MsgStep(void)
             else if (ch == 0xF8)
             {
                 n = *++gGameState.msgPtr;
-                if (gGameState.unk150 == 0)
-                    gGameState.unk150 = gGameState.textY;
+                if (gGameState.choiceY == 0)
+                    gGameState.choiceY = gGameState.textY;
                 if (n == 0)
                 {
-                    gGameState.unk14F = gGameState.unk14E;
-                    gGameState.unk151 = 1;
-                    gGameState.unk153 = n;
-                    gGameState.unk152 = gSprite_0202C130[0].duration;
+                    gGameState.choiceCursor = gGameState.choiceIndex;
+                    gGameState.choiceMenu = 1;
+                    gGameState.choiceCursorFrame = n;
+                    gGameState.choiceCursorTimer = gChoiceCursorSprite[0].duration;
                 }
-                else if (gGameState.unk14F == 0xFF)
+                else if (gGameState.choiceCursor == 0xFF)
                 {
-                    gGameState.unk14E++;
+                    gGameState.choiceIndex++;
                 }
                 goto space;
             }
             else if (ch == 0xF7)
             {
                 n = *++gGameState.msgPtr;
-                if (gGameState.unk150 == 0)
-                    gGameState.unk150 = gGameState.textY;
+                if (gGameState.choiceY == 0)
+                    gGameState.choiceY = gGameState.textY;
                 if (n == 0)
                 {
-                    gGameState.unk14F = gGameState.unk14E;
-                    gGameState.unk151 = 2;
-                    gGameState.unk153 = n;
-                    gGameState.unk152 = gSprite_0202C130[0].duration;
+                    gGameState.choiceCursor = gGameState.choiceIndex;
+                    gGameState.choiceMenu = 2;
+                    gGameState.choiceCursorFrame = n;
+                    gGameState.choiceCursorTimer = gChoiceCursorSprite[0].duration;
                 }
-                else if (gGameState.unk14F == 0xFF)
+                else if (gGameState.choiceCursor == 0xFF)
                 {
-                    gGameState.unk14E++;
+                    gGameState.choiceIndex++;
                 }
                 goto space;
             }
             else if (ch == 0xF6)
             {
                 n = *++gGameState.msgPtr;
-                Func_0201C484(n);
+                PlayMsgSound(n);
                 gGameState.msgPtr++;
                 return 1;
             }
             else if (ch == 0xF5)
             {
-                gGameState.unk226 = gMsgTingleAnims[*++gGameState.msgPtr];
-                Func_0201C568();
+                gGameState.tingleAnim = gMsgTingleAnims[*++gGameState.msgPtr];
+                StartTingleAnim();
             }
             else if (ch == 0xF3)  // call a handler
             {
@@ -1241,7 +1249,7 @@ s32 MsgStep(void)
             }
             else if (ch == 0xFC)
             {
-                gGameState.unk14A = *++gGameState.msgPtr;
+                gGameState.textColor = *++gGameState.msgPtr;
             }
             else
             {
@@ -1260,13 +1268,14 @@ end:
 }
 
 // Per frame in mode 1: slide the message box (msgBoxPos) and step the message (MsgStep, fast
-// while A is held), then run Tingle's animation (switch on gGameState.unk226; unk227 picks the
-// sprite list, unk228 the frame, unk202 counts the frame's duration, unk206 the scale) and
-// draw him, and the sprite at (0xC8, 0x58) while flags.unkB_1 is set.
+// while A is held), then run Tingle's animation (switch on gGameState.tingleAnim; tingleAnimPart
+// picks the sprite list, tingleFrame the frame, tingleTimer counts the frame's duration,
+// tingleScale the scale) and draw him, and the wind arrow at (0xC8, 0x58) while
+// flags.showWind is set.
 // agbcc -O2 runs gcse (LCM-based PRE) on the pool load of gGameState's address; calls kill
 // it, so case 11's DrawSprite call feeding the switch join directly (its own `sprite = ...;
 // break;`, not a fall into talk) makes the other cases' last gGameState reads reload it.
-void Func_0201CFE8(void)
+void UpdateMsgAndTingle(void)
 {
     s32 target;
     u32 mosaic;
@@ -1278,7 +1287,7 @@ void Func_0201CFE8(void)
     u8 anim;
     s32 ofsY;
 
-    if (gGameState.unk13C)
+    if (gGameState.msgOpen)
         target = 10;
     else
         target = 0;
@@ -1288,14 +1297,14 @@ void Func_0201CFE8(void)
     if (gGameState.msgBoxPos != target)
     {
         StepTowardS8(&gGameState.msgBoxPos, target, 2);
-        if (gGameState.unk13C)
+        if (gGameState.msgOpen)
         {
-            Func_0201BA2C(gGameState.msgBoxPos);
-            gGameState.unk14B = 1;
+            DrawMsgBoxRow(gGameState.msgBoxPos);
+            gGameState.msgStatus = 1;
         }
         else
         {
-            Func_0201BA9C(gGameState.msgBoxPos);
+            RestoreMsgBoxRow(gGameState.msgBoxPos);
             if (gGameState.msgBoxPos == 0)
             {
                 if (gGameState.unk21C)
@@ -1303,39 +1312,39 @@ void Func_0201CFE8(void)
                     gGameState.unk0E5 = 0;
                     gGameState.unk21C = 0;
                 }
-                gGameState.unk1FA = 0;
-                gGameState.unk226 = 0;
-                gGameState.unk227 = 0;
-                gGameState.unk228 = 0;
-                if (gGameState.flags.unkA_3 && gMain.modeState == 2)
+                gGameState.inMessage = 0;
+                gGameState.tingleAnim = 0;
+                gGameState.tingleAnimPart = 0;
+                gGameState.tingleFrame = 0;
+                if (gGameState.flags.restarting && gMain.modeState == 2)
                     Mode1StartFadeOut();
-                gGameState.unk142 = 0xFFFF;
-                gGameState.unk104 = 1;
+                gGameState.msgId = 0xFFFF;
+                gGameState.active = 1;
             }
         }
-        Func_0201BEA0(gGameState.msgBoxPos);
+        DrawMsgBoxFrame(gGameState.msgBoxPos);
     }
-    else if (gGameState.unk13C && gGameState.unk142 >= 0)
+    else if (gGameState.msgOpen && gGameState.msgId >= 0)
     {
         do
         {
             r = MsgStep();
-            if (gGameState.unk12B == 1 || r != 0)
+            if (gGameState.effectStep == 1 || r != 0)
                 break;
-        } while ((gMain.newKeys & 1) || gGameState.unk158);
-        gGameState.unk14B = r;
-        Func_0201BEA0(gGameState.msgBoxPos);
+        } while ((gMain.newKeys & 1) || gGameState.textFast);
+        gGameState.msgStatus = r;
+        DrawMsgBoxFrame(gGameState.msgBoxPos);
     }
-    else if (gGameState.unk1FA)
+    else if (gGameState.inMessage)
     {
-        gGameState.unk1FA = 0;
+        gGameState.inMessage = 0;
     }
-    if (gGameState.unk1FA || gGameState.unk1CC || gGameState.unk224
-     || (!gGameState.flags.busy && gGameState.unk104))
+    if (gGameState.inMessage || gGameState.menuOpen || gGameState.chartOpen
+     || (!gGameState.flags.busy && gGameState.active))
     {
-        gGameState.unk22B = 1;
-        anim = gGameState.unk226;
-        sprite = (*(anim + gTingleAnims))[gGameState.unk227];
+        gGameState.animateMarkers = 1;
+        anim = gGameState.tingleAnim;
+        sprite = (*(anim + gTingleAnims))[gGameState.tingleAnimPart];
         x = 0xB8;
         switch (anim)
         {
@@ -1343,254 +1352,254 @@ void Func_0201CFE8(void)
             x = 0x98;
             a10 = 2;
         case 1:
-            gGameState.unk206 = 0;
-            if (gGameState.unk14B)
+            gGameState.tingleScale = 0;
+            if (gGameState.msgStatus)
                 goto talk;
-            if (gGameState.unk202 == 0)
+            if (gGameState.tingleTimer == 0)
             {
-                if (++gGameState.unk228 > 8)
-                    gGameState.unk228 = 0;
-                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                if (++gGameState.tingleFrame > 8)
+                    gGameState.tingleFrame = 0;
+                gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 2:
-            if (gGameState.unk227 && gGameState.unk14B)
+            if (gGameState.tingleAnimPart && gGameState.msgStatus)
                 goto talk;
-            if (gGameState.unk202 == 0)
+            if (gGameState.tingleTimer == 0)
             {
-                gGameState.unk228++;
-                if (gGameState.unk227)
+                gGameState.tingleFrame++;
+                if (gGameState.tingleAnimPart)
                 {
-                    if (gGameState.unk228 > 8)
-                        gGameState.unk228 = 0;
-                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                    if (gGameState.tingleFrame > 8)
+                        gGameState.tingleFrame = 0;
+                    gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
                 }
                 else
                 {
-                    gGameState.unk228 = 0;
-                    if (gGameState.unk22A == 0)
+                    gGameState.tingleFrame = 0;
+                    if (gGameState.tingleScaleDir == 0)
                     {
-                        if (gGameState.unk206 != 0xA0)
+                        if (gGameState.tingleScale != 0xA0)
                         {
-                            gGameState.unk206 -= 0x20;
+                            gGameState.tingleScale -= 0x20;
                         }
                         else
                         {
-                            gGameState.unk202 = 10;
-                            gGameState.unk22A = 1;
+                            gGameState.tingleTimer = 10;
+                            gGameState.tingleScaleDir = 1;
                         }
                     }
-                    else if (gGameState.unk206 != 0x100)
+                    else if (gGameState.tingleScale != 0x100)
                     {
-                        gGameState.unk206 += 0x10;
+                        gGameState.tingleScale += 0x10;
                     }
                     else
                     {
-                        gGameState.unk227++;
-                        sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
-                        gGameState.unk202 = sprite[4];
+                        gGameState.tingleAnimPart++;
+                        sprite = gTingleAnims[gGameState.tingleAnim][gGameState.tingleAnimPart];
+                        gGameState.tingleTimer = sprite[4];
                     }
                 }
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 3:
-            if (gGameState.unk204 == 0)
+            if (gGameState.tingleScaleWait == 0)
             {
-                if (gGameState.unk22A == 0)
+                if (gGameState.tingleScaleDir == 0)
                 {
-                    if (gGameState.unk206 != 0xA0)
-                        gGameState.unk206 -= 8;
+                    if (gGameState.tingleScale != 0xA0)
+                        gGameState.tingleScale -= 8;
                     else
-                        gGameState.unk22A = 1;
+                        gGameState.tingleScaleDir = 1;
                 }
-                else if (gGameState.unk206 != 0x100)
+                else if (gGameState.tingleScale != 0x100)
                 {
-                    gGameState.unk206 += 8;
+                    gGameState.tingleScale += 8;
                 }
                 else
                 {
-                    gGameState.unk204 = 10;
-                    gGameState.unk22A = 0;
+                    gGameState.tingleScaleWait = 10;
+                    gGameState.tingleScaleDir = 0;
                 }
             }
             else
             {
-                gGameState.unk204--;
+                gGameState.tingleScaleWait--;
             }
         case 6:
-            if (gGameState.unk14B)
+            if (gGameState.msgStatus)
                 goto talk;
-            if (gGameState.unk202 == 0)
+            if (gGameState.tingleTimer == 0)
             {
-                if (++gGameState.unk228 > 8)
-                    gGameState.unk228 = 0;
-                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                if (++gGameState.tingleFrame > 8)
+                    gGameState.tingleFrame = 0;
+                gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 4:
-            gGameState.unk206 = 0;
-            if (gGameState.unk227 && gGameState.unk14B)
+            gGameState.tingleScale = 0;
+            if (gGameState.tingleAnimPart && gGameState.msgStatus)
                 goto talk;
-            if (gGameState.unk202 == 0)
+            if (gGameState.tingleTimer == 0)
             {
-                gGameState.unk228++;
-                if (gGameState.unk227)
+                gGameState.tingleFrame++;
+                if (gGameState.tingleAnimPart)
                 {
-                    if (gGameState.unk228 > 8)
-                        gGameState.unk228 = 0;
-                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                    if (gGameState.tingleFrame > 8)
+                        gGameState.tingleFrame = 0;
+                    gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
                 }
                 else
                 {
-                    if (gGameState.unk228 > 0x1D)
+                    if (gGameState.tingleFrame > 0x1D)
                     {
-                        gGameState.unk228 = 0;
-                        gGameState.unk227++;
-                        sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                        gGameState.tingleFrame = 0;
+                        gGameState.tingleAnimPart++;
+                        sprite = gTingleAnims[gGameState.tingleAnim][gGameState.tingleAnimPart];
                     }
-                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                    gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
                 }
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 5:
-            gGameState.unk206 = 0;
-            if (gGameState.unk202 == 0)
+            gGameState.tingleScale = 0;
+            if (gGameState.tingleTimer == 0)
             {
-                if (++gGameState.unk228 > 0x1D)
+                if (++gGameState.tingleFrame > 0x1D)
                 {
-                    if (gGameState.unk1C8)
+                    if (gGameState.effectTimer)
                     {
-                        gGameState.unk228 = 0;
-                        gGameState.unk202 = sprite[4];
+                        gGameState.tingleFrame = 0;
+                        gGameState.tingleTimer = sprite[4];
                     }
                     else
                     {
-                        gGameState.unk228 = 0;
-                        gGameState.unk226 = 0;
-                        gGameState.unk227 = 0;
+                        gGameState.tingleFrame = 0;
+                        gGameState.tingleAnim = 0;
+                        gGameState.tingleAnimPart = 0;
                         sprite = gTingleAnims[0][0];
                     }
                 }
                 else
                 {
-                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                    gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
                 }
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 7:
-            gGameState.unk206 = 0;
-            if (gGameState.unk202 == 0)
+            gGameState.tingleScale = 0;
+            if (gGameState.tingleTimer == 0)
             {
-                gGameState.unk228 = (gGameState.unk228 + 1) & 7;
-                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                gGameState.tingleFrame = (gGameState.tingleFrame + 1) & 7;
+                gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 8:
-            gGameState.unk206 = 0;
-            if (gGameState.unk202 == 0)
+            gGameState.tingleScale = 0;
+            if (gGameState.tingleTimer == 0)
             {
-                gGameState.unk228 = (gGameState.unk228 + 1) & 15;
-                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                gGameState.tingleFrame = (gGameState.tingleFrame + 1) & 15;
+                gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 9:
-            gGameState.unk206 = 0;
-            frame = gGameState.unk228;
+            gGameState.tingleScale = 0;
+            frame = gGameState.tingleFrame;
             break;
         case 10:
-            if (gGameState.unk202 == 0)
+            if (gGameState.tingleTimer == 0)
             {
-                gGameState.unk228++;
-                if (gGameState.unk227)
+                gGameState.tingleFrame++;
+                if (gGameState.tingleAnimPart)
                 {
-                    if (gGameState.unk206 > 0x2FF)
-                        gGameState.unk206 = 0x300;
+                    if (gGameState.tingleScale > 0x2FF)
+                        gGameState.tingleScale = 0x300;
                     else
-                        gGameState.unk206 += 0x10;
+                        gGameState.tingleScale += 0x10;
                 }
                 else
                 {
-                    if (gGameState.unk228 > 6)
+                    if (gGameState.tingleFrame > 6)
                     {
-                        gGameState.unk228 = 0;
-                        gGameState.unk206 = 0x100;
-                        gGameState.unk227++;
-                        sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                        gGameState.tingleFrame = 0;
+                        gGameState.tingleScale = 0x100;
+                        gGameState.tingleAnimPart++;
+                        sprite = gTingleAnims[gGameState.tingleAnim][gGameState.tingleAnimPart];
                     }
                     else
                     {
-                        gGameState.unk206 = 0;
+                        gGameState.tingleScale = 0;
                     }
-                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
+                    gGameState.tingleTimer = sprite[gGameState.tingleFrame * 8 + 4];
                 }
             }
             else
             {
-                gGameState.unk202--;
+                gGameState.tingleTimer--;
             }
             break;
         case 11:
-            gGameState.unk206 = 0;
-            if (gGameState.unk22C)
+            gGameState.tingleScale = 0;
+            if (gGameState.tinglePulseGrow)
             {
-                gGameState.unk208 += 4;
-                if (gGameState.unk208 > 0xFF)
-                    gGameState.unk22C = 0;
+                gGameState.tinglePulse += 4;
+                if (gGameState.tinglePulse > 0xFF)
+                    gGameState.tinglePulseGrow = 0;
             }
             else
             {
-                gGameState.unk208 -= 4;
-                if (gGameState.unk208 <= 0xC0)
-                    gGameState.unk22C = 1;
+                gGameState.tinglePulse -= 4;
+                if (gGameState.tinglePulse <= 0xC0)
+                    gGameState.tinglePulseGrow = 1;
             }
-            DrawSprite(sprite, 0, 0xCC, 0xE, 0, mosaic, gGameState.unk208, 0, 0, 0, 0);
+            DrawSprite(sprite, 0, 0xCC, 0xE, 0, mosaic, gGameState.tinglePulse, 0, 0, 0, 0);
             frame = 1;
-            sprite = gSprite_0202C740;
+            sprite = gTingleSprite;
             break;
         talk:
-            sprite = gSprite_0202C740;
+            sprite = gTingleSprite;
             break;
         case 12:
-            gGameState.unk206 = 0;
+            gGameState.tingleScale = 0;
             frame = 1;
             break;
         case 13:
-            gGameState.unk206 = 0;
+            gGameState.tingleScale = 0;
             frame = 0;
             break;
         case 16:
@@ -1610,78 +1619,78 @@ void Func_0201CFE8(void)
             frame = 7;
             break;
         case 0:
-            if (!mosaic && gGameState.unk206 != 0 && gGameState.unk206 != 0x100)
+            if (!mosaic && gGameState.tingleScale != 0 && gGameState.tingleScale != 0x100)
             {
-                if (gGameState.unk206 > 0x100)
-                    gGameState.unk206 -= 8;
+                if (gGameState.tingleScale > 0x100)
+                    gGameState.tingleScale -= 8;
                 else
-                    gGameState.unk206 += 8;
-                if (gGameState.unk206 == 0x100)
-                    gGameState.unk206 = 0;
+                    gGameState.tingleScale += 8;
+                if (gGameState.tingleScale == 0x100)
+                    gGameState.tingleScale = 0;
             }
-            frame = gGameState.unk228;
+            frame = gGameState.tingleFrame;
             break;
         case 15:
             return;
         }
         ofsY = 0x10;
-        DrawSprite(sprite, frame, x, 0x18, gGameState.unk229, 0, gGameState.unk206, 0, ofsY, 0, a10);
+        DrawSprite(sprite, frame, x, 0x18, gGameState.tingleAngle, 0, gGameState.tingleScale, 0, ofsY, 0, a10);
     }
     else
     {
-        gGameState.unk22B = 0;
+        gGameState.animateMarkers = 0;
     }
-    if (gGameState.flags.unkB_1 && gGameState.msgBoxPos == 0)
+    if (gGameState.flags.showWind && gGameState.msgBoxPos == 0)
     {
-        if (gGameState.unk0FF == 0)
+        if (gGameState.windArrowTimer == 0)
         {
             const u8 *s;
 
-            gGameState.unk100 = (gGameState.unk100 + 1) & 3;
-            s = gSprite_0202C400;
-            gGameState.unk0FF = s[gGameState.unk100 * 8 + 4];
+            gGameState.windArrowFrame = (gGameState.windArrowFrame + 1) & 3;
+            s = gWindArrowSprite;
+            gGameState.windArrowTimer = s[gGameState.windArrowFrame * 8 + 4];
         }
         else
         {
-            gGameState.unk0FF--;
+            gGameState.windArrowTimer--;
         }
-        DrawSprite(gSprite_0202C400, gGameState.unk100, 0xC8, 0x58, gGameState.flags.unk2 + 0x80, 0,
+        DrawSprite(gWindArrowSprite, gGameState.windArrowFrame, 0xC8, 0x58, gGameState.flags.windDir + 0x80, 0,
                    0x100, 0, 0, 0, 0);
     }
 }
 
 bool32 MsgReset(void)
 {
-    gGameState.unk13C = 0;
+    gGameState.msgOpen = 0;
     gGameState.msgBoxPos = 0;
-    gGameState.unk142 = 0xFFFF;
+    gGameState.msgId = 0xFFFF;
     return TRUE;
 }
 
 void MsgStart(s16 id)
 {
-    if (gGameState.unk142 != id)
+    if (gGameState.msgId != id)
     {
-        Func_0201C0E8(0);
-        gGameState.unk142 = id;
+        MsgNewPage(0);
+        gGameState.msgId = id;
 #ifdef VERSION_GZLJ01
         gGameState.msgPtr = (u8 *)0x02000000 + ((u16 *)0x02000000)[id];
 #else
         // The US message block starts with the offset of the text after the table.
         gGameState.msgPtr = (u8 *)(*(u16 *)0x02000000 + (((u16 *)0x02000002)[id] | 0x02000000));
 #endif
-        gGameState.unk14A = 0;
-        gGameState.unk14B = 0;
-        gGameState.unk150 = 0;
-        gGameState.unk14F = 0xFF;
-        gGameState.unk14E = 0;
-        gGameState.unk151 = 0;
-        gGameState.unk14C = 0;
-        gGameState.unk14D = 0;
-        gGameState.unk13E = 0;
-        gGameState.unk158 = 0;
-        gGameState.unk159 = 0;
-        gGameState.unk15A = 0;
+        gGameState.textColor = 0;
+        gGameState.msgStatus = 0;
+        gGameState.choiceY = 0;
+        gGameState.choiceCursor = 0xFF;
+        gGameState.choiceIndex = 0;
+        gGameState.choiceMenu = 0;
+        gGameState.textDelay = 0;
+        gGameState.textWait = 0;
+        gGameState.msgWaitTimer = 0;
+        gGameState.textFast = 0;
+        gGameState.charLoopSound = 0;
+        gGameState.textBig = 0;
     }
 }
 
@@ -1694,7 +1703,7 @@ bool32 ShowMessage_(u16 id, u8 arg)
 
     if (id <= 0x437)
     {
-        if (gGameState.unk13C != 1)
+        if (gGameState.msgOpen != 1)
         {
             u32 mask = 0xFFFF0000;
             s32 r;
@@ -1709,11 +1718,11 @@ bool32 ShowMessage_(u16 id, u8 arg)
                 params[1] = (params[1] & mask) | 2;
             SoundPlay(0x13 - SOUND_ID_SHIFT, params);
         }
-        gGameState.unk13C = 1;
-        gGameState.unk1FA = 1;
-        gGameState.unk226 = arg;
-        gGameState.unk22B = 1;
-        Func_0201C568();
+        gGameState.msgOpen = 1;
+        gGameState.inMessage = 1;
+        gGameState.tingleAnim = arg;
+        gGameState.animateMarkers = 1;
+        StartTingleAnim();
         MsgStart(id);
     }
     return TRUE;
@@ -1723,7 +1732,7 @@ bool32 MsgStartSilent(s16 id)
 {
     if ((u16)id <= 0x437)
     {
-        gGameState.unk13C = 1;
+        gGameState.msgOpen = 1;
         MsgStart(id);
     }
     return TRUE;
@@ -1731,9 +1740,9 @@ bool32 MsgStartSilent(s16 id)
 
 void MsgClose(void)
 {
-    if (gGameState.unk13C)
+    if (gGameState.msgOpen)
         SoundPlay(0x17 - SOUND_ID_SHIFT, 0);
-    gGameState.unk13C = 0;
+    gGameState.msgOpen = 0;
 }
 
 #ifndef VERSION_GZLJ01

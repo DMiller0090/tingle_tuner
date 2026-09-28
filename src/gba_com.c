@@ -11,7 +11,7 @@ void *const gGbaComBuffers[GBACOM_SLOT_COUNT] =
     [GBACOM_SLOT_MESSAGE]   = gGbaComMessageBuf,
     [GBACOM_SLOT_CONTROL]   = gGbaComBufControl,
     [GBACOM_SLOT_MAP_IMAGE] = gGbaComMessageBuf,
-    [GBACOM_SLOT_3]         = gGbaComBuf3,
+    [GBACOM_SLOT_MARKERS]         = gGbaComBufMarkers,
     [GBACOM_SLOT_GBA_FLG]   = &gGbaComBufGbaFlg,
     [GBACOM_SLOT_MAIL]      = gGbaComBufMail,
     [GBACOM_SLOT_ITEM]      = gGbaComBufItem,
@@ -19,10 +19,10 @@ void *const gGbaComBuffers[GBACOM_SLOT_COUNT] =
     [GBACOM_SLOT_SWITCH]    = gGbaComBufSwitch,
     [GBACOM_SLOT_FLAGS]     = gGbaComBufFlags,
     [GBACOM_SLOT_NAME]      = gGbaComBufName,
-    [GBACOM_SLOT_11]        = gGbaComBuf11,
+    [GBACOM_SLOT_VISITED]        = gGbaComBufVisited,
     [GBACOM_SLOT_SHOP]      = gGbaComBufShop,
     [GBACOM_SLOT_ITEM_BUY]  = gGbaComBufItemBuy,
-    [GBACOM_SLOT_14]        = gGbaComBuf14,
+    [GBACOM_SLOT_CHART_POINTS]        = gGbaComBufChartPoints,
     [GBACOM_SLOT_SE]        = gGbaComBufSE,
 };
 

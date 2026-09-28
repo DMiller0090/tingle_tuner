@@ -18,13 +18,13 @@ void Mode1State4(void);
 void Mode1State5(void);
 void Mode1SendSwitch(u8 soundArg);
 void Mode1RecvMarkers(void);
-void Mode1Func_02016350(void);
+void ResetMapState(void);
 
 // Not referenced by any code. It ends in 0xFF, like a short text in the message font's glyph
 // codes (see MsgStep).
 const u8 gMode1Unused_02023E38[12] = {0x7D, 0x7A, 0x01, 0x00, 0xB2, 0xB3, 0x00, 0x2B, 0x00, 0x00, 0x00, 0xFF};
 
-// Sound per dungeon number (gGameState.flags.dungeonNo), played by Mode1State1.
+// Message per dungeon number (gGameState.flags.dungeonNo), shown by Mode1State1.
 const s16 gDungeonMsgIds[18] = {50, 51, 52, 53, 54, 55, 82, 83, 84, 85, 86, 86, 138, 142, 135, 137, 141, 57};
 
 void (*const gMode1StateFuncs[])(void) =
@@ -39,7 +39,7 @@ void (*const gMode1StateFuncs[])(void) =
 
 // BG map entry of the rupee icon (tile 0x44) per wallet size: the palette gives its colour.
 const u16 gRupeeIconTiles[3] = {0xC044, 0xA044, 0x4044};
-// Sound per dungeon chest bit (flags.dungeonChests: WT, ET, TOTG, FW, DRC).
+// Message per dungeon chest bit (flags.dungeonChests: WT, ET, TOTG, FW, DRC).
 const s16 gChestMsgIds[5] = {0xE6, 0xE7, 0xE8, 0xEA, 0xE9};
 
 void Mode1SendSwitch(u8 soundArg);
@@ -65,7 +65,7 @@ void UpdateRandom(void)
 
 // Step the rupee counter toward the real count and draw it (up to 4 digits, two tile
 // rows, no leading zeros).
-void Mode1Func_020150A4(void)
+void UpdateRupeeCounter(void)
 {
     u16 *map = (u16 *)0x06006450;
     s32 digits[4];
@@ -136,7 +136,10 @@ void Mode1Func_020150A4(void)
         map[0x20] = 0xB000;
     }
 }
-void Mode1Func_0201521C(void)
+
+// Set up the map BGs: on the sea the sea chart (BG2, gMode1SeaMap) and the floor number box,
+// in a dungeon BG3 for the map image.
+void InitMapBgs(void)
 {
     if (gGameState.flags.dungeonNo == 0)
     {
@@ -152,22 +155,24 @@ void Mode1Func_0201521C(void)
     }
 }
 
-void Mode1Func_02015298(void)
+// Load mode 1's OBJ and BG tiles, palettes and BG map, then the map BGs.
+void LoadMode1Graphics(void)
 {
     LZ77UnCompVram(gMode1ObjTiles, (void *)0x06010000);
     CpuCopy16(gMode1ObjPalette, (void *)0x05000200, sizeof(gMode1ObjPalette));
     LZ77UnCompVram(gMode1BgTiles, (void *)0x06008000);
     CpuCopy16(gMode1BgPalette, (void *)0x05000000, sizeof(gMode1BgPalette));
     LZ77UnCompVram(gMode1BgMap, (void *)0x06006000);
-    Mode1Func_0201521C();
+    InitMapBgs();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
-// FAKEMATCH? The original computes &gGameState.unk106 right after the unk21E store (into r6)
-// though unk106 is stored much later: a pointer assigned there reproduces it.
+// FAKEMATCH? The original computes &gGameState.squareMsgPending right after the hudRightSlide
+// store (into r6) though squareMsgPending is stored much later: a pointer assigned there
+// reproduces it.
 void Mode1State0(void)
 {
     s32 i;
-    u8 *unk106;
+    u8 *squareMsgPending;
 
     if (!gGameState.flagsReceived)
         return;
@@ -183,66 +188,66 @@ void Mode1State0(void)
     gMain.bgOfs[1][1] = -4;
     gMain.bgOfs[2][0] = 0;
     gMain.bgOfs[2][1] = 0;
-    gGameState.unk0FC = 1;
-    gGameState.unk21D = 0;
-    gGameState.unk21E = 0;
-    unk106 = &gGameState.unk106;
+    gGameState.aButtonAction = 1;
+    gGameState.hudLeftSlide = 0;
+    gGameState.hudRightSlide = 0;
+    squareMsgPending = &gGameState.squareMsgPending;
     gGameState.targetDir = 0xFF;
-    gGameState.unk21F = 0;
-    gGameState.unk220 = 0;
+    gGameState.hudLeftHidden = 0;
+    gGameState.hudRightHidden = 0;
     gGameState.dungeonChests = gGameState.flags.dungeonChests;
 #ifdef VERSION_GZLJ01
     gGameState.glyphWidth = 8;
 #else
     gGameState.glyphWidth = 6;
 #endif
-    gGameState.unk0FD = 0;
-    gGameState.unk140 = 0xFFFF;
-    gGameState.unk1F8 = -1;
-    gGameState.unk121 = 0;
-    gGameState.unk11B = 0;
-    gGameState.unk11A = 0;
-    gGameState.unk11D = 0;
-    gGameState.unk010 = 0;
-    gGameState.unk11C = 0;
-    *unk106 = 0;
-    gGameState.unk030 = 0;
-    gGameState.unk120 = 0;
+    gGameState.hudChartLabel = 0;
+    gGameState.msgLoopSound = 0xFFFF;
+    gGameState.nextMsg = -1;
+    gGameState.holdState = 0;
+    gGameState.selectedType = 0;
+    gGameState.selection = 0;
+    gGameState.revealedType13 = 0;
+    gGameState.revealedType5 = 0;
+    gGameState.revealedType12 = 0;
+    *squareMsgPending = 0;
+    gGameState.squareMsgTimer = 0;
+    gGameState.viewLocked = 0;
     gGameState.switchMsg = -1;
     gGameState.switchType = 0;
-    gGameState.unk140 = -1;
-    gGameState.unk1F8 = -1;
-    gGameState.unk136 = 0;
-    gGameState.unk1E0 = 0;
+    gGameState.msgLoopSound = -1;
+    gGameState.nextMsg = -1;
+    gGameState.awayFromType20 = 0;
+    gGameState.chestState = 0;
     for (i = 0; i < 16; i++)
         gObjs[i].active = 0;
-    gGameState.unk10F = gSpriteTable[9][4];
-    gGameState.unk110 = 0;
-    gGameState.unk113 = gSpriteTable[13][4];
-    gGameState.unk114 = 0;
-    gGameState.unk115 = gSpriteTable[16][4];
-    gGameState.unk116 = 0;
-    gGameState.unk117 = gSpriteTable[19][4];
-    gGameState.unk118 = 0;
-    Mode1Func_02015298();
+    gGameState.type9Timer = gSpriteTable[9][4];
+    gGameState.type9Frame = 0;
+    gGameState.type13Timer = gSpriteTable[13][4];
+    gGameState.type13Frame = 0;
+    gGameState.type16Timer = gSpriteTable[16][4];
+    gGameState.type16Frame = 0;
+    gGameState.friendTimer = gSpriteTable[19][4];
+    gGameState.friendFrame = 0;
+    LoadMode1Graphics();
     if (gGameState.flags.noMap)
     {
-        gMain.unk457 = 1;
-        gGameState.unk10E = 0;
+        gMain.mapImageMode = 1;
+        gGameState.mapLoaded = 0;
     }
     else
     {
-        gMain.unk457 = gMain.inDungeon;
-        gGameState.unk10E = 1;
+        gMain.mapImageMode = gMain.inDungeon;
+        gGameState.mapLoaded = 1;
     }
     ResetSelectWindow();
     InitMapView();
     if (gGameState.flags.dungeonNo != 0)
     {
-        gGameState.unk108 = 0;
-        gGameState.unk10A = 0;
-        gGameState.unk10C = 0;
-        if (gGameState.unk10E)
+        gGameState.playerBlinkTimer = 0;
+        gGameState.enemyBlinkTimer = 0;
+        gGameState.cursorBlinkTimer = 0;
+        if (gGameState.mapLoaded)
             UpdateMap();
     }
     else
@@ -252,15 +257,15 @@ void Mode1State0(void)
     MsgReset();
     gGameState.switchMsg = 0xFFFF;
     gGameState.unk21C = 0;
-    gGameState.unk206 = 0x300;
+    gGameState.tingleScale = 0x300;
     ItemMenuInit();
-    gGameState.unk1E5_1 = 1;
-    gGameState.unk12B = 0;
-    gGameState.unk1FA = 0;
-    gGameState.unk1FB = 0;
-    gGameState.unk224 = 0;
+    gGameState.itemsEnabled = 1;
+    gGameState.effectStep = 0;
+    gGameState.inMessage = 0;
+    gGameState.selectWinOpen = 0;
+    gGameState.chartOpen = 0;
     gGameState.rupeeDelta = 0;
-    Mode1Func_020150A4();
+    UpdateRupeeCounter();
     gMain.bldcnt = 0;
     gMain.bldalpha = 0;
     gGameState.wavePhase = 0;
@@ -294,9 +299,9 @@ void Mode1State1(void)
         if (gGameState.flags.dungeonNo == 0)
         {
             gMain.dispcnt = 0x1F00;  // BG0-3 and OBJ
-            gGameState.unk23C = 0;
+            gGameState.afterLinkLost = 0;
         }
-        else if (gGameState.unk23C == 0)
+        else if (gGameState.afterLinkLost == 0)
         {
             gMain.dispcnt = 0x1B00;  // BG0, BG1, BG3, OBJ
         }
@@ -305,7 +310,7 @@ void Mode1State1(void)
             gMain.dispcnt = 0x1300;  // BG0, BG1, OBJ
         }
     }
-    Func_0201A540();
+    UpdateMapView();
 }
 // Fade in: step the mosaic and brightness back down every other frame, then go to state 2.
 void Mode1State5(void)
@@ -324,10 +329,10 @@ void Mode1State5(void)
                 gMain.bgcnt[2] ^= 0x40;
             if (gMain.bgcnt[3] & 0x40)
                 gMain.bgcnt[3] ^= 0x40;
-            if (gGameState.unk121)
+            if (gGameState.holdState)
             {
                 ShowMessage(0x63, 1);
-                gGameState.unk121 = 0;
+                gGameState.holdState = 0;
             }
             gMain.bldcnt = 0;
             gMain.bldy = 0;
@@ -339,7 +344,7 @@ void Mode1State5(void)
         }
     }
     UpdateMap();
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
 }
 // Send the switch packet (5 bytes and a checksum of its two words) and show its message.
 void Mode1SendSwitch(u8 soundArg)
@@ -353,7 +358,7 @@ void Mode1SendSwitch(u8 soundArg)
                       ((u32 *)GBACOM_BUF_SWITCH)[0] + ((u32 *)GBACOM_BUF_SWITCH)[1]);
     ShowMessage(gGameState.switchMsg, soundArg);
     gGameState.unk21C = 1;
-    gGameState.unk206 = 0x100;
+    gGameState.tingleScale = 0x100;
     if ((u8)(gGameState.switchType - 1) > 2 && gGameState.switchType != 14 && gGameState.switchType != 15)
     {
         gGameState.unk042 = 0;
@@ -366,11 +371,11 @@ void Mode1State2(void)
 {
     u32 keys;
 
-    if (gGameState.flags.unk3_2 && gGameState.unk1CC == 0 && gGameState.unk1EE == 0
-     && gGameState.unk224 == 0)
+    if (gGameState.flags.cursorInZone && gGameState.menuOpen == 0 && gGameState.selectWinStep == 0
+     && gGameState.chartOpen == 0)
         ShowMessage(0x51, 0xF);
-    if (gGameState.flags.unk5_2 && !gGameState.flags.busy && gGameState.unk1CC == 0
-     && gGameState.unk1EE == 0)
+    if (gGameState.flags.moveSpeed && !gGameState.flags.busy && gGameState.menuOpen == 0
+     && gGameState.selectWinStep == 0)
     {
         if (gGameState.flags.isFree)
             SoundPlayLoop(7, 7, 0);
@@ -384,7 +389,7 @@ void Mode1State2(void)
             u16 v;
 
             params[0] = 0;
-            v = (gGameState.flags.unk5_2 - 1) ^ 3;
+            v = (gGameState.flags.moveSpeed - 1) ^ 3;
             params[1] = (params[1] & mask) | v;
             SoundPlayLoop(9, 9, params);
         }
@@ -397,68 +402,68 @@ void Mode1State2(void)
             SoundPlay(7 - SOUND_ID_SHIFT, 0);
     }
     UpdateSelectWindow();
-    if (gGameState.unk1EE != 0)
+    if (gGameState.selectWinStep != 0)
         return;
     gMain.bgOfs[0][0] = 0;
-    if (gGameState.unk1FA)
+    if (gGameState.inMessage)
     {
-        if (gGameState.unk14B == 3 && gGameState.flags.unk3_1)
+        if (gGameState.msgStatus == 3 && gGameState.flags.gcInput)
         {
-            if (gGameState.flags.unk3_2)
-                gGameState.unk13E = 0x12B;
+            if (gGameState.flags.cursorInZone)
+                gGameState.msgWaitTimer = 0x12B;
             else
-                gGameState.unk13E++;
+                gGameState.msgWaitTimer++;
         }
-        if (gGameState.unk14B == 3)
+        if (gGameState.msgStatus == 3)
         {
-            if (gGameState.unk156 != 0)
+            if (gGameState.reactionTimer != 0)
             {
-                gGameState.unk156--;
+                gGameState.reactionTimer--;
                 SoundPlayLoop(6, 6, 0);
-                if (gGameState.unk156 == 0)
-                    gGameState.unk13E = 300;
+                if (gGameState.reactionTimer == 0)
+                    gGameState.msgWaitTimer = 300;
             }
-            else if (!gGameState.flags.unk3_2 && gGameState.unk12B != 1)
+            else if (!gGameState.flags.cursorInZone && gGameState.effectStep != 1)
             {
-                if ((gGameState.unk224 == 0 && (gMain.newKeys & 0x30F) && gGameState.unk142 != 0x50)
-                 || gGameState.unk13E > 0x12B)
+                if ((gGameState.chartOpen == 0 && (gMain.newKeys & 0x30F) && gGameState.msgId != 0x50)
+                 || gGameState.msgWaitTimer > 0x12B)
                 {
-                    gGameState.unk13E = 0;
-                    if ((u16)(gGameState.unk142 - 0x15) <= 2)
+                    gGameState.msgWaitTimer = 0;
+                    if ((u16)(gGameState.msgId - 0x15) <= 2)
                     {
-                        if (gGameState.markers[gGameState.unk119].type == 7)
+                        if (gGameState.markers[gGameState.selectedMarker].type == 7)
                             Mode1SendSwitch(3);
                         else
-                            Func_0201B7D4();
+                            ShowSelectionMsg();
                         SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
                         gMain.newKeys &= 0xF0;
                     }
-                    else if ((u16)(gGameState.unk142 - 0xE6) <= 4)
+                    else if ((u16)(gGameState.msgId - 0xE6) <= 4)
                     {
-                        ShowMessage(gGameState.unk1E3 + 0xEA, 1);
+                        ShowMessage(gGameState.chestCount + 0xEA, 1);
                         gMain.newKeys &= 0xF0;
                     }
-                    else if (gGameState.unk1F8 != -1)
+                    else if (gGameState.nextMsg != -1)
                     {
-                        ShowMessage(gGameState.unk1F8, 1);
-                        gGameState.unk1F8 = 0xFFFF;
+                        ShowMessage(gGameState.nextMsg, 1);
+                        gGameState.nextMsg = 0xFFFF;
                         gMain.newKeys &= 0xF0;
                     }
                     else
                     {
-                        if (gGameState.unk11A == 2)
+                        if (gGameState.selection == 2)
                         {
-                            u8 t = gGameState.unk11B;
+                            u8 t = gGameState.selectedType;
 
                             if (t == 5)
-                                gGameState.unk010 |= 1 << gGameState.markers[gGameState.unk119].unk6;
+                                gGameState.revealedType5 |= 1 << gGameState.markers[gGameState.selectedMarker].param;
                             else if (t == 13)
-                                gGameState.unk11D |= 1;
+                                gGameState.revealedType13 |= 1;
                             else if (t == 12)
-                                gGameState.unk11C |= 1;
+                                gGameState.revealedType12 |= 1;
                             else if (t == 16)
-                                gGameState.unk026 |= 1 << gGameState.markers[gGameState.unk119].unk6;
-                            gGameState.unk11A = 1;
+                                gGameState.revealedType16 |= 1 << gGameState.markers[gGameState.selectedMarker].param;
+                            gGameState.selection = 1;
                         }
                         MsgClose();
                     }
@@ -466,83 +471,83 @@ void Mode1State2(void)
             }
         }
     }
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
     if (gGameState.unk138_0)
     {
         UpdateMap();
     }
     else
     {
-        u16 target = (gGameState.unk1CC | gGameState.unk224) ? -4 : 0x7C;
+        u16 target = (gGameState.menuOpen | gGameState.chartOpen) ? -4 : 0x7C;
 
         if (StepToward((s16 *)&gMain.bgOfs[1][0], target, 16))
         {
-            gGameState.unk1E5_4 = 0;
-            if ((gMain.newKeys & 8) && !gGameState.flags.unkA_3 && gGameState.unk224 == 0)
+            gGameState.menuSliding = 0;
+            if ((gMain.newKeys & 8) && !gGameState.flags.restarting && gGameState.chartOpen == 0)
             {
-                if (gGameState.unk1FA == 0)
+                if (gGameState.inMessage == 0)
                 {
-                    if (gGameState.unk1E5_1 && gGameState.unk1E0 == 0
-                     && !(gGameState.unk1CC && gGameState.unk1E5_0))
+                    if (gGameState.itemsEnabled && gGameState.chestState == 0
+                     && !(gGameState.menuOpen && gGameState.itemFlying))
                     {
-                        gGameState.unk1CC ^= 1;
+                        gGameState.menuOpen ^= 1;
                         gGameState.unk223 = 0;
-                        if (gGameState.unk1CC == 0)
+                        if (gGameState.menuOpen == 0)
                         {
                             SoundPlay(0x2A - SOUND_ID_SHIFT, 0);
-                            gGameState.unk1E5_4 = 1;
-                            gGameState.unk13C = 0;
-                            gGameState.unk104 = 1;
+                            gGameState.menuSliding = 1;
+                            gGameState.msgOpen = 0;
+                            gGameState.active = 1;
                         }
                         else
                         {
                             gMain.bgOfs[1][1] = -4;
-                            SoundPlay(0x2B - SOUND_ID_SHIFT, gMain.unk40C);
+                            SoundPlay(0x2B - SOUND_ID_SHIFT, gMain.soundParams);
                             if (gGameState.unk21C != 0)
                                 gGameState.unk21C = 0;
-                            gGameState.unk1FA = 0;
-                            gGameState.unk226 = 1;
-                            gGameState.unk227 = 0;
-                            gGameState.unk228 = 0;
+                            gGameState.inMessage = 0;
+                            gGameState.tingleAnim = 1;
+                            gGameState.tingleAnimPart = 0;
+                            gGameState.tingleFrame = 0;
                         }
                     }
                 }
-                else if (gGameState.unk10E)
+                else if (gGameState.mapLoaded)
                 {
                     UpdateMap();
                 }
             }
-            else if (gGameState.unk1CC == 0)
+            else if (gGameState.menuOpen == 0)
             {
-                if (gGameState.unk10E)
+                if (gGameState.mapLoaded)
                     UpdateMap();
                 // (Through a u32 local: tested directly, agbcc copies the 2 before the and.)
                 keys = gMain.newKeys;
-                if ((keys & 2) && gGameState.unk1E5_1 && gGameState.unk104
-                 && gGameState.unk220 == 0 && gGameState.unk121 == 0)
-                    UseItem(gGameState.unk1DE);
-                if (!gMain.unk457)
-                    Func_0201B0F4();
-                if (gGameState.unk224 == 0)
+                if ((keys & 2) && gGameState.itemsEnabled && gGameState.active
+                 && gGameState.hudRightHidden == 0 && gGameState.holdState == 0)
+                    UseItem(gGameState.selectedItem);
+                if (!gMain.mapImageMode)
+                    UpdateChartOverlay();
+                if (gGameState.chartOpen == 0)
                 {
                     if (gMain.newKeys & 1)
                     {
-                        if (!gGameState.flags.busy && gGameState.unk1E5_1 && gGameState.unk104)
+                        if (!gGameState.flags.busy && gGameState.itemsEnabled && gGameState.active)
                         {
-                            if (gGameState.unk1FA == 0)
+                            if (gGameState.inMessage == 0)
                             {
-                                if (gGameState.unk0FC == 0)
-                                    Func_0201B8C8();
-                                else if (gGameState.unk0FC == 1)
+                                if (gGameState.aButtonAction == 0)
+                                    ExamineSelection();
+                                else if (gGameState.aButtonAction == 1)
                                     UseItem(0x10);
                             }
                         }
-                        else if (gGameState.unk1FA == 0)
+                        else if (gGameState.inMessage == 0)
                         {
                             SoundPlay(SE_KEY_BLOCKED, 0);
                         }
                     }
-                    if (gGameState.unk11E)
+                    if (gGameState.placeTargetAtCursor)
                     {
                         u8 i = FindMarker(3);
 
@@ -550,26 +555,26 @@ void Mode1State2(void)
                         gGameState.icons[2].x = gGameState.markers[i].x;
                         gGameState.icons[2].y = gGameState.markers[i].y;
                         SoundPlay(0xB - SOUND_ID_SHIFT, 0);
-                        gGameState.unk11E = 0;
+                        gGameState.placeTargetAtCursor = 0;
                     }
                 }
-                if ((gMain.newKeys & 0x100) && !gGameState.flags.busy && gGameState.unk1E5_1
-                 && gGameState.unk104 && gMain.linked)
+                if ((gMain.newKeys & 0x100) && !gGameState.flags.busy && gGameState.itemsEnabled
+                 && gGameState.active && gMain.linked)
                 {
-                    gGameState.unk222 ^= 1;
-                    if (gGameState.unk222)
-                        gGameState.unk019 = 0;
+                    gGameState.rToggle ^= 1;
+                    if (gGameState.rToggle)
+                        gGameState.followStillCount = 0;
                 }
             }
             else
             {
                 ItemMenuUpdate();
-                Func_0201A540();
+                UpdateMapView();
             }
         }
         else
         {
-            gGameState.unk1E5_4 = 1;
+            gGameState.menuSliding = 1;
         }
     }
     DrawStatusIcon();
@@ -578,9 +583,9 @@ void Mode1State2(void)
 // its target, then go to state 4.
 void Mode1State3(void)
 {
-    u16 target = gGameState.unk1CC ? -4 : 0x7C;
+    u16 target = gGameState.menuOpen ? -4 : 0x7C;
 
-    if (gGameState.unk1FB)
+    if (gGameState.selectWinOpen)
     {
         UpdateSelectWindow();
         return;
@@ -599,12 +604,12 @@ void Mode1State3(void)
                 gMain.bgcnt[2] ^= 0x40;
             if (gMain.bgcnt[3] & 0x40)
                 gMain.bgcnt[3] ^= 0x40;
-            if (!gMain.unk457)
+            if (!gMain.mapImageMode)
                 gMain.dispcnt &= ~0x0C00;  // BG2 and BG3 off
             else
                 gMain.dispcnt &= ~0x0800;  // BG3 off
-            gGameState.unk23C = 0;
-            gGameState.unk237 = 20;
+            gGameState.afterLinkLost = 0;
+            gGameState.markerDelay = 20;
             gMain.modeState = 4;
         }
         else
@@ -613,15 +618,15 @@ void Mode1State3(void)
         }
     }
     UpdateMap();
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
     StepToward((s16 *)&gMain.bgOfs[1][0], target, 16);
 }
-// Slot 3: the map markers. Byte 0 is the count, byte 1 goes to unk133 and unk104, then
+// Slot 3: the map markers. Byte 0 is the count, byte 1 goes to gcActive and active, then
 // 8-byte markers (struct MapMarker, unaligned here so read as bytes).
 // The US builds check the new marker position instead of the old one.
 void Mode1RecvMarkers(void)
 {
-    u8 count = GBACOM_BUF_3[0];
+    u8 count = GBACOM_BUF_MARKERS[0];
     u8 *m;
     s32 i;
     s32 j;
@@ -632,11 +637,11 @@ void Mode1RecvMarkers(void)
 
     if (gMain.mode == 1)
     {
-        if (GBACOM_BUF_3[1] != 0)
+        if (GBACOM_BUF_MARKERS[1] != 0)
         {
             // Both searches' results are unused. (do/while (1): a for or while loop
             // gets its exit test copied to the bottom, the original's doesn't.)
-            m = GBACOM_BUF_3 + 2;
+            m = GBACOM_BUF_MARKERS + 2;
             j = 0;
             do
             {
@@ -653,11 +658,11 @@ void Mode1RecvMarkers(void)
                 i++;
             } while (1);
         }
-        if (!gMain.unk457)
+        if (!gMain.mapImageMode)
         {
             s16 x;
 
-            m = GBACOM_BUF_3 + 2;
+            m = GBACOM_BUF_MARKERS + 2;
             j = 0;
             do
             {
@@ -680,25 +685,25 @@ void Mode1RecvMarkers(void)
 #ifdef VERSION_GZLJ01
                 if (gGameState.markers[i].x <= 0x6FF && gGameState.markers[i].y <= 0x6FF)
                 {
-                    gGameState.unk106 = 1;
-                    gGameState.unk030 = (gMain.random % 6 + 3) * 60;
+                    gGameState.squareMsgPending = 1;
+                    gGameState.squareMsgTimer = (gMain.random % 6 + 3) * 60;
                 }
 #else
                 if ((u16)x <= 0x6FF && *(u16 *)(m + 2) <= 0x6FF)
                 {
-                    gGameState.unk106 = 1;
+                    gGameState.squareMsgPending = 1;
                     // FAKEMATCH: the two temporaries lengthen gGameState's live range just
                     // enough that m gets r5 and gGameState r6 (a tie in allocation priority).
                     time = (gMain.random % 6 + 3) * 60;
                     time2 = time;
-                    gGameState.unk030 = time2;
+                    gGameState.squareMsgTimer = time2;
                 }
 #endif
-                gGameState.unk026 = 0;
-                gGameState.unk11D = 0;
-                gGameState.unk010 = 0;
-                gGameState.unk11B = 0;
-                gGameState.unk11A = 0;
+                gGameState.revealedType16 = 0;
+                gGameState.revealedType13 = 0;
+                gGameState.revealedType5 = 0;
+                gGameState.selectedType = 0;
+                gGameState.selection = 0;
                 if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
                     GbaComDataStatusReset(GBACOM_SLOT_MAIL);
                 gGameState.switchMsg = 0xFFFF;
@@ -706,68 +711,68 @@ void Mode1RecvMarkers(void)
             }
         }
     }
-    gGameState.markerCount = GBACOM_BUF_3[0];
-    gGameState.unk133 = GBACOM_BUF_3[1];
+    gGameState.markerCount = GBACOM_BUF_MARKERS[0];
+    gGameState.gcActive = GBACOM_BUF_MARKERS[1];
     if (gGameState.flags.busy)
-        gGameState.unk104 = 0;
-    else if (gGameState.unk133 == 0)
+        gGameState.active = 0;
+    else if (gGameState.gcActive == 0)
     {
-        if (*(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0 && gGameState.unk1CC == 0)
-            gGameState.unk104 = 1;
+        if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0)
+            gGameState.active = 1;
         else
-            gGameState.unk104 = GBACOM_BUF_3[1];
+            gGameState.active = GBACOM_BUF_MARKERS[1];
     }
     else
     {
-        gGameState.unk104 = gGameState.unk133;
+        gGameState.active = gGameState.gcActive;
     }
-    if (gGameState.flags.isFree || gGameState.unk11A)
+    if (gGameState.flags.isFree || gGameState.selection)
     {
         // The first two markers swap places.
-        CpuCopy16(&GBACOM_BUF_3[2], &gGameState.markers[1], 8);
-        CpuCopy16(&GBACOM_BUF_3[10], &gGameState.markers[0], 8);
+        CpuCopy16(&GBACOM_BUF_MARKERS[2], &gGameState.markers[1], 8);
+        CpuCopy16(&GBACOM_BUF_MARKERS[10], &gGameState.markers[0], 8);
         if (gGameState.markerCount > 2)
-            CpuCopy16(&GBACOM_BUF_3[18], &gGameState.markers[2], (gGameState.markerCount - 2) * 8);
+            CpuCopy16(&GBACOM_BUF_MARKERS[18], &gGameState.markers[2], (gGameState.markerCount - 2) * 8);
     }
     else
     {
-        CpuCopy16(&GBACOM_BUF_3[2], gGameState.markers, gGameState.markerCount * 8);
+        CpuCopy16(&GBACOM_BUF_MARKERS[2], gGameState.markers, gGameState.markerCount * 8);
     }
-    GbaComDataStatusReset(GBACOM_SLOT_3);
+    GbaComDataStatusReset(GBACOM_SLOT_MARKERS);
 }
 
 // Reset the per-map state (Mode1State4 after a map change). The object loop counts up: agbcc
 // reverses it into the original's pointer countdown, a countdown in C keeps the counter.
-void Mode1Func_02016350(void)
+void ResetMapState(void)
 {
     s32 i;
 
-    gGameState.unk11B = 0;
-    gGameState.unk11A = 0;
-    gGameState.unk10E = 1;
-    gGameState.unk11D = 0;
-    gGameState.unk010 = 0;
-    gGameState.unk11C = 0;
-    gGameState.unk222 = 1;
+    gGameState.selectedType = 0;
+    gGameState.selection = 0;
+    gGameState.mapLoaded = 1;
+    gGameState.revealedType13 = 0;
+    gGameState.revealedType5 = 0;
+    gGameState.revealedType12 = 0;
+    gGameState.rToggle = 1;
     gMain.unk404 = 0;
-    gGameState.unk106 = 0;
-    gGameState.unk030 = 0;
-    gGameState.unk120 = 0;
-    gGameState.unk15A = 0;
+    gGameState.squareMsgPending = 0;
+    gGameState.squareMsgTimer = 0;
+    gGameState.viewLocked = 0;
+    gGameState.textBig = 0;
     gGameState.switchMsg = 0xFFFF;
     gGameState.switchType = 0;
-    gGameState.unk140 = -1;
-    gGameState.unk1F8 = -1;
-    gGameState.unk0FD = 0;
-    gGameState.unk136 = 0;
-    gGameState.unk1E0 = 0;
+    gGameState.msgLoopSound = -1;
+    gGameState.nextMsg = -1;
+    gGameState.hudChartLabel = 0;
+    gGameState.awayFromType20 = 0;
+    gGameState.chestState = 0;
     for (i = 0; i < 16; i++)
         gObjs[i].active = 0;
-    if (!gGameState.unk1E5_1)
+    if (!gGameState.itemsEnabled)
     {
-        gGameState.unk1E5_1 = 1;
-        gGameState.unk1E5_2 = 0;
-        gGameState.unk12B = 0;
+        gGameState.itemsEnabled = 1;
+        gGameState.effectActive = 0;
+        gGameState.effectStep = 0;
     }
     InitMapView();
 }
@@ -776,16 +781,16 @@ void Mode1State4(void)
 {
     if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE))
     {
-        gGameState.unk10E = 1;
-        gGameState.unk237 = 20;
+        gGameState.mapLoaded = 1;
+        gGameState.markerDelay = 20;
         LoadMapImage();
     }
     if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
     {
         GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
-        if (gGameState.unk10E)
-            gGameState.unk10E = 0;
-        gGameState.unk237 = 20;
+        if (gGameState.mapLoaded)
+            gGameState.mapLoaded = 0;
+        gGameState.markerDelay = 20;
     }
     if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
         GbaComDataStatusReset(GBACOM_SLOT_MAIL);
@@ -793,9 +798,9 @@ void Mode1State4(void)
     {
         if (gMain.newKeys)
             SoundPlay(SE_KEY_BLOCKED, 0);
-        if (gGameState.flags.unkA_3)
+        if (gGameState.flags.restarting)
         {
-            if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                 Mode1RecvMarkers();
         }
         else if (!(gGameState.flags.busy & 2))  // no event running
@@ -805,23 +810,23 @@ void Mode1State4(void)
                 if (GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_IDLE)
                  || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVED))
                 {
-                    if (gGameState.unk237 != 0)
+                    if (gGameState.markerDelay != 0)
                     {
-                        if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                        if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                             Mode1RecvMarkers();
-                        gGameState.unk237--;
+                        gGameState.markerDelay--;
                     }
-                    else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                    else if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                     {
                         if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE))
                             GbaComDataStatusReset(GBACOM_SLOT_MAP_IMAGE);
                         if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
                             GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
-                        gMain.unk457 = gMain.inDungeon;
+                        gMain.mapImageMode = gMain.inDungeon;
                         ItemMenuInit();
-                        Mode1Func_0201521C();
+                        InitMapBgs();
                         Mode1RecvMarkers();
-                        Mode1Func_02016350();
+                        ResetMapState();
                         gMain.bgcnt[2] |= 0x40;
                         gMain.bgcnt[3] |= 0x40;
                         gMain.mosaic = 0xFFFF;
@@ -831,21 +836,21 @@ void Mode1State4(void)
                     }
                 }
             }
-            else if (gGameState.unk10E)
+            else if (gGameState.mapLoaded)
             {
-                if (gGameState.unk237 != 0)
+                if (gGameState.markerDelay != 0)
                 {
-                    if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                    if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                         Mode1RecvMarkers();
-                    gGameState.unk237--;
+                    gGameState.markerDelay--;
                 }
-                else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                else if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                 {
                     Mode1RecvMarkers();
-                    gMain.unk457 = gMain.inDungeon;
+                    gMain.mapImageMode = gMain.inDungeon;
                     ItemMenuInit();
-                    Mode1Func_0201521C();
-                    Mode1Func_02016350();
+                    InitMapBgs();
+                    ResetMapState();
                     gMain.bgcnt[3] |= 0x40;
                     gMain.mosaic = 0xFFFF;
                     gMain.dispcnt = 0x1B00;
@@ -855,13 +860,13 @@ void Mode1State4(void)
             }
         }
     }
-    DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
-    Func_0201CFE8();
+    DrawSprite(gWaitSprite, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
+    UpdateMsgAndTingle();
 }
 void Mode1StartFadeOut(void)
 {
     ObjResetActive();
-    gGameState.unk10E = 0;
+    gGameState.mapLoaded = 0;
     gMain.bgcnt[2] |= 0x40;  // mosaic
     gMain.bgcnt[3] |= 0x40;
     gMain.mosaic = 0;
@@ -881,43 +886,43 @@ void MainMode1(void)
     UpdateItemEffect();
 
     // A dungeon chest was opened: count them and play the newest one's sound.
-    if (gGameState.dungeonChests != gGameState.flags.dungeonChests && gGameState.unk1E0 == 0)
+    if (gGameState.dungeonChests != gGameState.flags.dungeonChests && gGameState.chestState == 0)
     {
-        gGameState.unk1E1 = gGameState.flags.dungeonChests ^ gGameState.dungeonChests;
-        gGameState.unk1E0 = 1;
+        gGameState.newChests = gGameState.flags.dungeonChests ^ gGameState.dungeonChests;
+        gGameState.chestState = 1;
         gMain.bgOfs[1][1] = -4;
     }
 #ifdef VERSION_GZLJ01
-    if (gGameState.unk1E0 == 1 && gGameState.unk1FA == 0 && gGameState.unk104 != 0)
+    if (gGameState.chestState == 1 && gGameState.inMessage == 0 && gGameState.active != 0)
 #else
     // The US builds wait for no menu or event instead. FAKEMATCH: `!flags.busy` gives the
     // same code but puts chest in r8 (the extra insns before combine shift the priorities).
-    if (gGameState.unk1E0 == 1 && !*(u16 *)&gGameState.unk1FA && !((gGameState.flags.busy << 1) & 6))
+    if (gGameState.chestState == 1 && !*(u16 *)&gGameState.inMessage && !((gGameState.flags.busy << 1) & 6))
 #endif
     {
-        gGameState.unk1CA = 0;
-        gGameState.unk1CC = 1;
-        gGameState.unk1FA = 0;
-        gGameState.unk226 = 0;
-        gGameState.unk227 = 0;
-        gGameState.unk228 = 0;
-        gGameState.unk1E0 += 1;
-        gGameState.unk1E3 = 0;
+        gGameState.chestTimer = 0;
+        gGameState.menuOpen = 1;
+        gGameState.inMessage = 0;
+        gGameState.tingleAnim = 0;
+        gGameState.tingleAnimPart = 0;
+        gGameState.tingleFrame = 0;
+        gGameState.chestState += 1;
+        gGameState.chestCount = 0;
         for (i = 0; i <= 4; i++)
         {
             if (gGameState.flags.dungeonChests & (1 << i))
-                gGameState.unk1E3++;
-            if (gGameState.unk1E1 & (1 << i))
+                gGameState.chestCount++;
+            if (gGameState.newChests & (1 << i))
                 chest = i;
         }
         ShowMessage(gChestMsgIds[chest], 1);
     }
 
-    if (gGameState.unk238 != gGameState.flags.unkB_7)
-        gGameState.unk239 = 1;
-    if (gGameState.unk239 && gGameState.unk104 && gMain.modeState == 2 && gGameState.unk1FA == 0)
+    if (gGameState.hasMagic != gGameState.flags.hasMagic)
+        gGameState.hasMagicChanged = 1;
+    if (gGameState.hasMagicChanged && gGameState.active && gMain.modeState == 2 && gGameState.inMessage == 0)
     {
-        gGameState.unk239 = 0;
+        gGameState.hasMagicChanged = 0;
         ShowMessage(0x10, 1);
         SetSlotItem(4, 5);
         SetSlotItem(8, 9);
@@ -926,10 +931,10 @@ void MainMode1(void)
 
     if (gMain.modeState == 2)
     {
-        // Life: a sound when it drops to 7 or below (once), Func_0201C484(15) on other drops.
-        if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0)
+        // Life: a message when it drops to 7 or below (once), PlayMsgSound(15) on other drops.
+        if (gGameState.inMessage == 0 && gGameState.menuOpen == 0)
         {
-            if (gGameState.flags.unkA_3)
+            if (gGameState.flags.restarting)
                 ShowMessage(0x110, 1);
             else if (gGameState.life > gGameState.flags.life)
             {
@@ -945,7 +950,7 @@ void MainMode1(void)
                 else
                 {
                     gGameState.life = gGameState.flags.life;
-                    Func_0201C484(15);
+                    PlayMsgSound(15);
                 }
             }
             else if (gGameState.life < gGameState.flags.life)
@@ -955,7 +960,7 @@ void MainMode1(void)
                 gGameState.life = gGameState.flags.life;
             }
         }
-        else if ((u16)(gGameState.unk142 - 0x10E) <= 2)
+        else if ((u16)(gGameState.msgId - 0x10E) <= 2)
         {
             gGameState.life = gGameState.flags.life;
             if (gGameState.flags.life > 7)
@@ -963,8 +968,8 @@ void MainMode1(void)
         }
 
         // On the sea: a clock sound at 6:00, 12:00 and 20:00 that depends on the weekday.
-        if (gGameState.flags.dungeonNo == 0 && gGameState.unk1FA == 0 && gGameState.unk1CC == 0
-         && gGameState.unk224 == 0)
+        if (gGameState.flags.dungeonNo == 0 && gGameState.inMessage == 0 && gGameState.menuOpen == 0
+         && gGameState.chartOpen == 0)
         {
             if (!gGameState.chimed)
             {
@@ -1023,41 +1028,41 @@ void MainMode1(void)
     }
 
     // Map change: fade out (state 3); Mode1State4 waits for the new map.
-    if (gGameState.flags.noMap || gMain.inDungeon != gMain.unk457
+    if (gGameState.flags.noMap || gMain.inDungeon != gMain.mapImageMode
      || GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL)
      || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVING)
      || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVED)
-     || !gGameState.unk10E)
+     || !gGameState.mapLoaded)
     {
         if (gMain.modeState == 2)
         {
             if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
                 GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
             Mode1StartFadeOut();
-            gGameState.unk10E = 0;
-            gGameState.unk224 = 0;
-            gGameState.unk235 = gMain.unk457;
-            if (gGameState.unk1CC || gGameState.unk1FA)
+            gGameState.mapLoaded = 0;
+            gGameState.chartOpen = 0;
+            gGameState.lastMapImageMode = gMain.mapImageMode;
+            if (gGameState.menuOpen || gGameState.inMessage)
             {
                 MsgClose();
-                gGameState.unk142 = 0xFFFF;
-                if (gGameState.unk1FA)
+                gGameState.msgId = 0xFFFF;
+                if (gGameState.inMessage)
                     gGameState.unk21C = 0;
-                if (gGameState.unk1CC)
-                    gGameState.unk1CC = 0;
+                if (gGameState.menuOpen)
+                    gGameState.menuOpen = 0;
             }
-            if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
-                GbaComDataStatusReset(GBACOM_SLOT_3);
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
+                GbaComDataStatusReset(GBACOM_SLOT_MARKERS);
         }
     }
-    else if (gMain.modeState != 4 && GbaComRecvStatusCheck(GBACOM_SLOT_3))
+    else if (gMain.modeState != 4 && GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
     {
         Mode1RecvMarkers();
     }
 
     if (GbaComRecvStatusCheck(GBACOM_SLOT_SE))
     {
-        Func_0201C484(GBACOM_BUF_SE[0] - 1);
+        PlayMsgSound(GBACOM_BUF_SE[0] - 1);
         GbaComDataStatusReset(GBACOM_SLOT_SE);
     }
 
@@ -1066,9 +1071,9 @@ void MainMode1(void)
         if (gMain.modeState == 2)
         {
             if (GBACOM_BUF_MAIL[7])
-                Func_0201C484(GBACOM_BUF_MAIL[7] - 1);
-            if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk224 == 0
-             && gGameState.unk1FB == 0)
+                PlayMsgSound(GBACOM_BUF_MAIL[7] - 1);
+            if (gGameState.inMessage == 0 && gGameState.menuOpen == 0 && gGameState.chartOpen == 0
+             && gGameState.selectWinOpen == 0)
             {
                 GbaComRecvDataGet(&gGameState.switchMsg, GBACOM_SLOT_MAIL, 8);
                 if (gGameState.switchType == 5 || gGameState.switchType == 6
@@ -1078,24 +1083,24 @@ void MainMode1(void)
                 {
                     if (gGameState.switchType == 12)
                     {
-                        if (gGameState.unk121 == 0)
+                        if (gGameState.holdState == 0)
                         {
-                            if (!gGameState.flags.unk5_5)
-                                gGameState.flags.unk5_5 = 1;
-                            gGameState.unk121 = 1;
-                            gGameState.unk122 = 0;
-                            gGameState.unk124 = 0;
-                            gGameState.unk123 = gSprite_0202CA08[4];
+                            if (!gGameState.flags.cursorHeld)
+                                gGameState.flags.cursorHeld = 1;
+                            gGameState.holdState = 1;
+                            gGameState.holdMsgIndex = 0;
+                            gGameState.holdFrame = 0;
+                            gGameState.holdTimer = gCursorHeldSprite[4];
                         }
-                        else if (gGameState.unk121 == 1)
+                        else if (gGameState.holdState == 1)
                         {
-                            gGameState.unk121 = 2;
-                            gGameState.unk124 = 0;
-                            gGameState.unk123 = gSprite_0202CA40[4];
+                            gGameState.holdState = 2;
+                            gGameState.holdFrame = 0;
+                            gGameState.holdTimer = gCursorReleaseSprite[4];
                             ShowMessage(0x5B, 0);
                         }
                     }
-                    if (gGameState.unk121 <= 1)
+                    if (gGameState.holdState <= 1)
                     {
                         Mode1SendSwitch(0);
                         gGameState.unk0E5 = 0;
@@ -1144,29 +1149,29 @@ void MainMode1(void)
                 ShowMessage(0xE, 1);
             else if (result == 3)
                 ShowMessage((gGameState.effect[3] << 8) + gGameState.effect[2], 1);
-            gGameState.unk12B = 0;
-            Func_0201EBAC();
+            gGameState.effectStep = 0;
+            EndItemEffect();
         }
         else
         {
             GbaComRecvDataGet(gGameState.effect, GBACOM_SLOT_EFFECT, 4);
-            gGameState.unk1E5_1 = 0;
-            gGameState.unk1E5_2 = 1;
+            gGameState.itemsEnabled = 0;
+            gGameState.effectActive = 1;
             if (gGameState.effect[0] == 2 || gGameState.effect[0] == 15 || gGameState.effect[0] == 21)
             {
                 gGameState.effect[0] = 2;
-                Func_0201EBD4();
+                StartBombBlast();
                 SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
             }
             else if (gGameState.effect[0] == 16)
             {
-                Func_0201F274();
+                StartLookEffect();
                 SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
-                if (gGameState.unk121)
+                if (gGameState.holdState)
                 {
-                    ShowMessage(gGameState.unk122 + 0x60, 1);
-                    if (gGameState.unk122 <= 2)
-                        gGameState.unk122++;
+                    ShowMessage(gGameState.holdMsgIndex + 0x60, 1);
+                    if (gGameState.holdMsgIndex <= 2)
+                        gGameState.holdMsgIndex++;
                 }
             }
             else if (gGameState.effect[0] == 3)
@@ -1174,71 +1179,71 @@ void MainMode1(void)
             else if (gGameState.effect[0] == 4)
                 ShowMessage(0x26, 1);
             else if (gGameState.effect[0] == 5)
-                Func_0201F2C4();
+                StartRandomEffect();
             else if (gGameState.effect[0] == 7)
-                Func_0201F420();
+                StartShopEffect();
             else if (gGameState.effect[0] == 8 || gGameState.effect[0] == 9 || gGameState.effect[0] == 10)
-                gGameState.unk12B = 7;
+                gGameState.effectStep = 7;
             else if (gGameState.effect[0] == 13)
                 ShowMessage(0x26, 1);
             else if (gGameState.effect[0] == 14)
-                Func_02020150();
+                StartBombCountdown();
             else if (gGameState.effect[0] == 17)
             {
                 gGameState.effect[0] = 3;
-                Func_0201EDC4();
+                StartBalloonEffect();
             }
             else if (gGameState.effect[0] == 18)
             {
                 gGameState.effect[0] = 4;
-                Func_0201F240();
+                StartShieldEffect();
             }
             else if (gGameState.effect[0] == 20)
-                gGameState.effect[0] = gGameState.unk1E4;
+                gGameState.effect[0] = gGameState.savedEffect;
             else if (gGameState.effect[0] == 19)
             {
                 ShowMessage(0x2D, 1);
                 gGameState.effect[0] = 5;
-                gGameState.unk12B = 6;
+                gGameState.effectStep = 6;
             }
             else
-                gGameState.unk1C8 = 0;
+                gGameState.effectTimer = 0;
         }
     }
 
-    // Slot 11: 8 bytes to unk0F4.
-    if (GbaComRecvStatusCheck(GBACOM_SLOT_11))
+    // Slot 11: 8 bytes to visitedSquares.
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_VISITED))
     {
-        CpuCopy16(GBACOM_BUF_11, gGameState.unk0F4, 8);
-        GbaComDataStatusReset(GBACOM_SLOT_11);
+        CpuCopy16(GBACOM_BUF_VISITED, gGameState.visitedSquares, 8);
+        GbaComDataStatusReset(GBACOM_SLOT_VISITED);
     }
 
     if (gMain.modeState == 2)
     {
-        gGameState.unk119 = Func_0201B3A4();
-        if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk1E5_1)
+        gGameState.selectedMarker = UpdateSelection();
+        if (gGameState.inMessage == 0 && gGameState.menuOpen == 0 && gGameState.itemsEnabled)
         {
-            if (gGameState.unk11A && gGameState.unk224 == 0)
+            if (gGameState.selection && gGameState.chartOpen == 0)
             {
-                if (gGameState.unk226 != 11)
+                if (gGameState.tingleAnim != 11)
                 {
-                    gGameState.unk226 = 11;
-                    Func_0201C568();
+                    gGameState.tingleAnim = 11;
+                    StartTingleAnim();
                 }
             }
-            else if (gGameState.unk226)
+            else if (gGameState.tingleAnim)
             {
-                gGameState.unk226 = 0;
-                Func_0201C568();
+                gGameState.tingleAnim = 0;
+                StartTingleAnim();
             }
         }
         // Darken the screen and show the wait sprite while a menu or event runs on the GC.
-        if ((gGameState.unk1FB | gGameState.unk1FA | gGameState.unk224 | gGameState.unk1CC) == 0
+        if ((gGameState.selectWinOpen | gGameState.inMessage | gGameState.chartOpen | gGameState.menuOpen) == 0
          && gGameState.flags.busy)
         {
             gMain.bldcnt = 0x2FEF;
             gMain.bldy = 7;
-            DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
+            DrawSprite(gWaitSprite, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
         }
         else
         {
@@ -1253,21 +1258,21 @@ void MainMode1(void)
     {
         u16 *map;
 
-        Mode1Func_020150A4();
+        UpdateRupeeCounter();
         map = (u16 *)0x0600644C;
         map[0] = gRupeeIconTiles[gGameState.flags.walletSize];
         map[0x20] = gRupeeIconTiles[gGameState.flags.walletSize] + 1;
     }
 
-    // Some seconds after a marker update (Mode1RecvMarkers), a sound for the chart square
-    // that marker 1 (Link?) is in.
-    if (gMain.modeState == 2 && gGameState.unk106)
+    // 3-8 s after Link's marker moved to another sea chart square (Mode1RecvMarkers), name
+    // the square he is in (message 0x406 + square).
+    if (gMain.modeState == 2 && gGameState.squareMsgPending)
     {
-        if (gGameState.unk030 != 0)
-            gGameState.unk030--;
-        else if (gGameState.unk1CC == 0 && *(u16 *)&gGameState.unk1FA == 0 && gGameState.unk224 == 0)
+        if (gGameState.squareMsgTimer != 0)
+            gGameState.squareMsgTimer--;
+        else if (gGameState.menuOpen == 0 && *(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0)
         {
-            gGameState.unk106 = 0;
+            gGameState.squareMsgPending = 0;
             i = 0;
             do
             {
@@ -1277,7 +1282,7 @@ void MainMode1(void)
             } while (1);
             // The square (7 per row) goes into i too: a separate local shifts the registers.
             i = (gGameState.markers[i].y >> 8) * 7 + (gGameState.markers[i].x >> 8);
-            if (i == 25 && gGameState.flags.unkA_4)
+            if (i == 25 && gGameState.flags.towerRaised)
                 ShowMessage(0x437, 1);
             else
                 ShowMessage(i + 0x406, 1);

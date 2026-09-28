@@ -66,7 +66,7 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 | `02018158` | `0201E948` | `mode0.c` | title screen while the GC sends the boot data: `Mode0State0-3`, `Mode0DrawTitleSprite`, `Mode0UpdateBlend`, `MainMode0`; `.rodata` `02023EE4-02023EFC` (US: `0202AB40-0202AB64`, which adds `gMode0UsString` for the US-only `DrawString`) |
 | `02018658` | `0201EE3C` | `heap.c` | `HeapInit`/`HeapAlloc`/`HeapFree`/`HeapCompact` (the JOY IRQ copy lives in this heap) |
 | `02018884` | `0201F068` | `sprite.c` | easing/step helpers, `DrawSprite`/`DrawSpriteAt`/`DrawSpriteParts`; `.rodata` `gSinTable` (`02023EFC–0202417C`, 320 × s16 8.8 sine, so `cos(i) = gSinTable[i + 64]`) and `gSpriteTable` |
-| `0201920C` | `0201F9F0` | `map.c` | the map screen, map icons, quest markers, `Func_0201B3A4`-`Func_0201B8C8`; `.rodata` `020241D4–0202429C` |
+| `0201920C` | `0201F9F0` | `map.c` | the map screen, map icons, quest markers, `UpdateSelection`-`ExamineSelection`; `.rodata` `020241D4–0202429C` |
 | `0201BA2C` | `02022228` | `message.c` | text renderer, choice menu, messages (`MsgStep`, `ShowMessage`, US `DrawString`); `.rodata` `0202429C–02024460` |
 | `0201DA78` | `02024684` | `item_menu.c` | item menu, `UseItem`, HUD panels; `.rodata` `02024460–020244D0` |
 | `0201EBAC` | `020257B8` | `effect.c` | item effects, `MainMode2`, objects, wave scroll, Select window, status icon; `.rodata` `020244D0–02024568` |
@@ -89,10 +89,10 @@ ends, so this only ever puts functions together:
 |-----------|----------|
 | `UpdateMap` (`0201A224`) ... `Mode1VBlank` (`0201ABDC`) | `Mode1VBlank` uses `gSeaAnimFrames` (`02024235`), before `UpdateMap`'s `gSeaAnimPeriods` (`0202423A`) |
 | `MapIconFollowMarker` (`0201AC94`) ... `UpdateMapIcons` (`0201AF48`) | pointer table `gMapIconFuncs` (`02024244`), used by `UpdateMapIcons` |
-| `ChoiceMenuUpdate` (`0201C204`) ... `MsgStep` (`0201CB10`) | `MsgStep`'s pointer table `gMsgCmdFuncs` makes its block 4-aligned. In the US builds `gMsgTingleAnims` (`0202AFBA`) and `gSoundIds_0202430E` (`0202AF76`) are not, so the block starts at `gTwoChoiceIds` (`ChoiceMenuUpdate`) or earlier |
+| `ChoiceMenuUpdate` (`0201C204`) ... `MsgStep` (`0201CB10`) | `MsgStep`'s pointer table `gMsgCmdFuncs` makes its block 4-aligned. In the US builds `gMsgTingleAnims` (`0202AFBA`) and `gMsgSoundIds` (`0202AF76`) are not, so the block starts at `gTwoChoiceIds` (`ChoiceMenuUpdate`) or earlier |
 | `DrawGlyphRun` (`0201C660`) ... `MsgStep` (`0201CB10`) | `MsgStep` uses `gMsgTingleAnims` (`02024354`), before `DrawGlyphRun`'s `gGlyphRunStart` (`02024376`); `gMsgCmdFuncs` (`020243A4`) lists the 19 handlers `MsgCmd00-12` |
 | `ItemMenuUpdate` (`0201DEAC`) ... `ItemMenuInit` (`0201E190`) | `ItemMenuUpdate` uses `gChestRowIds` (`020244C0`), after `ItemMenuInit`'s `gShopItemsInit` (`02024460`) |
-| `Func_0201EC10` ... `ObjBurst` (`0202081C`) | `gItemEffectFuncs` (`020244E4`, 18 handlers `0201EC10-02020190`, run by `UpdateItemEffect`), `gMode2StateFuncs` (`0202452C`, `Mode2State0-1`), `gObjFuncs` (`02024534`, entry 0 `ObjBurst`) and `gObjBurstStateFuncs` (`02024560`) |
+| `EffectBombBlast` ... `ObjBurst` (`0202081C`) | `gItemEffectFuncs` (`020244E4`, 18 handlers `0201EC10-02020190`, run by `UpdateItemEffect`), `gMode2StateFuncs` (`0202452C`, `Mode2State0-1`), `gObjFuncs` (`02024534`, entry 0 `ObjBurst`) and `gObjBurstStateFuncs` (`02024560`) |
 
 The five source files keep these groups whole. Between two groups the boundary is a choice
 within the range the tables allow, made by who calls the functions in between:
@@ -101,12 +101,12 @@ within the range the tables allow, made by who calls the functions in between:
   everywhere, `CopyMapColumn`/`CopyMapRow` only by the map code (`ScrollMap`,
   `InitMapView`). The easing helpers have no `.rodata` and nothing separates them from
   `DrawSprite`, so they share `sprite.c`.
-- `map.c` / `message.c` at `Func_0201BA2C`: the text renderer's functions are only called
-  from the message code; `Func_0201B8C8` calls `Func_0201B7D4` (whose `gMsgIds_02024278`
+- `map.c` / `message.c` at `DrawMsgBoxRow`: the text renderer's functions are only called
+  from the message code; `ExamineSelection` calls `ShowSelectionMsg` (whose `gFriendMsgIds`
   ends the map block) and both are cursor messages from `Mode1State2`.
 - `message.c` / `item_menu.c` at `DrawSlotCursor`: the item menu's first table is
   `gShopItemsInit`; `MsgReset` ... `MsgClose` are message functions.
-- `item_menu.c` / `effect.c` at `Func_0201EBAC`: `Func_0201EBAC`/`Func_0201EBD4` are called
+- `item_menu.c` / `effect.c` at `EndItemEffect`: `EndItemEffect`/`StartBombBlast` are called
   by the effects (and `MainMode1`), `UpdateHudPanels` (`gHudPanelTiles`) by the item menu.
 - `effect.c` runs to the sound driver: `BuildWaveScrollTable` ... `DrawStatusIcon` have no
   `.rodata`, so nothing separates them from the objects before them.
@@ -115,7 +115,7 @@ What the range does, in address order (names in symbols.txt):
 
 - `02018884-020190A8`: easing/step helpers (`EaseToward*`, `StepToward*`, `CountDown*`),
   `DrawSprite`/`DrawSpriteAt` (sprites are `struct SpriteFrame` lists of OAM parts;
-  `gMain.unk450`/`unk451` count the OAM entries and affine matrices used this frame).
+  `gMain.oamCount`/`affineCount` count the OAM entries and affine matrices used this frame).
 - `020190A8-0201AFCC`: the map screen. BG3 map streaming (`CopyMapColumn/Row`,
   `ScrollMap`), `DrawMapMarkers`, `HighlightMapRooms`, the view following a marker, the
   sea chart (`UpdateMap`, the 7x7 squares and their tile animation), the floor number, the
@@ -136,6 +136,44 @@ What the range does, in address order (names in symbols.txt):
 - `0201F308-02020E28`: the item effects (`effect[0]` from slot 7; `Effect7` is the shop,
   slots 12/13), the object system (`gObjs`, `ObjSpawn`, `ObjBurst`), `MainMode2` (the link-lost
   screen: two states), the per-line wave scroll, the select-button window wipe and the status icon.
+
+### Markers, selection and items
+
+The map shows the markers of slot 3 (`struct MapMarker`, built by the GC's `dMap_c`, see
+[protocol.md](protocol.md)): marker 0 is Link (type 1), marker 1 the Tingle Tuner cursor
+(type 3), then enemies (2), the ship (4), doors (17), friends (19) and others. A player or
+friend marker's `param` is the character (0: Link; `gCharIcon0-4`, also the status icon), and
+`UseItem` refuses items 3-5, 8-10 and 16 while Link's is not 0. `UpdateSelection` (every
+frame in state 2) looks for a marker within 8 px of the cursor, or on the sea for the spot of
+the cursor's square (slot 14); A (`ExamineSelection`) sends a pending switch record, or has
+Tingle think (messages `15`-`17`, `reactionTimer`) before `ShowSelectionMsg` shows the
+marker's message (`gbaName`) or the square's name; markers of types 5, 12, 13 and 16 are
+drawn hidden (`gSpriteTable[7]`) until examined (`revealedType*`). When Link's marker enters
+another sea chart square, the square is named 3-8 s later (`squareMsgPending`).
+
+Items (`gGameState.items`, from `gShopItemsInit`; B uses `selectedItem`, A with nothing
+selected uses 16). Most go to the GC in slot 6 and the answer in slot 7 (`effect[0]`) starts an
+item effect (`gItemEffectFuncs`); the GC side is `daAgb_c::GbaItemUse`. The in-game names are
+presumably the Tingle Tuner shop's:
+
+| item | price (discount) | GBA -> GC | effect |
+|------|------------------|-----------|--------|
+| 1 | 0 | - | puts the target (`icons[2]`) on the cursor; sea only |
+| 2 | 10 | 2 | bomb: GC answer 2 (15 with a rupee drop when following a target) blasts at the cursor (`EffectBombBlast`); answer 14 when the cursor sits on Link starts a countdown (`Effect14`) |
+| 3 | 30 (20) | 0x11, then 3 | balloon: GC hover boots for 150 frames (`StartBalloonEffect`, effect 3) |
+| 4 | 40 (30) | 0x12, then 4 | shield: GC Tingle shield for 300 frames (`StartShieldEffect`, effect 4) |
+| 5 | 40 (30) | 5 | random: the GC picks 10 (full heal), 12 (balloon and shield), 13 (long shield) or 0x13 (nothing) (`Effect5`) |
+| 6 | 0 | - | message `0D` only |
+| 7 | 0 | 7, then slots 12/13 | the shop (`Effect7`): arrows, bombs or bait for rupees |
+| 8-10 | 20/40/80 (10/20/40) | 0x14, then 8-10 | Tings: 3 hearts, magic, both full (`Effect8`: the title sprite brings the Ting down to Link) |
+| 11 | 0 | - | in slot 6 until the shop is unlocked (message code `F3 05`): a choice dialogue (`Effect11`) |
+| 16 | - | 16 | the GC's `MODE_LOOK_ATTENTION` (Link looks at the cursor) |
+| 0x15 | - | 0x15 | message code `F3 12`: a bomb on Link (answer 21) |
+
+The discounts come from the GC event flags `UNLOCK_TINGLE_BALLOON_DISCOUNT` (3-5) and
+`UNLOCK_TING_DISCOUNT` (8-10), which the GBA sets itself through `GbaFlg.bits` when message
+code `F3 00`/`F3 01` runs (`MsgCmd00`/`01`); the shop is event `0x1708`, set the same way by
+`F3 05`.
 
 `DrawSprite` (`02018AB8`) is the first function in the range that uses `.rodata` (it reads
 `gSinTable + 0x80`, the cosine), so `gSinTable` is either its object's or a data object of
@@ -173,29 +211,29 @@ plays SE index `entry + 1` when restarted within 150 frames of stopping. `SoundP
 
 **Sound IDs** (every `SoundPlay`/`SoundPlayLoop` call in the three builds, found by scanning
 the disassembly for `bl`; the US calls are the JP ones with `SOUND_ID_SHIFT` applied). "SE"
-is the sequence index in the SE set, "msg" the `F6 xx` message codes (`Func_0201C484`, via
-`gSoundIds_0202430E`) that play the ID in JP. Voice clips (player 4) are Tingle's sampled
-voice. Tables passed to `ShowMessage` (`gDungeonMsgIds`, `gChestMsgIds`, `gMsgIds_02024278`,
+is the sequence index in the SE set, "msg" the `F6 xx` message codes (`PlayMsgSound`, via
+`gMsgSoundIds`) that play the ID in JP. Voice clips (player 4) are Tingle's sampled
+voice. Tables passed to `ShowMessage` (`gDungeonMsgIds`, `gChestMsgIds`, `gFriendMsgIds`,
 the choice tables, `switchMsg`) hold message numbers, not sound IDs.
 
 | JP | US | SE | pl. | what plays it |
 |----|----|----|-----|---------------|
 | `00` | `00` | 2 | 4 | voice: the map screen comes in (`Mode1State1`, with the dungeon's message); msg `0A`, `0B` (entry 0) |
-| `01` | `01` | 3 | 4 | voice: Link's marker reaches something selectable (`Func_0201B3A4`); msg `17` |
-| `02` | `02` | 4 | 4 | voice: A on a selection shows its message (`Func_0201B8C8` result 2) |
+| `01` | `01` | 3 | 4 | voice: the cursor's marker reaches something selectable (`UpdateSelection`); msg `17` |
+| `02` | `02` | 4 | 4 | voice: A on a selection shows its message (`ExamineSelection` result 2) |
 | `03`-`05` | same | 5, 8, 6 | 4 | voice: messages only (msg `15`, `18`, `1A`; `16` is skipped) |
 | `06` | - | 7 | 4 | voice, JP only: msg `1B` |
 | `07` | `06` | 20 | 0 | `flags.isFree` goes off (`Mode1State2`); L released after panning the map (`UpdateMap`) |
 | `08` | `07` | 23 | 0 | msg `13` |
 | `09` | `08` | 24 | 0 | rupee counter reaches the count (`SE_RUPEE_COUNT_END`); msg `14` |
 | `0A` | `09` | 26 | 0 | A on the map's target cursor places the target (`MapIconCursor`) |
-| `0B` | `0A` | 25 | 0 | the target icon is put on Link's marker (`Mode1State2` after choice message `1A7`, `UseItem`) |
+| `0B` | `0A` | 25 | 0 | the target icon is put on the cursor's marker (`Mode1State2` after choice message `1A7`, `UseItem`) |
 | `0C` | `0B` | 27 | 0 | tick: `flags.timer` changes (`DrawTimerCount`), effect 14's countdown |
 | `0D`-`0F` | `0C`-`0E` | 28-30 | 0 | unused |
 | `10` | `0F` | 31 | 0 | msg `12` |
 | `11` | `10` | 21 | 0 | high priority; msg `11` |
 | `12` | `11` | 22 | 0 | high priority: the chest counter starts blinking (`ChestCounterMain`); msg `10` |
-| `13` | `12` | 34-36 | 0 | a message opens (`ShowMessage`, `Func_0201C0E8`): low priority, SE + random 0-2; msg `0C`-`0F` |
+| `13` | `12` | 34-36 | 0 | a message opens (`ShowMessage`, `MsgNewPage`): low priority, SE + random 0-2; msg `0C`-`0F` |
 | `14` | `13` | 42 | 0 | item menu: an item is picked and flies to the slot |
 | `15` | `14` | 43 | 0 | item menu: cursor auto-repeat, and the picked icon arriving |
 | `16` | `15` | 32 | 0 | title screen appears (`Mode0State0`); `flags.isFree` goes on; L pressed to pan the map |
@@ -207,7 +245,7 @@ the choice tables, `switchMsg`) hold message numbers, not sound IDs.
 | `1D`, `1E` | `1C`, `1D` | 55, 56 | 0 | `SE_RUPEE_COUNT_UP` / `_DOWN`, every other rupee; msg `08`, `07` |
 | `1F` | `1E` | 48 | 0 | `SE_LINKED`: all boot data received (`Mode0State3`); msg `00` |
 | `20` | `1F` | 41 | 1 | msg `1E` |
-| `21` | `20` | 40 | 1 | a switch record is sent to the GC (`Mode1SendSwitch` from `Mode1State2`, `Func_0201B8C8`); msg `1C` |
+| `21` | `20` | 40 | 1 | a switch record is sent to the GC (`Mode1SendSwitch` from `Mode1State2`, `ExamineSelection`); msg `1C` |
 | `22` | `21` | 39 | 1 | msg `1D` |
 | `23` | `22` | 47 | 1 | the GC's item effect 2/15/21 (the `ObjBurst` pieces) or 16 (`MainMode1`); msg `09` |
 | `24` | `23` | 17 | 1 | msg `19` |
@@ -223,20 +261,20 @@ Loop IDs (`SoundPlayLoop`, same in all builds; SE index US = JP - 1):
 
 | ID | SE | what keeps it playing |
 |----|----|-----------------------|
-| 0 | 12 | `MsgStep` while `unk159` is set and no message loop runs |
-| 1 | 15 | item effects 8-10 while the title sprite waits over the marker; msg `21` |
+| 0 | 12 | `MsgStep` while `charLoopSound` is set and no message loop runs |
+| 1 | 15 | item effects 8-10 while the title sprite waits over Link's marker; msg `21` |
 | 2 | 16 | the link-lost screen (`Mode2State1`); msg `20` |
-| 3 | 18 | status icon 2 (`DrawStatusIcon`, `unk1F5`) |
+| 3 | 18 | status icon 2 (`DrawStatusIcon`, `enemyHighlighted`) |
 | 4 | 19 | status icon while `flags.followTarget` |
 | 5 | 37 | title screen while the boot data comes in (`Mode0State1-3`); msg `22` |
-| 6 | 38 | `Mode1State2` while `unk156` runs (the random reaction of `Func_0201B8C8` result 1) |
-| 7 | 44 | `Mode1State2`: `flags.unk5_2` set and `flags.isFree` |
+| 6 | 38 | `Mode1State2` while `reactionTimer` runs (the random reaction of `ExamineSelection` result 1) |
+| 7 | 44 | `Mode1State2`: `flags.moveSpeed` set and `flags.isFree` |
 | 8 | 45 | `UpdateMap` while the D-pad pans the map (L held) |
-| 9 | 0 | `Mode1State2`: `flags.unk5_2` set, not free, not following; tempo from `(unk5_2 - 1) ^ 3` |
+| 9 | 0 | `Mode1State2`: `flags.moveSpeed` set, not free, not following; tempo from `(moveSpeed - 1) ^ 3` |
 | 10 | 0 | unused |
 
-The message codes `F6 20`-`F6 22` pick loop IDs (`gSoundIds_0202430E[0x20-0x22]`). The US table
-lost entry 27 (voice clip 6), but `Func_0201C484`'s ranges (`0C-0F` random, `20-22` loop, `16`
+The message codes `F6 20`-`F6 22` pick loop IDs (`gMsgSoundIds[0x20-0x22]`). The US table
+lost entry 27 (voice clip 6), but `PlayMsgSound`'s ranges (`0C-0F` random, `20-22` loop, `16`
 skipped) are unchanged, so in the US every code from `1B` reads the next entry, and `F6 22`
 reads past the table into `gMsgTingleAnims[0]` (2). Unless the US message data renumbered its
 codes, that is a US bug (the message data isn't extracted, so this isn't checked).

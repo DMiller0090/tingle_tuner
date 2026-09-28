@@ -36,27 +36,27 @@ const s16 gSinTable[320] =
 const u8 *const gSpriteTable[22] =
 {
     0x0,
-    gSprite_0202BD88,
-    gSprite_0202BDA8,
-    gSprite_0202BD98,
-    gSprite_0202BE30,
-    gSprite_0202C148,
-    gSprite_0202C1A0,
-    gSprite_0202C188,
-    gSprite_0202C140,
-    gSprite_0202C190,
-    gSprite_0202C128,
-    gSprite_0202BE38,
-    gSprite_0202C1A8,
-    gSprite_0202C1B0,
-    gSprite_0202C1F0,
-    gSprite_0202C1E8,
-    gSprite_0202C3E8,
-    gSprite_0202BDE8,
-    gSprite_0202BE00,
-    gSprite_0202BDD8,
-    gSprite_0202C4C0,
-    gSprite_0202C1E0
+    gMarkerType1Sprite,
+    gMarkerType2Sprite,
+    gMarkerType3Sprite,
+    gMarkerType4Sprite,
+    gMarkerType5Sprite,
+    gMarkerType6Sprite,
+    gMarkerType7Sprite,
+    gMarkerType8Sprite,
+    gMarkerType9Sprite,
+    gMarkerType10Sprite,
+    gMarkerType11Sprite,
+    gMarkerType12Sprite,
+    gMarkerType13Sprite,
+    gMarkerType14Sprite,
+    gMarkerType15Sprite,
+    gMarkerType16Sprite,
+    gMarkerType17Sprite,
+    gMarkerType18Sprite,
+    gMarkerType19Sprite,
+    gMarkerType20Sprite,
+    gMarkerType21Sprite
 };
 
 s16 EaseTowardMinMax(s16 *pos, s16 target, s16 div, s16 maxStep, s16 minStep)
@@ -177,9 +177,9 @@ u16 CountDownU16(u16 *timer)
     return *timer;
 }
 
-// Add a sprite frame to gOamBuffer at gMain.unk450 (the OAM entries used so far this frame).
+// Add a sprite frame to gOamBuffer at gMain.oamCount (the OAM entries used so far this frame).
 // With no angle and scale it draws every part at its offset; otherwise each part gets its own
-// double-size affine OBJ and matrix (gMain.unk451 counts those), rotated and scaled about
+// double-size affine OBJ and matrix (gMain.affineCount counts those), rotated and scaled about
 // (x - ofsX, y - ofsY). The parts' own offsets are ignored then, and ofsX/ofsY flip sign for
 // every part, so it only works right for one-part sprites or zero offsets (all callers so far).
 // mosaic is a u8 here; callers see a u32 (the prototype in game.h).
@@ -188,7 +188,7 @@ void DrawSprite_(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic
 void DrawSprite_(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic, u16 scale, s16 ofsX,
                  s16 ofsY, u8 tileOfs, u8 palette)
 {
-    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.oamCount];
     const struct SpriteFrame *frames = sprite;
     const struct SpritePart *part;
     s32 shake;
@@ -218,7 +218,7 @@ void DrawSprite_(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic
             else
                 oam->paletteNum = part->paletteNum;
             oam++;
-            gMain.unk450++;
+            gMain.oamCount++;
             part++;
         }
     }
@@ -229,7 +229,7 @@ void DrawSprite_(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic
         cos = (gSinTable + 64)[angle];
         sin = gSinTable[angle];
         negSin = -sin;
-        mtx = (struct OamData *)gOamBuffer + gMain.unk451 * 4;
+        mtx = (struct OamData *)gOamBuffer + gMain.affineCount * 4;
         if (scale == 0)
             scale = 0x100;
         while (part->end != 0xFFFF)
@@ -264,17 +264,17 @@ void DrawSprite_(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic
             else
                 oam->paletteNum = part->paletteNum;
             oam->affineMode = 3;
-            oam->matrixNum = gMain.unk451;
-            oam->hFlip = gMain.unk451 >> 3;
-            oam->vFlip = gMain.unk451 >> 4;
+            oam->matrixNum = gMain.affineCount;
+            oam->hFlip = gMain.affineCount >> 3;
+            oam->vFlip = gMain.affineCount >> 4;
             mtx[0].affineParam = scale * cos >> 8;
             mtx[1].affineParam = negSin * scale >> 8;
             mtx[2].affineParam = scale * sin >> 8;
             mtx[3].affineParam = scale * cos >> 8;
             oam++;
             mtx += 4;
-            gMain.unk450++;
-            gMain.unk451++;
+            gMain.oamCount++;
+            gMain.affineCount++;
             part++;
         }
     }
@@ -283,7 +283,7 @@ void DrawSprite_(const void *sprite, u8 frame, s16 x, s16 y, u8 angle, u8 mosaic
 // DrawSprite without rotation, tile offset or the parts' own priority.
 void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 palette, u8 priority)
 {
-    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.oamCount];
     const struct SpriteFrame *frames = sprite;
     const struct SpritePart *part;
     s32 shake;
@@ -309,7 +309,7 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
         else
             oam->paletteNum = part->paletteNum;
         oam++;
-        gMain.unk450++;
+        gMain.oamCount++;
         part++;
     }
 }
@@ -317,7 +317,7 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
 // DrawSpriteAt for a bare part list, keeping the parts' palettes.
 void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
 {
-    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.oamCount];
     const struct SpritePart *part = parts;
     // FAKEMATCH: the no-op % 2 lengthens x's live range so global-alloc ranks it after ~0x10
     s32 shake = ((gGameState.shake >> 1) % 2) & 1;
@@ -336,7 +336,7 @@ void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
         oam->priority = priority;
         oam->paletteNum = part->paletteNum;
         oam++;
-        gMain.unk450++;
+        gMain.oamCount++;
         part++;
     }
 }

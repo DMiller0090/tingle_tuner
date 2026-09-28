@@ -50,18 +50,18 @@ void DrawSlotCursor(u8 slot)
     bool32 mosaic = gMain.mosaic != 0;
 
     if (row <= 1)
-        DrawSprite(gSprite_0202BDB8, (gMain.frameCount >> 4) & 1,
+        DrawSprite(gSlotCursorSprite, (gMain.frameCount >> 4) & 1,
                    gMain.bgOfs[1][0] + (s16)(col * 24 + 24), row * 40 + 20, 0, mosaic, 0, 0, 0,
                    0, 0);
     else
-        DrawSprite(gSprite_0202BDB8, (gMain.frameCount >> 4) & 1,
+        DrawSprite(gSlotCursorSprite, (gMain.frameCount >> 4) & 1,
                    gMain.bgOfs[1][0] + (s16)(col * 16 + 0x27), 0x6C, 0, mosaic, 0, 0, 0, 0, 0);
 }
 
 // Add an item's icon as a 16x16 sprite to gOamBuffer.
 void DrawItemSprite(u8 item, u8 x, u8 y, u8 mosaic)
 {
-    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
+    struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.oamCount];
 
     oam->y = y;
     oam->mosaic = mosaic;
@@ -73,7 +73,7 @@ void DrawItemSprite(u8 item, u8 x, u8 y, u8 mosaic)
     oam->tileNum = gGameState.items[item].objTile;
     oam->priority = 0;
     oam->paletteNum = gGameState.items[item].objPalette;
-    gMain.unk450++;
+    gMain.oamCount++;
 }
 
 // Draw an item's 2x2-tile icon at map (a blank tile for item 0).
@@ -133,7 +133,7 @@ void SetSelectedItem(u8 item)
 {
     u16 *map = (u16 *)0x06006464;
 
-    gGameState.unk1DE = item;
+    gGameState.selectedItem = item;
     DrawItemIcon(item, map);
     map += 2;
     DrawItemCount(item, map);
@@ -154,41 +154,41 @@ void SetSlotItem(u8 slot, u8 item)
 }
 
 // The dungeon chest counter (MainMode1 starts it at state 1): state 2 blinks the new chest
-// bits until unk1FA is clear, state 3 waits 300 frames or a key.
+// bits until inMessage is clear, state 3 waits 300 frames or a key.
 void ChestCounterMain(void)
 {
-    if (gGameState.unk1E0 == 3)
+    if (gGameState.chestState == 3)
     {
-        if (--gGameState.unk1CA == 0 || gMain.newKeys != 0)
+        if (--gGameState.chestTimer == 0 || gMain.newKeys != 0)
         {
             DrawChestRow();
             SoundPlay(0x2A - SOUND_ID_SHIFT, 0);
-            gGameState.unk1CC = 0;
-            gGameState.unk13C = 0;
-            gGameState.unk1E0 = 0;
-            gGameState.unk104 = 1;
-            gGameState.unk1CA = 0;
+            gGameState.menuOpen = 0;
+            gGameState.msgOpen = 0;
+            gGameState.chestState = 0;
+            gGameState.active = 1;
+            gGameState.chestTimer = 0;
         }
     }
-    else if (gGameState.unk1E0 == 2)
+    else if (gGameState.chestState == 2)
     {
-        if (++gGameState.unk1CA == 0x20)
+        if (++gGameState.chestTimer == 0x20)
             SoundPlay(0x12 - SOUND_ID_SHIFT, 0);
-        if (gGameState.unk1CA & 0x20)
+        if (gGameState.chestTimer & 0x20)
         {
-            if (!(gGameState.unk1CA & 0x1F))
+            if (!(gGameState.chestTimer & 0x1F))
                 SoundPlay(0x25 - SOUND_ID_SHIFT, 0);
-            gGameState.flags.dungeonChests |= gGameState.unk1E1;
+            gGameState.flags.dungeonChests |= gGameState.newChests;
         }
         else
         {
-            gGameState.flags.dungeonChests &= ~gGameState.unk1E1;
+            gGameState.flags.dungeonChests &= ~gGameState.newChests;
         }
         DrawChestRow();
-        if (gGameState.unk1FA == 0 && (gGameState.unk1CA & 0x20))
+        if (gGameState.inMessage == 0 && (gGameState.chestTimer & 0x20))
         {
-            gGameState.unk1CA = 300;
-            gGameState.unk1E0++;
+            gGameState.chestTimer = 300;
+            gGameState.chestState++;
         }
     }
 }
@@ -213,9 +213,9 @@ void ItemMenuUpdate(void)
 #endif
 
 #ifdef VERSION_GZLJ01
-    if (gGameState.unk1E0 != 0)
+    if (gGameState.chestState != 0)
 #else
-    if (gGameState.unk1E0 > 1)
+    if (gGameState.chestState > 1)
 #endif
     {
         ChestCounterMain();
@@ -229,7 +229,7 @@ void ItemMenuUpdate(void)
         if (gGameState.msgTest)
         {
             MsgStartSilent(0);
-            gGameState.unk142 = 0;
+            gGameState.msgId = 0;
         }
     }
     if (gGameState.msgTest)
@@ -247,7 +247,7 @@ void ItemMenuUpdate(void)
         {
             gGameState.menuKeyRepeat = 4;
         }
-        id = gGameState.unk142;
+        id = gGameState.msgId;
         if (keys & 0x40)
         {
             if (++id > 0x437)
@@ -294,13 +294,13 @@ void ItemMenuUpdate(void)
         return;
     }
 #endif
-    if (gGameState.unk1E5_0)
+    if (gGameState.itemFlying)
     {
         gGameState.menuCursorX += gGameState.menuCursorDX;
         gGameState.menuCursorY += gGameState.menuCursorDY;
         if (gGameState.menuCursorX == 0x9000)
         {
-            gGameState.unk1E5_0 = 0;
+            gGameState.itemFlying = 0;
             SetSelectedItem(gGameState.slotItems[gGameState.menuCursor]);
             SoundPlay(0x15 - SOUND_ID_SHIFT, 0);
         }
@@ -312,7 +312,7 @@ void ItemMenuUpdate(void)
     {
         gGameState.menuKeyRepeat = 16;
         keys = gMain.newKeys;
-        gGameState.unk1DF = 0;
+        gGameState.pickedEmptySlot = 0;
         SoundPlay(0x29 - SOUND_ID_SHIFT, 0);
     }
     else if (CountDownU8(&gGameState.menuKeyRepeat))
@@ -351,7 +351,7 @@ void ItemMenuUpdate(void)
         if ((gGameState.flags.dungeonChests >> col) & 1)
             MsgStartSilent(gChestRowIds[col]);
         else
-            gGameState.unk13C = 0;
+            gGameState.msgOpen = 0;
     }
     else
     {
@@ -359,15 +359,15 @@ void ItemMenuUpdate(void)
         {
             if (item == 0)
             {
-                gGameState.unk1DF = 1;
+                gGameState.pickedEmptySlot = 1;
             }
-            else if (item != gGameState.unk1DE)
+            else if (item != gGameState.selectedItem)
             {
                 gGameState.menuCursorX = ((gGameState.menuCursor % 5) * 24 + 20) << 8;
                 gGameState.menuCursorY = ((gGameState.menuCursor / 5) * 40 + 20) << 8;
                 gGameState.menuCursorDX = (0x9000 - gGameState.menuCursorX) >> 4;
                 gGameState.menuCursorDY = (0x8800 - gGameState.menuCursorY) >> 4;
-                gGameState.unk1E5_0 = 1;
+                gGameState.itemFlying = 1;
                 SoundPlay(0x14 - SOUND_ID_SHIFT, 0);
             }
             else
@@ -377,9 +377,9 @@ void ItemMenuUpdate(void)
         }
         entry = &gGameState.items[item];
         if (item == 0)
-            gGameState.unk13C = 0;
+            gGameState.msgOpen = 0;
         else
-            MsgStartSilent(entry->unk4);
+            MsgStartSilent(entry->descMsg);
     }
     DrawSlotCursor(gGameState.menuCursor);
 }
@@ -391,13 +391,13 @@ bool32 ItemMenuInit(void)
     s32 i;
 
     CpuSet(gShopItemsInit, gGameState.items, 0x30);
-    if (gGameState.unk138_4)
+    if (gGameState.balloonDiscount)
     {
         gGameState.items[3].price = 20;
         gGameState.items[4].price = 30;
         gGameState.items[5].price = 30;
     }
-    if (gGameState.unk138_5)
+    if (gGameState.tingDiscount)
     {
         gGameState.items[8].price = 10;
         gGameState.items[9].price = 20;
@@ -407,25 +407,25 @@ bool32 ItemMenuInit(void)
     {
         gGameState.items[11].tile = (gGameState.items[11].tile & 0xFFF) | 0x1000;
         gGameState.items[11].objPalette = 9;
-        gGameState.items[11].unk4 = 7;
-        gGameState.unk1E5_3 = 1;
+        gGameState.items[11].descMsg = 7;
+        gGameState.onSea = 1;
     }
     else
     {
         gGameState.items[11].tile = (gGameState.items[11].tile & 0xFFF) | 0x8000;
         gGameState.items[11].objPalette = 8;
-        gGameState.items[11].unk4 = 6;
-        gGameState.unk1E5_3 = 0;
+        gGameState.items[11].descMsg = 6;
+        gGameState.onSea = 0;
     }
     i = 0;
     do
     {
-        if (i == 6 && !gGameState.unk138_3)
+        if (i == 6 && !gGameState.shopUnlocked)
         {
             SetSlotItem(6, 11);
             i = 7;
         }
-        else if (!gGameState.flags.unkB_7 && (i == 4 || i > 7))
+        else if (!gGameState.flags.hasMagic && (i == 4 || i > 7))
         {
             SetSlotItem(i, 0);
             i++;
@@ -436,14 +436,14 @@ bool32 ItemMenuInit(void)
             i++;
         }
     } while (i <= 9);
-    if (gGameState.unk1DE == 0)
-        gGameState.unk1DE = 2;
-    SetSelectedItem(gGameState.unk1DE);
+    if (gGameState.selectedItem == 0)
+        gGameState.selectedItem = 2;
+    SetSelectedItem(gGameState.selectedItem);
     UpdateHudPanels();
     DrawChestRow();
-    gGameState.unk1CC = 0;
+    gGameState.menuOpen = 0;
     gGameState.menuCursor = 0;
-    gGameState.unk1E5_0 = 0;
+    gGameState.itemFlying = 0;
     return TRUE;
 }
 
@@ -497,7 +497,7 @@ bool32 UseItem(u8 item)
     if (!gMain.linked)
         return TRUE;
     m = FindMarker(1);
-    if (gGameState.markers[m].unk6 != 0
+    if (gGameState.markers[m].param != 0
      && ((item >= 3 && item <= 5) || item == 8 || item == 9 || item == 10 || item == 16))
     {
         if (item == 16)
@@ -517,12 +517,12 @@ bool32 UseItem(u8 item)
 #else
         gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0x8A;
 #endif
-        SetSelectedItem(gGameState.unk1DE);
-        Func_0201FCA0();
+        SetSelectedItem(gGameState.selectedItem);
+        StartEffect11();
     }
     else if (item == 1)
     {
-        if (gMain.unk457 == 0)
+        if (gMain.mapImageMode == 0)
         {
             if (MarkerDistance(1) <= 24)
             {
@@ -563,7 +563,7 @@ bool32 UseItem(u8 item)
         else
         {
             gGameState.effect[0] = item;
-            Func_0201F878();
+            StartTingEffect();
         }
     }
     else
@@ -585,13 +585,14 @@ bool32 UseItem(u8 item)
 }
 
 
-void Func_0201E584(void)
+// Redraw the right HUD panel (the item on B, or the chart label) when it is fully shown.
+void RedrawHudItem(void)
 {
-    if (gGameState.unk21E == 0)
+    if (gGameState.hudRightSlide == 0)
     {
-        if (gGameState.unk0FD == 0)
+        if (gGameState.hudChartLabel == 0)
         {
-            SetSelectedItem(gGameState.unk1DE);
+            SetSelectedItem(gGameState.selectedItem);
         }
         else
         {
@@ -617,70 +618,70 @@ void Func_0201E584(void)
 #define HUD_LEFT_WIDTH 5
 #endif
 
-// Slide the two HUD panels at the top of the screen in and out (unk21F/unk21D: the left one,
-// unk220/unk21E: the right one with the held item and its price) depending on the game's
-// state, and draw them.
+// Slide the two HUD panels at the top of the screen in and out (hudLeftHidden/hudLeftSlide:
+// the left one, the A button's label; hudRightHidden/hudRightSlide: the right one with the
+// item on B and its price) depending on the game's state, and draw them.
 void UpdateHudPanels(void)
 {
     u16 *map;
     u16 tile;
     s32 i;
 
-    if (gGameState.unk224 != 0)
-        gGameState.unk0FC = 2;
-    else if (gGameState.unk11A != 0)
-        gGameState.unk0FC = 0;
+    if (gGameState.chartOpen != 0)
+        gGameState.aButtonAction = 2;
+    else if (gGameState.selection != 0)
+        gGameState.aButtonAction = 0;
     else
-        gGameState.unk0FC = 1;
+        gGameState.aButtonAction = 1;
 
-    if (gGameState.unk21F == 0)
+    if (gGameState.hudLeftHidden == 0)
     {
-        if (gMain.modeState != 2 || !gGameState.unk1E5_1
-         || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
-         || gGameState.unk1CC != 0
-         || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
-             && gGameState.unk104 == 0))
-            gGameState.unk21F = 1;
+        if (gMain.modeState != 2 || !gGameState.itemsEnabled
+         || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.active == 0)
+         || gGameState.menuOpen != 0
+         || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen == 0 && gGameState.flags.busy != 0
+             && gGameState.active == 0))
+            gGameState.hudLeftHidden = 1;
     }
-    else if (gGameState.unk1E5_1 && gGameState.unk1CC == 0 && gMain.modeState == 2)
+    else if (gGameState.itemsEnabled && gGameState.menuOpen == 0 && gMain.modeState == 2)
     {
-        if (((gGameState.flags.dungeonNo != 0 || gGameState.unk224 == 0) && gGameState.flags.busy == 0
-             && gGameState.unk104 != 0)
-         || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0))
-            gGameState.unk21F = 0;
+        if (((gGameState.flags.dungeonNo != 0 || gGameState.chartOpen == 0) && gGameState.flags.busy == 0
+             && gGameState.active != 0)
+         || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen != 0))
+            gGameState.hudLeftHidden = 0;
     }
 
-    if (gGameState.unk220 == 0)
+    if (gGameState.hudRightHidden == 0)
     {
-        if (gGameState.unk1CC == 0)
+        if (gGameState.menuOpen == 0)
         {
-            if (gMain.modeState != 2 || (!gGameState.unk1E5_1 && gGameState.unk1DE != 11)
-             || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
-             || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
-                 && gGameState.unk104 == 0)
-             || gGameState.unk121 != 0)
-                gGameState.unk220 = 1;
+            if (gMain.modeState != 2 || (!gGameState.itemsEnabled && gGameState.selectedItem != 11)
+             || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.active == 0)
+             || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen == 0 && gGameState.flags.busy != 0
+                 && gGameState.active == 0)
+             || gGameState.holdState != 0)
+                gGameState.hudRightHidden = 1;
         }
     }
-    else if (gGameState.unk1E5_1 && gMain.modeState == 2)
+    else if (gGameState.itemsEnabled && gMain.modeState == 2)
     {
-        if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.unk104 != 0
-             && gGameState.unk121 == 0)
-         || ((gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
-              && gGameState.unk104 != 0 && gGameState.unk121 == 0)
-             || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
-             || gGameState.unk1CC != 0))
-            gGameState.unk220 = 0;
+        if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.active != 0
+             && gGameState.holdState == 0)
+         || ((gGameState.flags.dungeonNo == 0 && gGameState.chartOpen == 0 && gGameState.flags.busy == 0
+              && gGameState.active != 0 && gGameState.holdState == 0)
+             || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen != 0)
+             || gGameState.menuOpen != 0))
+            gGameState.hudRightHidden = 0;
     }
 
-    if (gGameState.unk21F != 0)
+    if (gGameState.hudLeftHidden != 0)
     {
-        if (gGameState.unk21D <= HUD_LEFT_WIDTH - 1)
+        if (gGameState.hudLeftSlide <= HUD_LEFT_WIDTH - 1)
         {
-            gGameState.unk21D++;
-            map = (u16 *)0x06006440 + (0x18 + HUD_LEFT_WIDTH - gGameState.unk21D);
+            gGameState.hudLeftSlide++;
+            map = (u16 *)0x06006440 + (0x18 + HUD_LEFT_WIDTH - gGameState.hudLeftSlide);
             tile = 0xE01B;
-            for (i = 0; i < gGameState.unk21D; i++)
+            for (i = 0; i < gGameState.hudLeftSlide; i++)
             {
                 map[0] = tile;
                 map[0x20] = tile | 0x800;
@@ -690,17 +691,17 @@ void UpdateHudPanels(void)
         }
         else
         {
-            gGameState.unk21D = HUD_LEFT_WIDTH;
+            gGameState.hudLeftSlide = HUD_LEFT_WIDTH;
         }
     }
     else
     {
-        tile = gHudPanelTiles[gGameState.unk0FC];
+        tile = gHudPanelTiles[gGameState.aButtonAction];
         map = (u16 *)0x06006470;
-        if (gGameState.unk21D != 0)
+        if (gGameState.hudLeftSlide != 0)
         {
-            gGameState.unk21D--;
-            for (i = HUD_LEFT_WIDTH; i != gGameState.unk21D; i--)
+            gGameState.hudLeftSlide--;
+            for (i = HUD_LEFT_WIDTH; i != gGameState.hudLeftSlide; i--)
             {
                 map[0] = tile;
                 map[0x20] = tile + 0x10;
@@ -728,14 +729,14 @@ void UpdateHudPanels(void)
         }
     }
 
-    if (gGameState.unk220 != 0)
+    if (gGameState.hudRightHidden != 0)
     {
-        if (gGameState.unk21E <= 3)
+        if (gGameState.hudRightSlide <= 3)
         {
-            gGameState.unk21E++;
-            map = (u16 *)0x06006440 + (0x16 - gGameState.unk21E);
+            gGameState.hudRightSlide++;
+            map = (u16 *)0x06006440 + (0x16 - gGameState.hudRightSlide);
             tile = 0xE01B;
-            for (i = 0; i < gGameState.unk21E; i++)
+            for (i = 0; i < gGameState.hudRightSlide; i++)
             {
                 map[0] = tile;
                 map[0x20] = tile | 0x800;
@@ -745,27 +746,27 @@ void UpdateHudPanels(void)
         }
         else
         {
-            gGameState.unk21E = 4;
+            gGameState.hudRightSlide = 4;
         }
     }
-    else if (gGameState.unk21E != 0)
+    else if (gGameState.hudRightSlide != 0)
     {
-        gGameState.unk21E--;
-        if (gGameState.unk0FD == 0)
+        gGameState.hudRightSlide--;
+        if (gGameState.hudChartLabel == 0)
         {
-            u8 n = gGameState.unk21E;
+            u8 n = gGameState.hudRightSlide;
 
             // The price digits and item tile reuse i (the original keeps them in i's register).
             map = (u16 *)0x06006440 + (0x15 - n);
             switch (n)
             {
             case 0:
-                i = (u8)(gGameState.items[gGameState.unk1DE].price % 10) * 2;
+                i = (u8)(gGameState.items[gGameState.selectedItem].price % 10) * 2;
                 map[0] = i + 0x4030;
                 map[0x20] = i + 0x4031;
                 break;
             case 1:
-                i = (u8)(gGameState.items[gGameState.unk1DE].price / 10) * 2;
+                i = (u8)(gGameState.items[gGameState.selectedItem].price / 10) * 2;
                 if (i != 0)
                 {
                     map[0] = i + 0x4030;
@@ -778,19 +779,19 @@ void UpdateHudPanels(void)
                 }
                 break;
             case 2:
-                i = gGameState.items[gGameState.unk1DE].tile;
+                i = gGameState.items[gGameState.selectedItem].tile;
                 map[0] = i + 1;
                 map[0x20] = i + 1 + 0x10;
                 break;
             case 3:
-                i = gGameState.items[gGameState.unk1DE].tile;
+                i = gGameState.items[gGameState.selectedItem].tile;
                 map[0] = i;
                 map[0x20] = i + 0x10;
                 break;
             }
             map++;
             tile = 0xE01B;
-            for (i = gGameState.unk21E; i != 0; i--)
+            for (i = gGameState.hudRightSlide; i != 0; i--)
             {
                 map[0] = tile;
                 map[0x20] = tile | 0x800;
@@ -802,7 +803,7 @@ void UpdateHudPanels(void)
         {
             map = (u16 *)0x06006464;
             tile = 0xB080;
-            for (i = 4; i != gGameState.unk21E; i--)
+            for (i = 4; i != gGameState.hudRightSlide; i--)
             {
                 map[0] = tile;
                 map[0x20] = tile + 0x10;

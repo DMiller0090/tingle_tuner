@@ -40,14 +40,18 @@ Mode1State2 = 0x020158E0; // thumb
 Mode1State3 = 0x02015F68; // thumb
 Mode1State4 = 0x0201643C; // thumb
 Mode1State5 = 0x02015744; // thumb
-Mode1Func_020150A4 = 0x020150A4; // thumb
-Mode1Func_0201521C = 0x0201521C; // thumb
-Mode1Func_02015298 = 0x02015298; // thumb
+// step the shown rupee count toward flags.rupees (with the count sounds) and draw it
+UpdateRupeeCounter = 0x020150A4; // thumb
+// sea: sea chart BGs (gMode1SeaMap on BG2) and the floor number box; dungeon: BG3 for the map image
+InitMapBgs = 0x0201521C; // thumb
+// mode 1 OBJ/BG tiles, palettes and BG map, then InitMapBgs
+LoadMode1Graphics = 0x02015298; // thumb
 Mode1SendSwitch = 0x02015840; // thumb
 Mode1RecvMarkers = 0x020160C8; // thumb
-Mode1Func_02016350 = 0x02016350; // thumb
+// per-map state reset after a map change (Mode1State4), then InitMapView
+ResetMapState = 0x02016350; // thumb
 Mode1StartFadeOut = 0x02016684; // thumb
-// VBlankIntr calls it in mode 1 unless gMain.unk457 is set
+// VBlankIntr calls it in mode 1 unless gMain.mapImageMode is set
 Mode1VBlank = 0x0201ABDC; // thumb
 
 // ---- game code 02018884-02020E28 (not split yet) ----
@@ -64,12 +68,13 @@ ShowMessage = 0x0201D978; // thumb
 ObjReset = 0x02020570; // thumb
 // table[line] = BG0HOFS + sin(phase + 4 * line) * amplitude / 256 for the 160 lines
 BuildWaveScrollTable = 0x020208BC; // thumb
-Func_0201A540 = 0x0201A540; // thumb
+// follow the player's marker without drawing the map (fixed or streamed view)
+UpdateMapView = 0x0201A540; // thumb
 // move *pos toward target by speed; TRUE once there
 StepToward = 0x020189E0; // thumb
 // Select wipes a window (WIN0) across the screen and back, showing BG0's other half
 UpdateSelectWindow = 0x020209E0; // thumb
-// adds one sprite (sprite data, frame, x, y, ...) to gOamBuffer at gMain.unk450
+// adds one sprite (sprite data, frame, x, y, ...) to gOamBuffer at gMain.oamCount
 DrawSprite = 0x02018AB8; // thumb
 // shorter DrawSprite: (sprite data, frame, x, y, 3 more bytes)
 DrawSpriteAt = 0x02018F0C; // thumb
@@ -81,32 +86,47 @@ MsgReset = 0x0201D8AC; // thumb
 ObjResetActive = 0x02020644; // thumb
 InitMapView = 0x0201A6D4; // thumb
 UpdateMap = 0x0201A224; // thumb
-Func_0201CFE8 = 0x0201CFE8; // thumb
-Func_0201B7D4 = 0x0201B7D4; // thumb
+// per frame in mode 1: slide the message box, run MsgStep, animate and draw Tingle and the wind arrow
+UpdateMsgAndTingle = 0x0201CFE8; // thumb
+// the message for the selection (the square's name, a friend's, or the marker's gbaName)
+ShowSelectionMsg = 0x0201B7D4; // thumb
 // closes the message (sound 0x17 if one was open)
 MsgClose = 0x0201DA50; // thumb
 // use item menu entry n (sends slot 6 via SendItemUse, checks rupees)
 UseItem = 0x0201E384; // thumb
-Func_0201B0F4 = 0x0201B0F4; // thumb
-Func_0201B8C8 = 0x0201B8C8; // thumb
+// L/B open and close the sea chart overlay; while open: map icons, target cursor (A), quest markers; then UpdateTargetCompass
+UpdateChartOverlay = 0x0201B0F4; // thumb
+// A on the selection: send the switch record, think (random message) first, or show its message
+ExamineSelection = 0x0201B8C8; // thumb
 // item menu cursor (d-pad with key repeat, B picks); GZLE01_ud adds a sound test
 ItemMenuUpdate = 0x0201DEAC; // thumb
 DrawStatusIcon = 0x02020C10; // thumb
-Func_0201B3A4 = 0x0201B3A4; // thumb
-Func_0201C484 = 0x0201C484; // thumb
-Func_0201C568 = 0x0201C568; // thumb
+// what the cursor's marker (type 3) is on: a marker (returns its index) or a sea chart square
+UpdateSelection = 0x0201B3A4; // thumb
+// message code F6 (and the slot 5/15 sound bytes): play gMsgSoundIds[id]; 0x0C-0x0F random voice, 0x20-0x22 a loop
+PlayMsgSound = 0x0201C484; // thumb
+// start Tingle's animation gGameState.tingleAnim from its first frame
+StartTingleAnim = 0x0201C568; // thumb
 // puts an item in a menu slot (5 per row) and draws its icon and count
 SetSlotItem = 0x0201DD20; // thumb
-// slide the two HUD panels (unk21F/unk21D, unk220/unk21E) in and out
+// slide the two HUD panels (hudLeftHidden/hudLeftSlide, hudRightHidden/hudRightSlide) in and out
 UpdateHudPanels = 0x0201E5E0; // thumb
-Func_0201EBAC = 0x0201EBAC; // thumb
-Func_0201EBD4 = 0x0201EBD4; // thumb
-Func_0201EDC4 = 0x0201EDC4; // thumb
-Func_0201F240 = 0x0201F240; // thumb
-Func_0201F274 = 0x0201F274; // thumb
-Func_0201F2C4 = 0x0201F2C4; // thumb
-Func_0201F420 = 0x0201F420; // thumb
-Func_02020150 = 0x02020150; // thumb
+// back to no item effect (itemsEnabled on, effectActive off)
+EndItemEffect = 0x0201EBAC; // thumb
+// item effects 2/15/21 (a Tingle Bomb went off): effectTimer 180, the burst object, Tingle animation 5
+StartBombBlast = 0x0201EBD4; // thumb
+// GC answer 17 to item 3 (request 0x11): effect 3 (the balloon), message 0x23
+StartBalloonEffect = 0x0201EDC4; // thumb
+// GC answer 18 to item 4 (request 0x12): effect 4 (the shield), message 0x25
+StartShieldEffect = 0x0201F240; // thumb
+// GC answer 16 to item 16 (A with nothing selected; GC MODE_LOOK_ATTENTION): Tingle animation 5 for 120 frames
+StartLookEffect = 0x0201F274; // thumb
+// effect 5 (item 5; the GC picks a random result, effect[1]): message 0x29/0x2A/0x2B
+StartRandomEffect = 0x0201F2C4; // thumb
+// effect 7 (item 7, the shop): random greeting (0x3A/0x3B), dialogStep 0
+StartShopEffect = 0x0201F420; // thumb
+// GC answer 14 to item 2 (the cursor was on Link; the GC frees it and drops the bomb later): message 0x50, 300-frame countdown
+StartBombCountdown = 0x02020150; // thumb
 UpdateItemEffect = 0x02020298; // thumb
 // placeholders so all versions share INCLUDE_ASM names
 // move *pos by (target - *pos) / div, clamped to [minStep, maxStep] in size; returns what is left
@@ -130,11 +150,11 @@ CopyMapRow = 0x020192D8; // thumb
 ScrollMap = 0x02019350; // thumb
 // animate and draw the map markers (gGameState.markers) and the gGameState.icons[2] sprite
 DrawMapMarkers = 0x02019510; // thumb
-// on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gSlot14Data spots
+// on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gChartPoints spots
 HighlightMapRooms = 0x02019CAC; // thumb
 // move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
 FollowMarkerFixedMap = 0x02019F5C; // thumb
-// the same for the streamed map (gMain.unk457 set): gGameState.mapX/Y, clamped to the map; ScrollMap follows
+// the same for the streamed map (gMain.mapImageMode set): gGameState.mapX/Y, clamped to the map; ScrollMap follows
 FollowMarkerStreamedMap = 0x0201A0A8; // thumb
 MarkerDistance = 0x0201A8AC; // thumb
 UpdateTargetCompass = 0x0201A944; // thumb
@@ -147,26 +167,32 @@ MapIconCursor = 0x0201AD90; // thumb
 UpdateMapIcons = 0x0201AF48; // thumb
 // sea chart markers for the pearl/Triangle Island/temple quest (flags byte 9)
 DrawQuestMarkers = 0x0201AFCC; // thumb
-Func_0201B2C0 = 0x0201B2C0; // thumb
-Func_0201BA2C = 0x0201BA2C; // thumb
-Func_0201BA9C = 0x0201BA9C; // thumb
+// sea chart squares whose visitedSquares bit (slot 11) is clear get palette 6
+DarkenUnvisitedSquares = 0x0201B2C0; // thumb
+// BG map row `row` of the message box: border tiles and 12 text canvas tiles
+DrawMsgBoxRow = 0x0201BA2C; // thumb
+// put back the two BG map rows under the message box (from the copy at 0x06007800)
+RestoreMsgBoxRow = 0x0201BA9C; // thumb
 // fill the text canvas (VRAM 0x0600F100, 12 tiles a row) with colour 1
 TextClearCanvas = 0x0201BAD8; // thumb
 // OR a glyph's 4bpp rows into the text canvas at a pixel offset
 TextBlitGlyph = 0x0201BAF8; // thumb
 // scale a glyph 2x into the EWRAM buffer below the program (PROG_BASE - 0x540)
 TextScaleGlyph = 0x0201BC0C; // thumb
-// draw an 8x8 glyph (VRAM 0x0600A000) on the text canvas, 2x when unk15A
+// draw an 8x8 glyph (VRAM 0x0600A000) on the text canvas, 2x when textBig
 TextDrawGlyph = 0x0201BCC0; // thumb
-// draw an 8x4 glyph (VRAM 0x0600A010) on the text canvas, 2x when unk15A
+// draw an 8x4 glyph (VRAM 0x0600A010) on the text canvas, 2x when textBig
 TextDrawSmallGlyph = 0x0201BDE4; // thumb
-Func_0201BEA0 = 0x0201BEA0; // thumb
-Func_0201C0E8 = 0x0201C0E8; // thumb
-// the choice menu's animated cursor (gSprite_0202C130), at y = unk14F * 12 + unk150 + 52
+// the message box frame's OBJ pieces (top edge at row * 8 + 48)
+DrawMsgBoxFrame = 0x0201BEA0; // thumb
+// clear the text canvas and home the text cursor; with playSound, a random voice blip (sound 0x13)
+MsgNewPage = 0x0201C0E8; // thumb
+// the choice menu's animated cursor (gChoiceCursorSprite), at y = choiceCursor * 12 + choiceY + 52
 DrawChoiceCursor = 0x0201C164; // thumb
 // Up/Down/A in the choice menu; returns 1 while waiting, 0 after a pick, 3 when the pick is 0xFFFF
 ChoiceMenuUpdate = 0x0201C204; // thumb
-Func_0201C60C = 0x0201C60C; // thumb
+// wrap the text cursor to the next line at the right edge; FALSE when the box is full
+TextWrapLine = 0x0201C60C; // thumb
 // draws a run of consecutive glyphs (gGlyphRunStart/Length[id]) at the text cursor
 DrawGlyphRun = 0x0201C660; // thumb
 // draws one glyph at the text cursor (gGameState.textX/Y) and advances it; FALSE when the window is full
@@ -199,29 +225,40 @@ MsgStartSilent = 0x0201DA24; // thumb
 DrawSlotCursor = 0x0201DA78; // thumb
 DrawItemSprite = 0x0201DB50; // thumb
 SetSelectedItem = 0x0201DCEC; // thumb
-// dungeon chest counter animation (gGameState.unk1E0 states 2-3)
+// dungeon chest counter animation (gGameState.chestState states 2-3)
 ChestCounterMain = 0x0201DDA0; // thumb
 // item menu row 2: one icon per flags.dungeonChests bit
 DrawChestRow = 0x0201E2FC; // thumb
-Func_0201E584 = 0x0201E584; // thumb
-Func_0201EC10 = 0x0201EC10; // thumb
-Func_0201ECC4 = 0x0201ECC4; // thumb
-Func_0201ED08 = 0x0201ED08; // thumb
-Func_0201EDF8 = 0x0201EDF8; // thumb
+// redraw the right HUD panel (the item on B, or the chart label) when it is fully shown
+RedrawHudItem = 0x0201E584; // thumb
+// item effects 2, 15, 17: shake while effectTimer runs, blast sprite at the cursor marker
+EffectBombBlast = 0x0201EC10; // thumb
+// start the animation (gEffectIntroSprite) that opens items 3-5 and 8-10
+StartEffectIntro = 0x0201ECC4; // thumb
+// step and draw it; at its end effectStep 2 and effectDelay 10
+DrawEffectIntro = 0x0201ED08; // thumb
+// draw the balloon (kind 0) or shield (kind 1) at a map position (the player's marker)
+DrawBalloonShield = 0x0201EDF8; // thumb
 // two-digit flags.timer next to the effect sprite
 DrawTimerCount = 0x0201EF98; // thumb
-Func_0201F068 = 0x0201F068; // thumb
-Func_0201F2A8 = 0x0201F2A8; // thumb
+// item effects 3, 4, 13: send the item use, then show flags.timer until it runs out
+EffectBalloonShield = 0x0201F068; // thumb
+// item effects 0, 1, 6, 16: end when effectTimer reaches 0
+EffectWaitTimer = 0x0201F2A8; // thumb
 Effect5 = 0x0201F308; // thumb
 // item effect 7: the shop (purchase request in slot 12, answer in slot 13)
 Effect7 = 0x0201F460; // thumb
-Func_0201F878 = 0x0201F878; // thumb
-Func_0201F8C4 = 0x0201F8C4; // thumb
+// items 8-10 (the Tings, restoring life and magic): effect intro, message 0x27
+StartTingEffect = 0x0201F878; // thumb
+// gTitleSprite at a map position, bobbing, with the Ting (kind 1) or the balloon (kind 2)
+DrawTitleSpriteOnMap = 0x0201F8C4; // thumb
 // item effects 8-10: the title sprite drops onto the type 1 marker, then SendItemUse
 Effect8 = 0x0201FA2C; // thumb
-Func_0201FCA0 = 0x0201FCA0; // thumb
+// item 11 (slot 6 until the shop is unlocked): message 0xD2 (dungeon) or 0xDB (sea), a choice dialogue
+StartEffect11 = 0x0201FCA0; // thumb
 Effect11 = 0x0201FD04; // thumb
-Func_0201FEEC = 0x0201FEEC; // thumb
+// Effect5 results 12/13: effectDelay 8, then Effect12's drop (effectStep 4)
+StartEffectDrop = 0x0201FEEC; // thumb
 Effect12 = 0x0201FF14; // thumb
 Effect14 = 0x02020190; // thumb
 Mode2State0 = 0x020202E8; // thumb
@@ -457,11 +494,12 @@ gIntrTableInit = 0x02023DEC; // data
 gOamHiddenEntry = 0x02023E24; // data
 gMainModeFuncs = 0x02023E2C; // data
 gMode1Unused_02023E38 = 0x02023E38; // data
+// message per flags.dungeonNo, shown by Mode1State1 at the end of the intro
 gDungeonMsgIds = 0x02023E44; // data
 gMode1StateFuncs = 0x02023E68; // data
 // BG map entry of the rupee icon per wallet size (MainMode1)
 gRupeeIconTiles = 0x02023E80; // data
-// sound per dungeon chest bit (flags.dungeonChests), played by MainMode1
+// message per dungeon chest bit (flags.dungeonChests), shown by MainMode1
 gChestMsgIds = 0x02023E86; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
@@ -471,8 +509,8 @@ gMode0StateFuncs = 0x02023EEC; // data
 gSinTable = 0x02023EFC; // data
 // sprite data pointers (entry 0 is NULL); byte 4 of each sprite is read as a count
 gSpriteTable = 0x0202417C; // data
-// x/y offsets (s16[8]) by marker direction (MapMarker.unk4 >> 5), for marker type 9.
-// port_symbols maps these and gSprite_0202BE28 wrong (the US DrawMapMarkers has one pool
+// x/y offsets (s16[8]) by marker direction (MapMarker.angle >> 5), for marker type 9.
+// port_symbols maps these and gMarkerHighlightSprite wrong (the US DrawMapMarkers has one pool
 // entry fewer); the US files pin them.
 gMarkerDirOfsX = 0x020241D4; // data
 gMarkerDirOfsY = 0x020241E4; // data
@@ -495,38 +533,41 @@ gMapIconSprites = 0x02024254; // data
 gPearlMarkerPos = 0x02024264; // data
 gTriangleIslandPos = 0x0202426A; // data
 gTempleMarkerPos = 0x02024270; // data
-// sound per marker unk6 for type 0x13 markers (Func_0201B7D4)
-gTable_02024274 = 0x02024274; // data
-gMsgIds_02024278 = 0x02024278; // data
+// sea chart overlay tile of square 25 (Tower of the Gods) before/after flags.towerRaised (UpdateChartOverlay)
+gTowerChartTiles = 0x02024274; // data
+// message per friend marker (type 19) character, MapMarker.param - 1 (ShowSelectionMsg; only 1-3 are selectable)
+gFriendMsgIds = 0x02024278; // data
 // u32 per text colour, ANDed with the glyph's 4bpp rows
 gTextColorMasks = 0x0202429C; // data
-// message code 0xF5 argument -> Tingle animation (gGameState.unk226)
+// message code 0xF5 argument -> Tingle animation (gGameState.tingleAnim)
 gMsgTingleAnims = 0x02024354; // data
 gGlyphRunStart = 0x02024376; // data
 gGlyphRunLength = 0x02024386; // data
-gGlyphTable_0202438E = 0x0202438E; // data
+// JP DrawChar: base glyphs of the voiced-kana codes 0xE0-0xE5 (drawn under mark 0xC2) and 0xEB- (mark 0xC4)
+gVoicedKanaGlyphs = 0x0202438E; // data
 gDayNameChars = 0x02024394; // data
 gMsgCmdFuncs = 0x020243A4; // data
 // sprite lists of Tingle's animations (gTingleAnims)
-gTingleFrames_020243F0 = 0x020243F0; // data
-gTingleFrames_020243F4 = 0x020243F4; // data
-gTingleFrames_020243FC = 0x020243FC; // data
-gTingleFrames_02024400 = 0x02024400; // data
-gTingleFrames_02024408 = 0x02024408; // data
-gTingleFrames_0202440C = 0x0202440C; // data
-gTingleFrames_02024410 = 0x02024410; // data
-gTingleFrames_02024414 = 0x02024414; // data
-gTingleFrames_02024418 = 0x02024418; // data
-gTingleFrames_02024420 = 0x02024420; // data
+gTingleAnim0 = 0x020243F0; // data
+gTingleAnim2 = 0x020243F4; // data
+gTingleAnim3 = 0x020243FC; // data
+gTingleAnim4 = 0x02024400; // data
+gTingleAnim5 = 0x02024408; // data
+gTingleAnim7 = 0x0202440C; // data
+gTingleAnim8 = 0x02024410; // data
+gTingleAnim9 = 0x02024414; // data
+gTingleAnim10 = 0x02024418; // data
+gTingleAnim11 = 0x02024420; // data
 gTingleAnims = 0x02024424; // data
 // initial item menu entries (struct ItemSlot[12]), copied by ItemMenuInit
 gShopItemsInit = 0x02024460; // data
 // id per dungeon chest (flags.dungeonChests bit) for the item menu's third row, passed to MsgStartSilent
 gChestRowIds = 0x020244C0; // data
-// first tile of the left HUD panel per gGameState.unk0FC (UpdateHudPanels)
+// first tile of the left HUD panel per gGameState.aButtonAction (UpdateHudPanels)
 gHudPanelTiles = 0x020244CA; // data
 gShopRequests = 0x020244D0; // data
-gBobOffsets_020244DA = 0x020244DA; // data
+// DrawTitleSpriteOnMap's bob by (frameCount >> 4) & 3 (the same values as gMode0BobOffsets)
+gEffectBobOffsets = 0x020244DA; // data
 // item effect handlers, indexed by GameState.effect[0] (slot 7); run by UpdateItemEffect
 gItemEffectFuncs = 0x020244E4; // data
 // MainMode2 (link lost) states
@@ -538,12 +579,14 @@ gObjBurstOfsY = 0x02024542; // data
 gObjBurstVelX = 0x0202454C; // data
 gObjBurstVelY = 0x02024556; // data
 gObjBurstStateFuncs = 0x02024560; // data
-// graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
+// choice menu tables (ChoiceMenuUpdate): per question message, the message per choice
 gTwoChoiceIds = 0x020242B8; // data
 gTwoChoiceMsgIds = 0x020242C2; // data
 gThreeChoiceIds = 0x020242D6; // data
 gThreeChoiceMsgIds = 0x020242E4; // data
-gSoundIds_0202430E = 0x0202430E; // data
+// message code F6 argument (and slot 5/15 sound byte - 1) -> SoundPlay/SoundPlayLoop id (PlayMsgSound)
+gMsgSoundIds = 0x0202430E; // data
+// graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data
 gMode1BgMap = 0x02026850; // data
@@ -553,68 +596,92 @@ gSeaAnimTiles = 0x02027498; // data
 gMode2BgMap = 0x02029498; // data
 gMode1ObjTiles = 0x020295EC; // data
 gMode1ObjPalette = 0x0202BB78; // data
-gSprite_0202BD78 = 0x0202BD78; // data
+// Select window edge (SelectWindowDrawEdge)
+gSelectWindowEdgeSprite = 0x0202BD78; // data
 gSprite_0202BD80 = 0x0202BD80; // data
-gSprite_0202BD88 = 0x0202BD88; // data
-gSprite_0202BD98 = 0x0202BD98; // data
-gSprite_0202BDA8 = 0x0202BDA8; // data
-gSprite_0202BDB8 = 0x0202BDB8; // data
+gMarkerType1Sprite = 0x0202BD88; // data
+gMarkerType3Sprite = 0x0202BD98; // data
+gMarkerType2Sprite = 0x0202BDA8; // data
+// item menu slot cursor (DrawSlotCursor)
+gSlotCursorSprite = 0x0202BDB8; // data
 // map scroll cursor (UpdateMap)
-gSprite_0202BDC8 = 0x0202BDC8; // data
-gSprite_0202BDD8 = 0x0202BDD8; // data
-gSprite_0202BDE8 = 0x0202BDE8; // data
-gSprite_0202BDF0 = 0x0202BDF0; // data
-gSprite_0202BE00 = 0x0202BE00; // data
-gSprite_0202BE28 = 0x0202BE28; // data
-gSprite_0202BE30 = 0x0202BE30; // data
-gSprite_0202BE38 = 0x0202BE38; // data
-gSprite_0202C128 = 0x0202C128; // data
-gSprite_0202C130 = 0x0202C130; // data
-gSprite_0202C140 = 0x0202C140; // data
-gSprite_0202C148 = 0x0202C148; // data
-gSprite_0202C150 = 0x0202C150; // data
-gSprite_0202C188 = 0x0202C188; // data
-gSprite_0202C190 = 0x0202C190; // data
-gSprite_0202C1A0 = 0x0202C1A0; // data
-gSprite_0202C1A8 = 0x0202C1A8; // data
-gSprite_0202C1B0 = 0x0202C1B0; // data
-gSprite_0202C1E0 = 0x0202C1E0; // data
-gSprite_0202C1E8 = 0x0202C1E8; // data
-gSprite_0202C1F0 = 0x0202C1F0; // data
-gSprite_0202C1F8 = 0x0202C1F8; // data
-gSprite_0202C200 = 0x0202C200; // data
-gSprite_0202C208 = 0x0202C208; // data
-gSprite_0202C3E8 = 0x0202C3E8; // data
+gMapScrollCursorSprite = 0x0202BDC8; // data
+gMarkerType19Sprite = 0x0202BDD8; // data
+gMarkerType17Sprite = 0x0202BDE8; // data
+// "more text" arrow (MsgStep)
+gMsgNextArrowSprite = 0x0202BDF0; // data
+gMarkerType18Sprite = 0x0202BE00; // data
+gMarkerHighlightSprite = 0x0202BE28; // data
+gMarkerType4Sprite = 0x0202BE30; // data
+gMarkerType11Sprite = 0x0202BE38; // data
+gMarkerType10Sprite = 0x0202C128; // data
+// choice menu cursor (DrawChoiceCursor); frame 1 also for the idle cursor marker
+gChoiceCursorSprite = 0x0202C130; // data
+gMarkerType8Sprite = 0x0202C140; // data
+gMarkerType5Sprite = 0x0202C148; // data
+// ObjBurst piece
+gBurstPieceSprite = 0x0202C150; // data
+gMarkerType7Sprite = 0x0202C188; // data
+gMarkerType9Sprite = 0x0202C190; // data
+gMarkerType6Sprite = 0x0202C1A0; // data
+gMarkerType12Sprite = 0x0202C1A8; // data
+gMarkerType13Sprite = 0x0202C1B0; // data
+gMarkerType21Sprite = 0x0202C1E0; // data
+gMarkerType15Sprite = 0x0202C1E8; // data
+gMarkerType14Sprite = 0x0202C1F0; // data
+// chart target cursor (icon type 2)
+gMapCursorIconSprite = 0x0202C1F8; // data
+// the target (icon type 3; also the quest markers)
+gTargetSprite = 0x0202C200; // data
+// chart icon on the player's marker (icon type 1)
+gFollowIconSprite = 0x0202C208; // data
+gMarkerType16Sprite = 0x0202C3E8; // data
 // target compass arrow (UpdateTargetCompass)
-gSprite_0202C3F8 = 0x0202C3F8; // data
-gSprite_0202C400 = 0x0202C400; // data
-gSprite_0202C420 = 0x0202C420; // data
-gSprite_0202C428 = 0x0202C428; // data
-gSprite_0202C430 = 0x0202C430; // data
-gSprite_0202C438 = 0x0202C438; // data
-gSprite_0202C440 = 0x0202C440; // data
-gSprite_0202C448 = 0x0202C448; // data
-gSprite_0202C490 = 0x0202C490; // data
-gSprite_0202C498 = 0x0202C498; // data
-gSprite_0202C4A8 = 0x0202C4A8; // data
-gSprite_0202C4B8 = 0x0202C4B8; // data
-gSprite_0202C4C0 = 0x0202C4C0; // data
+gCompassArrowSprite = 0x0202C3F8; // data
+// wind arrow, turned by flags.windDir (UpdateMsgAndTingle)
+gWindArrowSprite = 0x0202C400; // data
+// character icons by MapMarker.param of the player (drawn under his marker, and as the status icon) and friends
+gCharIcon0 = 0x0202C420; // data
+// status icon 2 (an enemy marker is highlighted)
+gStatusHighlightSprite = 0x0202C428; // data
+// blinking frame around the status icon
+gStatusFrameSprite = 0x0202C430; // data
+// shown mid-screen while the GC is busy or a map change is pending (Mode1State4)
+gWaitSprite = 0x0202C438; // data
+gCharIcon1 = 0x0202C440; // data
+gCharIcon2 = 0x0202C448; // data
+// the Ting (items 8-10) under gTitleSprite; palette by effect
+gTingSprite = 0x0202C490; // data
+gCharIcon4 = 0x0202C498; // data
+gCharIcon3 = 0x0202C4A8; // data
+gFriendIcon0 = 0x0202C4B8; // data
+gMarkerType20Sprite = 0x0202C4C0; // data
 gSprite_0202C650 = 0x0202C650; // data
-gSprite_0202C740 = 0x0202C740; // data
+// Tingle (idle and talking; gTingleAnim0)
+gTingleSprite = 0x0202C740; // data
 gSprite_0202C788 = 0x0202C788; // data
 gSprite_0202C7C8 = 0x0202C7C8; // data
 gSprite_0202C848 = 0x0202C848; // data
 gSprite_0202C850 = 0x0202C850; // data
-gSprite_0202C928 = 0x0202C928; // data
-gSprite_0202C938 = 0x0202C938; // data
-gSprite_0202C940 = 0x0202C940; // data
-gSprite_0202C950 = 0x0202C950; // data
-gSprite_0202CA08 = 0x0202CA08; // data
-gSprite_0202CA40 = 0x0202CA40; // data
-gSprite_0202CAD8 = 0x0202CAD8; // data
-gSprite_0202CAE0 = 0x0202CAE0; // data
-gSprite_0202CC50 = 0x0202CC50; // data
-gSprite_0202CC60 = 0x0202CC60; // data
+// balloon over the player's marker (effects 3, 12)
+gBalloonSprite = 0x0202C928; // data
+// the title screen sprite (Mode0DrawTitleSprite); also drops in for items 8-10 and Effect12
+gTitleSprite = 0x0202C938; // data
+// shield beside the player's marker (effects 4, 12, 13)
+gShieldSprite = 0x0202C940; // data
+// animation that opens items 3-5 and 8-10 (StartEffectIntro)
+gEffectIntroSprite = 0x0202C950; // data
+// cursor marker while held (holdState 1), then the release (holdState 2)
+gCursorHeldSprite = 0x0202CA08; // data
+gCursorReleaseSprite = 0x0202CA40; // data
+// cursor marker while something is selected
+gCursorSelectSprite = 0x0202CAD8; // data
+// pulsing icon over Tingle while something is selected (Tingle animation 11)
+gSelectionIconSprite = 0x0202CAE0; // data
+// bomb at the cursor during the countdown (Effect14)
+gBombSprite = 0x0202CC50; // data
+// blast at the cursor (EffectBombBlast)
+gBombBlastSprite = 0x0202CC60; // data
 // seven pointers into the sound bank, see docs/layout.md; the sound driver's .rodata follows
 gSoundBankHeader = 0x0202CD20; // data
 // the sound bank (the packer's raw tail, copied to tail_dest), see docs/layout.md "Raw tail block"
@@ -659,8 +726,8 @@ gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
-// slot 14 payload (49 struct SeaChartEntry {x, y, big, square}), copied by Mode0State3; read by HighlightMapRooms, MapIconCursor, Func_0201B3A4
-gSlot14Data = 0x03002FB0; // data
+// slot 14 payload (49 struct SeaChartEntry {x, y, big, square}), copied by Mode0State3; read by HighlightMapRooms, MapIconCursor, UpdateSelection
+gChartPoints = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 // sound driver work area (030010F0-03002F64), see docs/layout.md "Sound driver"
 // u16[19]: SoundPlay id per player (0xFFFF none); u8[19]: set by SoundPlay until the next SoundMain
@@ -714,7 +781,7 @@ gSoundPlayers = 0x030029C4; // data
 
 // ---- EWRAM below the program: link receive buffers (gGbaComBuffers) ----
 gGbaComMessageBuf = 0x0200A000; // data
-gGbaComBuf3 = 0x02014000; // data
+gGbaComBufMarkers = 0x02014000; // data
 gGbaComBufGbaFlg = 0x02014100; // data
 gGbaComBufMail = 0x02014110; // data
 gGbaComBufSwitch = 0x02014120; // data
@@ -723,8 +790,8 @@ gGbaComBufItem = 0x02014140; // data
 gGbaComBufEffect = 0x02014150; // data
 gGbaComBufFlags = 0x02014160; // data
 gGbaComBufName = 0x02014170; // data
-gGbaComBuf11 = 0x02014180; // data
-gGbaComBuf14 = 0x02014190; // data
+gGbaComBufVisited = 0x02014180; // data
+gGbaComBufChartPoints = 0x02014190; // data
 gGbaComBufShop = 0x02014290; // data
 gGbaComBufItemBuy = 0x020142A0; // data
 gGbaComBufSE = 0x020142B0; // data

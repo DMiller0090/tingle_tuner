@@ -13,31 +13,31 @@ const u8 gShopRequests[9] =
     0x2, 0x1, 0x14, 0x1, 0xA, 0x28, 0x0, 0xA, 0x32
 };
 
-const s16 gBobOffsets_020244DA[4] =
+const s16 gEffectBobOffsets[4] =
 {
     0, -1, 0, 1
 };
 
 void (*const gItemEffectFuncs[18])(void) =
 {
-    Func_0201F2A8,
-    Func_0201F2A8,
-    Func_0201EC10,
-    Func_0201F068,
-    Func_0201F068,
+    EffectWaitTimer,
+    EffectWaitTimer,
+    EffectBombBlast,
+    EffectBalloonShield,
+    EffectBalloonShield,
     Effect5,
-    Func_0201F2A8,
+    EffectWaitTimer,
     Effect7,
     Effect8,
     Effect8,
     Effect8,
     Effect11,
     Effect12,
-    Func_0201F068,
+    EffectBalloonShield,
     Effect14,
-    Func_0201EC10,
-    Func_0201F2A8,
-    Func_0201EC10
+    EffectBombBlast,
+    EffectWaitTimer,
+    EffectBombBlast
 };
 
 void (*const gMode2StateFuncs[2])(void) =
@@ -77,92 +77,100 @@ void (*const gObjBurstStateFuncs[2])(struct Obj *obj) =
     ObjBurstFly
 };
 
-void Func_0201EBAC(void)
+// Back to no item effect: items usable again, UpdateItemEffect idle, the view follows.
+void EndItemEffect(void)
 {
-    gGameState.unk1E5_1 = 1;
-    gGameState.unk1E5_2 = 0;
-    gGameState.unk120 = 0;
+    gGameState.itemsEnabled = 1;
+    gGameState.effectActive = 0;
+    gGameState.viewLocked = 0;
 }
 
-void Func_0201EBD4(void)
+// Item effects 2, 15 and 21 (a Tingle Bomb went off): 180 frames of shaking, the burst pieces
+// and Tingle's animation 5.
+void StartBombBlast(void)
 {
-    gGameState.unk1C8 = 180;
-    gGameState.unk228 = 0;
-    gGameState.unk226 = 5;
-    gGameState.unk227 = 0;
+    gGameState.effectTimer = 180;
+    gGameState.tingleFrame = 0;
+    gGameState.tingleAnim = 5;
+    gGameState.tingleAnimPart = 0;
     ObjSpawn(0);
 }
 
-void Func_0201EC10(void)
+// Item effects 2, 15 and 17: shake the screen while effectTimer runs (held while the GC's
+// menu is open) and draw the blast at the cursor.
+void EffectBombBlast(void)
 {
     u8 mosaic = gMain.mosaic != 0;
     u8 i;
     u8 unk;
 
     if (gGameState.flags.busy & 1)
-        gGameState.unk1C8++;
-    if (gGameState.unk1C8 == 0)
+        gGameState.effectTimer++;
+    if (gGameState.effectTimer == 0)
     {
-        Func_0201EBAC();
+        EndItemEffect();
         return;
     }
     i = FindMarker(3);
-    gGameState.shake = gGameState.unk1C8;
-    unk = gGameState.unk1EE;
+    gGameState.shake = gGameState.effectTimer;
+    unk = gGameState.selectWinStep;
     if (unk == 0)
-        DrawSpriteParts(gSprite_0202CC60, gGameState.markers[i].x - gMain.bgOfs[3][0],
+        DrawSpriteParts(gBombBlastSprite, gGameState.markers[i].x - gMain.bgOfs[3][0],
                       gGameState.markers[i].y - gMain.bgOfs[3][1], mosaic, unk);
 }
 
-void Func_0201ECC4(void)
+// Start the animation that opens items 3-5 and 8-10 (gEffectIntroSprite, mid-map).
+void StartEffectIntro(void)
 {
-    gGameState.unk12D = 0;
-    gGameState.unk120 = 1;
-    gGameState.unk034 = gGameState.unk032 = 0x44;
-    gGameState.unk12C = gSprite_0202C950[0].duration;
-    gGameState.unk12B = 1;
+    gGameState.introFrame = 0;
+    gGameState.viewLocked = 1;
+    gGameState.spriteY = gGameState.spriteX = 0x44;
+    gGameState.introTimer = gEffectIntroSprite[0].duration;
+    gGameState.effectStep = 1;
 }
 
-void Func_0201ED08(void)
+// Step and draw it; after its last frame go to effectStep 2 and turn the message page.
+void DrawEffectIntro(void)
 {
     u32 mosaic = gMain.mosaic != 0;
     const struct SpriteFrame *anim;
 
-    if (gGameState.unk12C == 0)
+    if (gGameState.introTimer == 0)
     {
-        if (gGameState.unk12D < 22)
+        if (gGameState.introFrame < 22)
         {
-            gGameState.unk12D++;
+            gGameState.introFrame++;
         }
-        else if (gGameState.unk12B < 2)
+        else if (gGameState.effectStep < 2)
         {
-            gGameState.unk12B = 2;
-            gGameState.unk132 = 10;
-            gGameState.unk13E = 300;
+            gGameState.effectStep = 2;
+            gGameState.effectDelay = 10;
+            gGameState.msgWaitTimer = 300;
         }
-        gGameState.unk12C = gSprite_0202C950[gGameState.unk12D].duration;
-        anim = gSprite_0202C950;
+        gGameState.introTimer = gEffectIntroSprite[gGameState.introFrame].duration;
+        anim = gEffectIntroSprite;
     }
     else
     {
-        gGameState.unk12C--;
-        anim = gSprite_0202C950;
+        gGameState.introTimer--;
+        anim = gEffectIntroSprite;
     }
-    DrawSpriteAt(anim, gGameState.unk12D, gGameState.unk032, gGameState.unk034, mosaic, 0, 1);
+    DrawSpriteAt(anim, gGameState.introFrame, gGameState.spriteX, gGameState.spriteY, mosaic, 0, 1);
 }
 
-void Func_0201EDC4(void)
+// GC answer 17 to item 3's request 0x11: effect 3, the balloon.
+void StartBalloonEffect(void)
 {
-    Func_0201ECC4();
-    gGameState.unk12E = gSprite_0202C928[0].duration;
-    gGameState.unk12F = 0;
+    StartEffectIntro();
+    gGameState.balloonTimer = gBalloonSprite[0].duration;
+    gGameState.balloonFrame = 0;
     ShowMessage(0x23, 1);
 }
 
-// Draw the item effect sprite (kind 0: gSprite_0202C928, else gSprite_0202C940) at a map
+// Draw the item effect sprite (kind 0: gBalloonSprite, else gShieldSprite) at a map
 // position. The scroll is subtracted as an s16, which keeps the arithmetic in int (x and y
 // get sign-extended after the scroll load).
-void Func_0201EDF8(s16 x, s16 y, u8 kind)
+void DrawBalloonShield(s16 x, s16 y, u8 kind)
 {
     u32 mosaic = gMain.mosaic != 0;
     const struct SpriteFrame *anim;
@@ -170,46 +178,46 @@ void Func_0201EDF8(s16 x, s16 y, u8 kind)
 
     if (kind == 0)
     {
-        if (gGameState.unk12E == 0)
+        if (gGameState.balloonTimer == 0)
         {
-            gGameState.unk12F ^= 1;
-            gGameState.unk12E = gSprite_0202C928[gGameState.unk12F].duration;
-            anim = gSprite_0202C928;
+            gGameState.balloonFrame ^= 1;
+            gGameState.balloonTimer = gBalloonSprite[gGameState.balloonFrame].duration;
+            anim = gBalloonSprite;
         }
         else
         {
-            gGameState.unk12E--;
-            anim = gSprite_0202C928;
+            gGameState.balloonTimer--;
+            anim = gBalloonSprite;
         }
         if (gGameState.effect[0] == 12)
             flip = 16;
         else
             flip = 0;
-        DrawSpriteAt(anim, gGameState.unk12F, x - gMain.bgOfs[3][0] + 3,
+        DrawSpriteAt(anim, gGameState.balloonFrame, x - gMain.bgOfs[3][0] + 3,
                      y - gMain.bgOfs[3][1] - 24, mosaic, flip, 1);
     }
     else
     {
-        if (gGameState.unk130 == 0)
+        if (gGameState.shieldTimer == 0)
         {
-            gGameState.unk131 ^= 1;
-            gGameState.unk130 = gSprite_0202C940[gGameState.unk131].duration;
-            anim = gSprite_0202C940;
+            gGameState.shieldFrame ^= 1;
+            gGameState.shieldTimer = gShieldSprite[gGameState.shieldFrame].duration;
+            anim = gShieldSprite;
         }
         else
         {
-            gGameState.unk130--;
-            anim = gSprite_0202C940;
+            gGameState.shieldTimer--;
+            anim = gShieldSprite;
         }
         if (gGameState.effect[0] == 12)
             flip = 8;
         else
             flip = 0;
-        if (gGameState.unk131 == 0)
-            DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] - 4,
+        if (gGameState.shieldFrame == 0)
+            DrawSpriteAt(anim, gGameState.shieldFrame, x - gMain.bgOfs[3][0] - 4,
                          y - gMain.bgOfs[3][1], mosaic, flip, 1);
         else
-            DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] + 4,
+            DrawSpriteAt(anim, gGameState.shieldFrame, x - gMain.bgOfs[3][0] + 4,
                          y - gMain.bgOfs[3][1], mosaic, flip, 1);
     }
 }
@@ -229,7 +237,9 @@ void DrawTimerCount(s16 x, s16 y)
     DrawSprite(gSpriteTable[10], 0, x + 8, y, 0, mosaic, 0, 0, 0, digit + 1, 0);
 }
 
-void Func_0201F068(void)
+// Item effects 3, 4 and 13: after the intro send the item use, then show flags.timer (the
+// GC's remaining time) over the player until it runs out.
+void EffectBalloonShield(void)
 {
     struct Main *main = &gMain;
     u8 notType3 = gGameState.effect[0] != 3;
@@ -237,48 +247,48 @@ void Func_0201F068(void)
     u16 x;
     u16 y;
 
-    if (gGameState.unk12B != 6)
-        Func_0201ED08();
-    if (gGameState.unk12B == 2)
+    if (gGameState.effectStep != 6)
+        DrawEffectIntro();
+    if (gGameState.effectStep == 2)
     {
-        if (gGameState.unk1FA == 0)
+        if (gGameState.inMessage == 0)
         {
-            if (gGameState.unk132 == 0)
+            if (gGameState.effectDelay == 0)
             {
                 if (gGameState.effect[0] == 13)
                     price = gGameState.items[5].price;
                 else
                     price = gGameState.items[gGameState.effect[0]].price;
                 SendItemUse(gGameState.effect[0], price);
-                gGameState.unk12B = 5;
+                gGameState.effectStep = 5;
             }
             else
             {
-                gGameState.unk132--;
+                gGameState.effectDelay--;
             }
         }
     }
-    else if (gGameState.unk12B == 5)
+    else if (gGameState.effectStep == 5)
     {
         if (gGameState.flags.timer != 0)
         {
-            gGameState.unk120 = 0;
-            gGameState.unk12B = 6;
+            gGameState.viewLocked = 0;
+            gGameState.effectStep = 6;
         }
     }
-    else if (gGameState.unk12B == 6)
+    else if (gGameState.effectStep == 6)
     {
         u8 i = FindMarker(1);
 
-        Func_0201EDF8(gGameState.markers[i].x, gGameState.markers[i].y, notType3);
+        DrawBalloonShield(gGameState.markers[i].x, gGameState.markers[i].y, notType3);
         if (gGameState.flags.timer == 0)
         {
-            gGameState.unk120 = 1;
-            gGameState.unk1C8 = 120;
-            gGameState.unk12B = 7;
-            gGameState.unk032 = gGameState.markers[i].x - main->bgOfs[3][0];
-            gGameState.unk034 = gGameState.markers[i].y - main->bgOfs[3][1];
-            if (gGameState.unk1DE == 5)
+            gGameState.viewLocked = 1;
+            gGameState.effectTimer = 120;
+            gGameState.effectStep = 7;
+            gGameState.spriteX = gGameState.markers[i].x - main->bgOfs[3][0];
+            gGameState.spriteY = gGameState.markers[i].y - main->bgOfs[3][1];
+            if (gGameState.selectedItem == 5)
                 ShowMessage(0x30, 1);
             else if (!notType3)
                 ShowMessage(0x2E, 1);
@@ -300,42 +310,48 @@ void Func_0201F068(void)
             DrawTimerCount(x, y);
         }
     }
-    else if (gGameState.unk12B == 7)
+    else if (gGameState.effectStep == 7)
     {
-        if (gGameState.unk1C8 == 0)
+        if (gGameState.effectTimer == 0)
         {
-            gGameState.unk120 = 0;
-            gGameState.unk12B = 0;
-            Func_0201EBAC();
+            gGameState.viewLocked = 0;
+            gGameState.effectStep = 0;
+            EndItemEffect();
         }
     }
 }
 
-void Func_0201F240(void)
+// GC answer 18 to item 4's request 0x12: effect 4, the shield.
+void StartShieldEffect(void)
 {
-    Func_0201ECC4();
-    gGameState.unk130 = gSprite_0202C940[0].duration;
-    gGameState.unk131 = 0;
+    StartEffectIntro();
+    gGameState.shieldTimer = gShieldSprite[0].duration;
+    gGameState.shieldFrame = 0;
     ShowMessage(0x25, 1);
 }
 
-void Func_0201F274(void)
+// GC answer 16 to item 16 (A with nothing selected; GC MODE_LOOK_ATTENTION): Tingle's
+// animation 5 for 120 frames.
+void StartLookEffect(void)
 {
-    gGameState.unk1C8 = 120;
-    gGameState.unk228 = 0;
-    gGameState.unk226 = 5;
-    gGameState.unk227 = 0;
+    gGameState.effectTimer = 120;
+    gGameState.tingleFrame = 0;
+    gGameState.tingleAnim = 5;
+    gGameState.tingleAnimPart = 0;
 }
 
-void Func_0201F2A8(void)
+// Item effects 0, 1, 6 and 16: end when effectTimer runs out.
+void EffectWaitTimer(void)
 {
-    if (gGameState.unk1C8 == 0)
-        Func_0201EBAC();
+    if (gGameState.effectTimer == 0)
+        EndItemEffect();
 }
 
-void Func_0201F2C4(void)
+// Effect 5 (item 5): the GC picked a result (effect[1]); a message per result, and 13
+// (the long shield) takes over at once.
+void StartRandomEffect(void)
 {
-    Func_0201ECC4();
+    StartEffectIntro();
     if (gGameState.effect[1] == 13)
     {
         gGameState.effect[0] = gGameState.effect[1];
@@ -354,139 +370,140 @@ void Func_0201F2C4(void)
 // Item effect 5.
 void Effect5(void)
 {
-    Func_0201ED08();
-    if (gGameState.unk12B == 2)
+    DrawEffectIntro();
+    if (gGameState.effectStep == 2)
     {
-        if (gGameState.unk1FA == 0)
+        if (gGameState.inMessage == 0)
         {
-            if (gGameState.unk132 == 0)
+            if (gGameState.effectDelay == 0)
             {
                 if (gGameState.effect[1] == 10)
                 {
                     ShowMessage(0x2C, 1);
                     gGameState.effect[0] = gGameState.effect[1];
-                    gGameState.unk120 = 0;
-                    gGameState.unk132 = 8;
-                    gGameState.unk12B = 3;
+                    gGameState.viewLocked = 0;
+                    gGameState.effectDelay = 8;
+                    gGameState.effectStep = 3;
                 }
                 else if (gGameState.effect[1] == 0x13)
                 {
                     SendItemUse(0x13, gGameState.items[5].price);
-                    gGameState.unk12B = 5;
+                    gGameState.effectStep = 5;
                 }
                 else
                 {
                     gGameState.effect[0] = gGameState.effect[1];
-                    Func_0201FEEC();
-                    gGameState.unk12B = 3;
+                    StartEffectDrop();
+                    gGameState.effectStep = 3;
                 }
             }
             else
             {
-                gGameState.unk132--;
+                gGameState.effectDelay--;
             }
         }
     }
-    else if (gGameState.unk12B == 5)
+    else if (gGameState.effectStep == 5)
     {
     }
-    else if (gGameState.unk12B == 6)
+    else if (gGameState.effectStep == 6)
     {
-        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
             gMain.newKeys &= ~(gMain.newKeys & 0x30F);
-            gGameState.unk120 = 0;
+            gGameState.viewLocked = 0;
             ShowMessage(0x30, 1);
-            Func_0201EBAC();
+            EndItemEffect();
         }
     }
 }
 
-void Func_0201F420(void)
+// Effect 7 (item 7, the shop): a random greeting.
+void StartShopEffect(void)
 {
     if (gMain.random & 1)
         ShowMessage(0x3A, 14);
     else
         ShowMessage(0x3B, 14);
-    gGameState.unk1E2 = 0;
+    gGameState.dialogStep = 0;
 }
 
-// Item effect 7, the shop: gGameState.unk1E2 steps through choosing an item, sending the purchase request
-// (slot 12) and waiting for the GC's answer (slot 13).
+// Item effect 7, the shop: gGameState.dialogStep steps through choosing an item, sending the
+// purchase request (slot 12) and waiting for the GC's answer (slot 13).
 void Effect7(void)
 {
     u16 item;
     u8 what, result;
 
-    if (gGameState.flags.unk3_2)
+    if (gGameState.flags.cursorInZone)
     {
-        Func_0201EBAC();
+        EndItemEffect();
         return;
     }
-    if (gGameState.unk1E2 == 0)
+    if (gGameState.dialogStep == 0)
     {
-        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
-            gGameState.unk13C = 0;
+            gGameState.msgOpen = 0;
             if ((*(u32 *)gGameState.effect & 0xFFFFFF00) == 0)
             {
                 ShowMessage(0x3C, 14);
-                gGameState.unk1E2 = 4;
+                gGameState.dialogStep = 4;
             }
             else if (gGameState.effect[1])
             {
                 ShowMessage(0x40, 14);
-                gGameState.unk1E2 = 1;
+                gGameState.dialogStep = 1;
             }
             else if (gGameState.effect[2])
             {
                 ShowMessage(0x3F, 14);
-                gGameState.unk1E2 = 1;
+                gGameState.dialogStep = 1;
             }
             else if (gGameState.effect[3])
             {
                 ShowMessage(0x3E, 14);
-                gGameState.unk1E2 = 1;
+                gGameState.dialogStep = 1;
             }
             else
             {
                 ShowMessage(0x3C, 14);
-                gGameState.unk1E2 = 4;
+                gGameState.dialogStep = 4;
             }
         }
     }
-    else if (gGameState.unk1E2 == 1)
+    else if (gGameState.dialogStep == 1)
     {
-        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+        if ((gGameState.msgStatus == 1 || gGameState.msgStatus == 3) && (gMain.newKeys & 1))
         {
-            if (gGameState.unk142 == 0x3E)
+            if (gGameState.msgId == 0x3E)
             {
-                if (gGameState.unk14F == 1)
-                    gGameState.unk1E2 = 5;
+                if (gGameState.choiceCursor == 1)
+                    gGameState.dialogStep = 5;
                 else
-                    gGameState.unk1E2 = 2;
+                    gGameState.dialogStep = 2;
             }
-            else if (gGameState.unk142 == 0x3F || gGameState.unk142 == 0x40)
+            else if (gGameState.msgId == 0x3F || gGameState.msgId == 0x40)
             {
-                if (gGameState.unk14F == 2)
-                    gGameState.unk1E2 = 5;
+                if (gGameState.choiceCursor == 2)
+                    gGameState.dialogStep = 5;
                 else
-                    gGameState.unk1E2 = 2;
+                    gGameState.dialogStep = 2;
             }
         }
     }
-    else if (gGameState.unk1E2 == 2)
+    else if (gGameState.dialogStep == 2)
     {
-        item = gGameState.unk142;
+        item = gGameState.msgId;
         if (item >= 0x41 && item <= 0x45)
         {
-            if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+            if ((gGameState.msgStatus == 1 || gGameState.msgStatus == 3) && (gMain.newKeys & 1))
             {
-                if (gGameState.unk14F == 0)
+                if (gGameState.choiceCursor == 0)
                 {
-                    if (gGameState.unk142 == 0x41)
+                    if (gGameState.msgId == 0x41)
                         what = 0;
-                    else if (gGameState.unk142 == 0x43)
+                    else if (gGameState.msgId == 0x43)
                         what = 1;
                     else
                         what = 2;
@@ -494,19 +511,19 @@ void Effect7(void)
                     GBACOM_BUF_SHOP[1] = gShopRequests[what * 3 + 1];
                     GBACOM_BUF_SHOP[2] = gShopRequests[what * 3 + 2];
                     GbaComSendDataSet(GBACOM_BUF_SHOP, 4, GBACOM_SLOT_SHOP, *(u32 *)GBACOM_BUF_SHOP);
-                    gGameState.unk1E2 = 3;
+                    gGameState.dialogStep = 3;
                     gMain.newKeys ^= 1;
                 }
                 else
                 {
-                    gGameState.unk13C = 0;
+                    gGameState.msgOpen = 0;
                     ShowMessage(0x3D, 1);
-                    gGameState.unk1E2 = 5;
+                    gGameState.dialogStep = 5;
                 }
             }
         }
     }
-    else if (gGameState.unk1E2 == 3)
+    else if (gGameState.dialogStep == 3)
     {
         if (GbaComRecvStatusCheck(GBACOM_SLOT_ITEM_BUY))
         {
@@ -515,27 +532,27 @@ void Effect7(void)
             GbaComDataStatusReset(GBACOM_SLOT_ITEM_BUY);
             if (result == 0)
             {
-                gGameState.unk13C = 0;
+                gGameState.msgOpen = 0;
                 ShowMessage(0x48, 14);
-                gGameState.unk1E2 = 4;
-                gGameState.unk151 = 0;
-                gGameState.unk150 = 0;
-                gGameState.unk14F = 0xFF;
-                gGameState.unk14E = 0;
+                gGameState.dialogStep = 4;
+                gGameState.choiceMenu = 0;
+                gGameState.choiceY = 0;
+                gGameState.choiceCursor = 0xFF;
+                gGameState.choiceIndex = 0;
             }
             else if (result == 1)
             {
                 gMain.newKeys |= 1;
-                gGameState.unk1E2 = 4;
+                gGameState.dialogStep = 4;
             }
             else if (result == 2)
             {
-                gGameState.unk13C = 0;
-                gGameState.unk1E2 = 4;
-                gGameState.unk151 = 0;
-                gGameState.unk150 = 0;
-                gGameState.unk14F = 0xFF;
-                gGameState.unk14E = 0;
+                gGameState.msgOpen = 0;
+                gGameState.dialogStep = 4;
+                gGameState.choiceMenu = 0;
+                gGameState.choiceY = 0;
+                gGameState.choiceCursor = 0xFF;
+                gGameState.choiceIndex = 0;
                 if (what == 0)
                     ShowMessage(0x44, 14);
                 else if (what == 1)
@@ -545,13 +562,13 @@ void Effect7(void)
             }
             else
             {
-                gGameState.unk13C = 0;
+                gGameState.msgOpen = 0;
                 ShowMessage(0x46, 14);
-                gGameState.unk151 = 0;
-                gGameState.unk150 = 0;
-                gGameState.unk14F = 0xFF;
-                gGameState.unk14E = 0;
-                gGameState.unk1E2 = 4;
+                gGameState.choiceMenu = 0;
+                gGameState.choiceY = 0;
+                gGameState.choiceCursor = 0xFF;
+                gGameState.choiceIndex = 0;
+                gGameState.dialogStep = 4;
             }
         }
         else
@@ -559,44 +576,45 @@ void Effect7(void)
             gMain.newKeys &= 0xFF3E;
         }
     }
-    else if (gGameState.unk1E2 == 4)
+    else if (gGameState.dialogStep == 4)
     {
-        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
-            gGameState.unk13C = 0;
+            gGameState.msgOpen = 0;
             ShowMessage(0x3D, 1);
-            gGameState.unk1E2 = 5;
+            gGameState.dialogStep = 5;
         }
     }
     else
     {
-        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
-            Func_0201EBAC();
+        if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
+            EndItemEffect();
     }
 }
 
-void Func_0201F878(void)
+// Items 8-10 (the Tings): the effect intro, then Effect8.
+void StartTingEffect(void)
 {
-    Func_0201ECC4();
-    gGameState.unk1E5_1 = 0;
-    gGameState.unk1E5_2 = 1;
-    gGameState.unk12E = gSprite_0202C928[0].duration;
-    gGameState.unk12F = 0;
+    StartEffectIntro();
+    gGameState.itemsEnabled = 0;
+    gGameState.effectActive = 1;
+    gGameState.balloonTimer = gBalloonSprite[0].duration;
+    gGameState.balloonFrame = 0;
     ShowMessage(0x27, 1);
 }
 
-// Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gSprite_0202C490 with a
-// palette per effect, kind 2 flips it and adds gSprite_0202C928 at (unk036, unk038). One
+// Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gTingSprite with a
+// palette per effect, kind 2 flips it and adds gBalloonSprite at (sprite2X, sprite2Y). One
 // variable holds the flip flags and then the palette.
-void Func_0201F8C4(s16 x, s16 y, u8 kind)
+void DrawTitleSpriteOnMap(s16 x, s16 y, u8 kind)
 {
-    s16 bob = gBobOffsets_020244DA[(gMain.frameCount & 0x30) >> 4];
+    s16 bob = gEffectBobOffsets[(gMain.frameCount & 0x30) >> 4];
     u8 mosaic = gMain.mosaic != 0;
     u8 flags = 0;
 
     if (kind == 2)
         flags = 8;
-    DrawSpriteAt(gSprite_0202C938, 0, x - gMain.bgOfs[3][0] + bob,
+    DrawSpriteAt(gTitleSprite, 0, x - gMain.bgOfs[3][0] + bob,
                  y - gMain.bgOfs[3][1], mosaic, flags, 1);
     if (kind == 1)
     {
@@ -606,14 +624,14 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind)
             flags = 15;
         else
             flags = 4;
-        DrawSprite(gSprite_0202C490, 0, x - gMain.bgOfs[3][0] + (s16)(bob + 11),
+        DrawSprite(gTingSprite, 0, x - gMain.bgOfs[3][0] + (s16)(bob + 11),
                    y - gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, flags);
     }
     else if (kind == 2)
     {
         flags = 16;
-        DrawSpriteAt(gSprite_0202C928, 0, gGameState.unk036 - gMain.bgOfs[3][0] + bob,
-                     gGameState.unk038 - gMain.bgOfs[3][1], mosaic, flags, 1);
+        DrawSpriteAt(gBalloonSprite, 0, gGameState.sprite2X - gMain.bgOfs[3][0] + bob,
+                     gGameState.sprite2Y - gMain.bgOfs[3][1], mosaic, flags, 1);
     }
 }
 
@@ -626,179 +644,182 @@ void Effect8(void)
     u16 x, y;
     u8 arg;
 
-    if (gGameState.unk12B <= 3)
-        Func_0201ED08();
-    if (gGameState.unk12B == 2)
+    if (gGameState.effectStep <= 3)
+        DrawEffectIntro();
+    if (gGameState.effectStep == 2)
     {
-        if (gGameState.unk1FA == 0)
+        if (gGameState.inMessage == 0)
         {
-            if (gGameState.unk132 == 0)
+            if (gGameState.effectDelay == 0)
             {
-                // FAKEMATCH: without x (found with decomp-permuter), cse stores unk132's
+                // FAKEMATCH: without x (found with decomp-permuter), cse stores effectDelay's
                 // register (known to be 0 here) instead of a fresh 0.
                 x = 0;
-                gGameState.unk120 = 0;
-                gGameState.unk132 = 8;
-                gGameState.unk12B = 3;
+                gGameState.viewLocked = 0;
+                gGameState.effectDelay = 8;
+                gGameState.effectStep = 3;
                 gGameState.flags.isFree = 0;
-                gGameState.unk1E4 = gGameState.effect[0];
+                gGameState.savedEffect = gGameState.effect[0];
                 SendItemUse(0x14, x);
             }
             else
             {
-                gGameState.unk132--;
+                gGameState.effectDelay--;
             }
         }
     }
-    else if (gGameState.unk12B == 3)
+    else if (gGameState.effectStep == 3)
     {
-        if (gGameState.unk132 == 0)
+        if (gGameState.effectDelay == 0)
         {
             if (gGameState.scrolling == 0)
             {
-                gGameState.unk034 = main->bgOfs[3][1] - 0x30;
-                gGameState.unk12B = 4;
+                gGameState.spriteY = main->bgOfs[3][1] - 0x30;
+                gGameState.effectStep = 4;
             }
         }
         else
         {
-            gGameState.unk132--;
+            gGameState.effectDelay--;
             gGameState.flags.isFree = 0;
         }
     }
-    else if (gGameState.unk12B == 4)
+    else if (gGameState.effectStep == 4)
     {
         if (main->frameCount & 1)
-            gGameState.unk034++;
-        if (gGameState.markers[m].y - gGameState.unk034 <= 0x18)
+            gGameState.spriteY++;
+        if (gGameState.markers[m].y - gGameState.spriteY <= 0x18)
         {
-            gGameState.unk132 = (idx + 2) * 60;
-            gGameState.unk034 = gGameState.markers[m].y - 0x18;
-            gGameState.unk12B = 6;
+            gGameState.effectDelay = (idx + 2) * 60;
+            gGameState.spriteY = gGameState.markers[m].y - 0x18;
+            gGameState.effectStep = 6;
             ShowMessage(0x28, 1);
         }
-        Func_0201F8C4(gGameState.markers[m].x - 0x18, gGameState.unk034, 1);
+        DrawTitleSpriteOnMap(gGameState.markers[m].x - 0x18, gGameState.spriteY, 1);
     }
-    else if (gGameState.unk12B == 6)
+    else if (gGameState.effectStep == 6)
     {
         x = gGameState.markers[m].x - 0x18;
         y = gGameState.markers[m].y - 0x18;
-        Func_0201F8C4(x, y, 1);
-        if (gGameState.unk132 == 0)
+        DrawTitleSpriteOnMap(x, y, 1);
+        if (gGameState.effectDelay == 0)
         {
-            if (gGameState.unk1DE == 5)
+            if (gGameState.selectedItem == 5)
                 arg = gGameState.items[5].price;
             else
                 arg = gGameState.items[idx + 8].price;
             SendItemUse(idx + 8, arg);
-            gGameState.unk034 = y;
-            gGameState.unk12B = 5;
+            gGameState.spriteY = y;
+            gGameState.effectStep = 5;
         }
         else
         {
             SoundPlayLoop(1, 1, 0);
-            if (--gGameState.unk132 == 10)
-                gGameState.unk13E = 300;
+            if (--gGameState.effectDelay == 10)
+                gGameState.msgWaitTimer = 300;
         }
     }
-    else if (gGameState.unk12B == 5)
+    else if (gGameState.effectStep == 5)
     {
         x = gGameState.markers[m].x - 0x18;
         y = gGameState.markers[m].y - 0x18;
-        Func_0201F8C4(x, y, 1);
+        DrawTitleSpriteOnMap(x, y, 1);
     }
-    else if (gGameState.unk12B == 7)
+    else if (gGameState.effectStep == 7)
     {
-        gGameState.unk034--;
-        Func_0201F8C4(gGameState.markers[m].x - 0x18, gGameState.unk034, 0);
-        if (gGameState.unk034 < main->bgOfs[3][1] - 0x30)
+        gGameState.spriteY--;
+        DrawTitleSpriteOnMap(gGameState.markers[m].x - 0x18, gGameState.spriteY, 0);
+        if (gGameState.spriteY < main->bgOfs[3][1] - 0x30)
         {
-            gGameState.unk12B = 0;
-            if (gGameState.unk1DE == 5)
+            gGameState.effectStep = 0;
+            if (gGameState.selectedItem == 5)
                 ShowMessage(0x30, 1);
             else
                 ShowMessage(gGameState.effect[0] + 0x10, 1);
-            Func_0201EBAC();
+            EndItemEffect();
         }
     }
 }
 
-void Func_0201FCA0(void)
+// Item 11 (the slot 6 item until the shop is unlocked): a choice dialogue, one for the sea
+// and one for dungeons (Effect11).
+void StartEffect11(void)
 {
-    if (!gGameState.unk1E5_3)
+    if (!gGameState.onSea)
         ShowMessage(0xD2, 1);
     else
         ShowMessage(0xDB, 1);
     gGameState.effect[0] = 11;
-    gGameState.unk1E5_2 = 1;
-    gGameState.unk1E5_1 = 0;
-    gGameState.unk1E2 = 0;
+    gGameState.effectActive = 1;
+    gGameState.itemsEnabled = 0;
+    gGameState.dialogStep = 0;
 }
 
 // Item effect 11.
 void Effect11(void)
 {
-    if (gGameState.unk1E2 == 0)
+    if (gGameState.dialogStep == 0)
     {
-        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+        if ((gGameState.msgStatus == 1 || gGameState.msgStatus == 3) && (gMain.newKeys & 1))
         {
-            if (gGameState.unk14F == 0)
-                gGameState.unk1E2 = 2;
-            else if (gGameState.unk14F == 1)
-                gGameState.unk1E2 = 1;
+            if (gGameState.choiceCursor == 0)
+                gGameState.dialogStep = 2;
+            else if (gGameState.choiceCursor == 1)
+                gGameState.dialogStep = 1;
             else
-                gGameState.unk1E2 = 4;
+                gGameState.dialogStep = 4;
         }
     }
-    else if (gGameState.unk1E2 == 1)
+    else if (gGameState.dialogStep == 1)
     {
-        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
-            gGameState.unk1E2 = 2;
+        if ((gGameState.msgStatus == 1 || gGameState.msgStatus == 3) && (gMain.newKeys & 1))
+            gGameState.dialogStep = 2;
     }
-    else if (gGameState.unk1E2 == 2)
+    else if (gGameState.dialogStep == 2)
     {
-        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
             gMain.newKeys &= ~(gMain.newKeys & 0x30F);
             ShowMessage(0xD8, 1);
-            gGameState.unk1E2 = 3;
+            gGameState.dialogStep = 3;
         }
     }
-    else if (gGameState.unk1E2 == 3)
+    else if (gGameState.dialogStep == 3)
     {
-        if ((gGameState.unk14B == 1 || gGameState.unk14B == 3) && (gMain.newKeys & 1))
+        if ((gGameState.msgStatus == 1 || gGameState.msgStatus == 3) && (gMain.newKeys & 1))
         {
-            if (gGameState.unk14F == 1)
+            if (gGameState.choiceCursor == 1)
             {
                 gMain.newKeys ^= 1;
-                if (!gGameState.unk1E5_3)
+                if (!gGameState.onSea)
                     ShowMessage(0xD4, 1);
                 else
                     ShowMessage(0xDD, 1);
-                gGameState.unk1E2 = 1;
+                gGameState.dialogStep = 1;
             }
             else
             {
-                gGameState.unk1E2 = 4;
+                gGameState.dialogStep = 4;
             }
         }
     }
     else
     {
-        if ((gGameState.unk14B == 3 && (gMain.newKeys & 0x30F)) || gGameState.unk13E > 0x12A)
+        if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
             gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0xAE;
-            SetSelectedItem(gGameState.unk1DE);
-            Func_0201EBAC();
+            SetSelectedItem(gGameState.selectedItem);
+            EndItemEffect();
         }
     }
 }
 
-void Func_0201FEEC(void)
+// Effect5 with a result for Effect12: go straight to its drop.
+void StartEffectDrop(void)
 {
-    gGameState.unk132 = 8;
-    gGameState.unk120 = 0;
-    gGameState.unk12B = 4;
+    gGameState.effectDelay = 8;
+    gGameState.viewLocked = 0;
+    gGameState.effectStep = 4;
 }
 
 // Item effect 12.
@@ -808,47 +829,47 @@ void Effect12(void)
     s32 m = FindMarker(1);
     u16 x, y;
 
-    if (gGameState.unk12B == 3)
+    if (gGameState.effectStep == 3)
     {
-        if (gGameState.unk132 == 0)
+        if (gGameState.effectDelay == 0)
         {
             if (gGameState.scrolling == 0)
             {
-                gGameState.unk038 = gGameState.unk034 = main->bgOfs[3][1] - 0x30;
-                gGameState.unk12B = 4;
+                gGameState.sprite2Y = gGameState.spriteY = main->bgOfs[3][1] - 0x30;
+                gGameState.effectStep = 4;
             }
         }
         else
         {
-            gGameState.unk132--;
+            gGameState.effectDelay--;
         }
     }
-    else if (gGameState.unk12B == 4)
+    else if (gGameState.effectStep == 4)
     {
         if (main->frameCount & 1)
         {
-            gGameState.unk034++;
-            gGameState.unk038++;
+            gGameState.spriteY++;
+            gGameState.sprite2Y++;
         }
-        if (gGameState.markers[m].y - gGameState.unk034 <= 0x18)
+        if (gGameState.markers[m].y - gGameState.spriteY <= 0x18)
         {
-            gGameState.unk034 = gGameState.markers[m].y - 0x18;
-            gGameState.unk038 = gGameState.markers[m].y - 0x18;
+            gGameState.spriteY = gGameState.markers[m].y - 0x18;
+            gGameState.sprite2Y = gGameState.markers[m].y - 0x18;
             SendItemUse(gGameState.effect[0], gGameState.items[5].price);
-            gGameState.unk12B = 5;
+            gGameState.effectStep = 5;
         }
         x = gGameState.markers[m].x - 0x15;
-        gGameState.unk036 = gGameState.markers[m].x + 0x11;
-        Func_0201F8C4(x, gGameState.unk034, 2);
+        gGameState.sprite2X = gGameState.markers[m].x + 0x11;
+        DrawTitleSpriteOnMap(x, gGameState.spriteY, 2);
     }
-    else if (gGameState.unk12B == 5)
+    else if (gGameState.effectStep == 5)
     {
-        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 1);
-        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 0);
+        DrawBalloonShield(gGameState.markers[m].x, gGameState.markers[m].y, 1);
+        DrawBalloonShield(gGameState.markers[m].x, gGameState.markers[m].y, 0);
         if (gGameState.flags.timer)
         {
-            gGameState.unk1C8 = 120;
-            gGameState.unk12B = 6;
+            gGameState.effectTimer = 120;
+            gGameState.effectStep = 6;
         }
         else
         {
@@ -857,17 +878,17 @@ void Effect12(void)
             DrawTimerCount(x, y);
         }
     }
-    else if (gGameState.unk12B == 6)
+    else if (gGameState.effectStep == 6)
     {
-        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 1);
-        Func_0201EDF8(gGameState.markers[m].x, gGameState.markers[m].y, 0);
+        DrawBalloonShield(gGameState.markers[m].x, gGameState.markers[m].y, 1);
+        DrawBalloonShield(gGameState.markers[m].x, gGameState.markers[m].y, 0);
         if (!gGameState.flags.timer)
         {
-            gGameState.unk032 = gGameState.markers[m].x - 0x15;
-            gGameState.unk036 = gGameState.markers[m].x + 0x11;
-            gGameState.unk034 = gGameState.markers[m].y - 0x18;
-            gGameState.unk038 = gGameState.markers[m].y - 0x18;
-            gGameState.unk12B = 7;
+            gGameState.spriteX = gGameState.markers[m].x - 0x15;
+            gGameState.sprite2X = gGameState.markers[m].x + 0x11;
+            gGameState.spriteY = gGameState.markers[m].y - 0x18;
+            gGameState.sprite2Y = gGameState.markers[m].y - 0x18;
+            gGameState.effectStep = 7;
         }
         else
         {
@@ -876,34 +897,36 @@ void Effect12(void)
             DrawTimerCount(x, y);
         }
     }
-    else if (gGameState.unk12B == 7)
+    else if (gGameState.effectStep == 7)
     {
-        gGameState.unk034--;
-        gGameState.unk038--;
-        gGameState.unk032 = gGameState.markers[m].x - 0x15;
-        gGameState.unk036 = gGameState.markers[m].x + 0x11;
-        Func_0201F8C4(gGameState.unk032, gGameState.unk034, 2);
-        if (gGameState.unk034 < main->bgOfs[3][1] - 0x30)
+        gGameState.spriteY--;
+        gGameState.sprite2Y--;
+        gGameState.spriteX = gGameState.markers[m].x - 0x15;
+        gGameState.sprite2X = gGameState.markers[m].x + 0x11;
+        DrawTitleSpriteOnMap(gGameState.spriteX, gGameState.spriteY, 2);
+        if (gGameState.spriteY < main->bgOfs[3][1] - 0x30)
         {
             ShowMessage(0x30, 1);
-            gGameState.unk12B = 0;
-            Func_0201EBAC();
+            gGameState.effectStep = 0;
+            EndItemEffect();
         }
-        if (gGameState.unk038 < main->bgOfs[3][1] - 0x30)
-            gGameState.unk038 = main->bgOfs[3][1] - 0x30;
+        if (gGameState.sprite2Y < main->bgOfs[3][1] - 0x30)
+            gGameState.sprite2Y = main->bgOfs[3][1] - 0x30;
     }
 }
 
-void Func_02020150(void)
+// GC answer 14 to item 2 (the cursor sat on Link: the GC frees it and drops the bomb
+// later): a 300-frame countdown (Effect14).
+void StartBombCountdown(void)
 {
     ShowMessage(0x50, 1);
-    gGameState.unk1C8 = 300;
-    gGameState.unk228 = 0;
-    gGameState.unk226 = 5;
-    gGameState.unk227 = 0;
+    gGameState.effectTimer = 300;
+    gGameState.tingleFrame = 0;
+    gGameState.tingleAnim = 5;
+    gGameState.tingleAnimPart = 0;
 }
 
-// Item effect 14: a countdown (unk1C8) that ticks faster near the end, drawn at the type 3
+// Item effect 14: a countdown (effectTimer) that ticks faster near the end, drawn at the type 3
 // marker; at 0 it switches to effect 2.
 void Effect14(void)
 {
@@ -911,32 +934,32 @@ void Effect14(void)
     s32 m;
 
     if (gGameState.flags.busy & 1)
-        gGameState.unk1C8++;
-    if (gGameState.unk1EE == 0)
+        gGameState.effectTimer++;
+    if (gGameState.selectWinStep == 0)
     {
-        gGameState.unk13E = 0;
-        if (gGameState.unk1C8 > 179)
+        gGameState.msgWaitTimer = 0;
+        if (gGameState.effectTimer > 179)
         {
-            if ((u16)(gGameState.unk1C8 % 30) == 0)
+            if ((u16)(gGameState.effectTimer % 30) == 0)
                 SoundPlay(0xC - SOUND_ID_SHIFT, 0);
         }
-        else if (gGameState.unk1C8 > 59)
+        else if (gGameState.effectTimer > 59)
         {
-            if ((u16)(gGameState.unk1C8 % 20) == 0)
+            if ((u16)(gGameState.effectTimer % 20) == 0)
                 SoundPlay(0xC - SOUND_ID_SHIFT, 0);
         }
-        else if (gGameState.unk1C8 == 0)
+        else if (gGameState.effectTimer == 0)
         {
-            gGameState.unk13E = 300;
+            gGameState.msgWaitTimer = 300;
             gGameState.effect[0] = 2;
-            Func_0201EBD4();
+            StartBombBlast();
         }
-        else if ((u16)(gGameState.unk1C8 % 10) == 0)
+        else if ((u16)(gGameState.effectTimer % 10) == 0)
         {
             SoundPlay(0xC - SOUND_ID_SHIFT, 0);
         }
         m = FindMarker(3);
-        DrawSpriteParts(gSprite_0202CC50, gGameState.markers[m].x - gMain.bgOfs[3][0],
+        DrawSpriteParts(gBombSprite, gGameState.markers[m].x - gMain.bgOfs[3][0],
                       gGameState.markers[m].y - gMain.bgOfs[3][1], mosaic, 0);
     }
 }
@@ -944,12 +967,12 @@ void Effect14(void)
 // Run the current item effect (effect[0], from slot 7) while one is active.
 void UpdateItemEffect(void)
 {
-    if (gGameState.unk1E5_2)
+    if (gGameState.effectActive)
     {
-        if (!gGameState.unk1E5_1)
+        if (!gGameState.itemsEnabled)
         {
-            if (gGameState.unk1C8 != 0)
-                gGameState.unk1C8--;
+            if (gGameState.effectTimer != 0)
+                gGameState.effectTimer--;
             gItemEffectFuncs[gGameState.effect[0]]();
         }
     }
@@ -968,10 +991,10 @@ void Mode2State0(void)
 #ifndef VERSION_GZLJ01
     TextClearCanvas();
     gGameState.msgPtr = MSG_DATA + *(u16 *)(MSG_DATA + *(u16 *)MSG_DATA + 0x3E);
-    gGameState.unk14A = 6;
-    gGameState.unk14B = 0;
+    gGameState.textColor = 6;
+    gGameState.msgStatus = 0;
     gGameState.glyphWidth = 6;
-    gGameState.unk15A = 0;
+    gGameState.textBig = 0;
     DrawString(gMode2UsString, 0, 0, 8);
 #endif
     CpuCopy16(gMode1BgPalette, (void *)0x05000000, sizeof(gMode1BgPalette));
@@ -984,7 +1007,7 @@ void Mode2State0(void)
     gMain.bldcnt = 0x2071;  // BG0 over BG0-3, OBJ and backdrop
     gMain.bldalpha = ((16 - blend) << 8) | blend;
     gGameState.flagsReceived = 0;
-    gGameState.unk23C = 1;
+    gGameState.afterLinkLost = 1;
     gMode0Work.timer = 1;
     gMode0Work.fadingOut = 0;
     gMain.modeState++;
@@ -1073,11 +1096,11 @@ void ObjReset(struct Obj *obj)
     obj->vz = 0;
     obj->unk12 = 0;
     obj->unk14 = 0;
-    obj->unk16 = 0;
-    obj->unk18 = 0;
-    obj->unk1A = 0;
-    obj->unk1C = 0;
-    obj->unk1E = 0;
+    obj->scale = 0;
+    obj->ofsX = 0;
+    obj->ofsY = 0;
+    obj->piece = 0;
+    obj->angle = 0;
     obj->active = 0;
     obj->type = 0;
 }
@@ -1136,8 +1159,8 @@ void ObjResetActive(void)
 // Place this piece and up to four more at the first type 3 marker, flying out in a fan.
 void ObjBurstInit(struct Obj *obj)
 {
-    s16 ofsX = gObjBurstOfsX[obj->unk1C];
-    s16 ofsY = gObjBurstOfsY[obj->unk1C];
+    s16 ofsX = gObjBurstOfsX[obj->piece];
+    s16 ofsY = gObjBurstOfsY[obj->piece];
     s32 i = 0;
     s32 idx;
     s32 j;
@@ -1151,13 +1174,13 @@ void ObjBurstInit(struct Obj *obj)
 
     obj->x = (gGameState.markers[i].x << 8) + ofsX;
     obj->y = (gGameState.markers[i].y << 8) + ofsY;
-    obj->unk1A = obj->unk18 = 0;
-    obj->vx = gObjBurstVelX[obj->unk1C];
-    obj->vy = gObjBurstVelY[obj->unk1C];
+    obj->ofsY = obj->ofsX = 0;
+    obj->vx = gObjBurstVelX[obj->piece];
+    obj->vy = gObjBurstVelY[obj->piece];
     obj->vz = -0x100;
-    obj->unk1E = 0;
+    obj->angle = 0;
     obj->unk12 = 2;
-    obj->unk16 = 0x180;
+    obj->scale = 0x180;
     obj->active++;
 
     for (j = 1; j <= 4; j++)
@@ -1166,20 +1189,20 @@ void ObjBurstInit(struct Obj *obj)
         if (idx != -1)
         {
             // BUG: indexes from obj, not gObjs (the same when obj is gObjs[0])
-            obj[idx].unk1C = j;
-            ofsX = gObjBurstOfsX[obj[idx].unk1C];
-            ofsY = gObjBurstOfsY[obj[idx].unk1C];
+            obj[idx].piece = j;
+            ofsX = gObjBurstOfsX[obj[idx].piece];
+            ofsY = gObjBurstOfsY[obj[idx].piece];
             obj[idx].type = 0;
             obj[idx].active = 1;
             obj[idx].x = (gGameState.markers[i].x << 8) + ofsX;
             obj[idx].y = (gGameState.markers[i].y << 8) + ofsY;
-            obj[idx].unk1A = obj[idx].unk18 = 0;
-            obj[idx].vx = gObjBurstVelX[obj[idx].unk1C];
-            obj[idx].vy = gObjBurstVelY[obj[idx].unk1C];
+            obj[idx].ofsY = obj[idx].ofsX = 0;
+            obj[idx].vx = gObjBurstVelX[obj[idx].piece];
+            obj[idx].vy = gObjBurstVelY[obj[idx].piece];
             obj[idx].vz = -0x100;
-            obj[idx].unk1E = 0;
+            obj[idx].angle = 0;
             obj[idx].unk12 = 2;
-            obj[idx].unk16 = 0x180;
+            obj[idx].scale = 0x180;
             obj[idx].active = 2;
         }
     }
@@ -1193,14 +1216,14 @@ void ObjBurstFly(struct Obj *obj)
     ObjFall(obj, 5);
     if (obj->z == 0)
         ObjReset(obj);
-    obj->unk1E -= 16;
+    obj->angle -= 16;
     if (obj->vz < 0)
-        obj->unk16 = 0x80 - obj->vz;
+        obj->scale = 0x80 - obj->vz;
     else
-        obj->unk16 = obj->vz + 0x80;
+        obj->scale = obj->vz + 0x80;
 }
 
-// Object type 0: pieces flying out of the type 3 marker (spawned by Func_0201EBD4).
+// Object type 0: pieces flying out of the type 3 marker (spawned by StartBombBlast).
 void ObjBurst(struct Obj *obj)
 {
     u8 mosaic = (gMain.bgcnt[0] >> 6) & 1;
@@ -1212,8 +1235,8 @@ void ObjBurst(struct Obj *obj)
     {
         x = (obj->x >> 8) - (u16)gMain.bgOfs[3][0];  // the one unsigned read of the scroll
         y = ((obj->y + obj->z) >> 8) - (u16)gMain.bgOfs[3][1];
-        DrawSprite(gSprite_0202C150, 0, x, y, obj->unk1E, mosaic, obj->unk16, obj->unk18,
-                   obj->unk1A, 0, 0);
+        DrawSprite(gBurstPieceSprite, 0, x, y, obj->angle, mosaic, obj->scale, obj->ofsX,
+                   obj->ofsY, 0, 0);
     }
 }
 
@@ -1245,19 +1268,19 @@ void SelectWindowWipe(u8 open)
     else
         step = -16;
     gMain.winin = 0x1F;
-    gGameState.unk1E8 = gGameState.unk1E8 + step;
-    if (gGameState.unk1E8 >= 0xE8 && gGameState.unk1E8 <= 0xF8)
+    gGameState.selectWinX = gGameState.selectWinX + step;
+    if (gGameState.selectWinX >= 0xE8 && gGameState.selectWinX <= 0xF8)
     {
         gMain.win0h = 0xEF;
     }
-    else if (gGameState.unk1E8 + 8 == 0)
+    else if (gGameState.selectWinX + 8 == 0)
     {
         gMain.win0h = 0;
         gMain.winin = 0;
     }
     else
     {
-        gMain.win0h = gGameState.unk1E8 + 8;
+        gMain.win0h = gGameState.selectWinX + 8;
     }
     gMain.win0v = 0x9F;
     gMain.winout = 0;
@@ -1266,39 +1289,39 @@ void SelectWindowWipe(u8 open)
 
 void SelectWindowDrawEdge(void)
 {
-    DrawSprite(gSprite_0202BD78, 0, gGameState.unk1E8, gGameState.unk1EA, 0, 0, 0, 0, 0, 0, 0);
+    DrawSprite(gSelectWindowEdgeSprite, 0, gGameState.selectWinX, gGameState.selectWinY, 0, 0, 0, 0, 0, 0, 0);
 }
 
 // Select (in mode 1 state 2, when nothing else is up) wipes a window across the screen
 // (SelectWindowWipe), flips BG0 to its other half behind it and wipes it back; Select again (or
-// leaving state 2) reverses it. gGameState.unk1EE is the step.
+// leaving state 2) reverses it. gGameState.selectWinStep is the step.
 void UpdateSelectWindow(void)
 {
-    switch (gGameState.unk1EE)
+    switch (gGameState.selectWinStep)
     {
     case 0:
-        if (gMain.modeState == 2 && gGameState.unk1FA == 0 && gGameState.unk1CC == 0
-         && !gGameState.unk1E5_4 && (gMain.newKeys & 4))
+        if (gMain.modeState == 2 && gGameState.inMessage == 0 && gGameState.menuOpen == 0
+         && !gGameState.menuSliding && (gMain.newKeys & 4))
         {
-            gGameState.unk1FB = 1;
+            gGameState.selectWinOpen = 1;
             SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
-            gGameState.unk1EE++;
+            gGameState.selectWinStep++;
         }
         break;
     case 1:
         SelectWindowWipe(0);
-        if (gGameState.unk1E8 == 0xFFF8)
+        if (gGameState.selectWinX == 0xFFF8)
         {
-            gGameState.unk1EE++;
+            gGameState.selectWinStep++;
             gMain.bgOfs[0][0] = 0x100;
         }
         SelectWindowDrawEdge();
         break;
     case 2:
         SelectWindowWipe(1);
-        if (gGameState.unk1E8 == 0xF8)
+        if (gGameState.selectWinX == 0xF8)
         {
-            gGameState.unk1EE++;
+            gGameState.selectWinStep++;
             gMain.dispcnt ^= 0x2000;
         }
         SelectWindowDrawEdge();
@@ -1308,30 +1331,30 @@ void UpdateSelectWindow(void)
         if (gMain.modeState != 2)
         {
             SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
-            gGameState.unk1EE++;
+            gGameState.selectWinStep++;
         }
         else if (gMain.newKeys & 4)
         {
             SoundPlay(0x27 - SOUND_ID_SHIFT, 0);
-            gGameState.unk1EE++;
+            gGameState.selectWinStep++;
         }
         break;
     case 4:
         SelectWindowWipe(0);
-        if (gGameState.unk1E8 == 0xFFF8)
+        if (gGameState.selectWinX == 0xFFF8)
         {
-            gGameState.unk1EE++;
+            gGameState.selectWinStep++;
             gMain.bgOfs[0][0] = 0;
         }
         SelectWindowDrawEdge();
         break;
     case 5:
         SelectWindowWipe(1);
-        if (gGameState.unk1E8 == 0xF8)
+        if (gGameState.selectWinX == 0xF8)
         {
-            gGameState.unk1EE = 0;
-            gGameState.unk1FB = 0;
-            gGameState.unk104 = 1;
+            gGameState.selectWinStep = 0;
+            gGameState.selectWinOpen = 0;
+            gGameState.active = 1;
             gMain.dispcnt &= 0xDFFF;
         }
         SelectWindowDrawEdge();
@@ -1341,12 +1364,12 @@ void UpdateSelectWindow(void)
 
 void ResetSelectWindow(void)
 {
-    gGameState.unk1E8 = 0xF8;
-    gGameState.unk1EA = 0x50;
-    gGameState.unk1EE = 0;
+    gGameState.selectWinX = 0xF8;
+    gGameState.selectWinY = 0x50;
+    gGameState.selectWinStep = 0;
 }
 
-// The status icon at (232, 128) and the blinking frame around it; gGameState.unk1F4 picks the
+// The status icon at (232, 128) and the blinking frame around it; gGameState.statusIcon picks the
 // icon.
 void DrawStatusIcon(void)
 {
@@ -1354,66 +1377,66 @@ void DrawStatusIcon(void)
     s32 m = FindMarker(1);
     u8 type;
 
-    if (gGameState.unk1FB | gGameState.unk1FA | gGameState.unk224 | gGameState.unk1CC)
+    if (gGameState.selectWinOpen | gGameState.inMessage | gGameState.chartOpen | gGameState.menuOpen)
         return;
-    if (gGameState.unk121 != 0 || gGameState.markers[m].unk6 == 4)
+    if (gGameState.holdState != 0 || gGameState.markers[m].param == 4)
     {
-        gGameState.unk1F4 = 0;
+        gGameState.statusIcon = 0;
     }
-    else if (gGameState.flags.unk8_7)
+    else if (gGameState.flags.miniboss)
     {
         if (gGameState.flags.isFree)
-            gGameState.unk1F4 = 1;
+            gGameState.statusIcon = 1;
         else
-            gGameState.unk1F4 = 0;
+            gGameState.statusIcon = 0;
     }
     else if (gGameState.flags.isFree)
     {
-        if (gGameState.unk1F5)
+        if (gGameState.enemyHighlighted)
         {
             SoundPlayLoop(3, 3, 0);
-            gGameState.unk1F4 = 2;
+            gGameState.statusIcon = 2;
         }
         else
         {
-            gGameState.unk1F4 = 1;
+            gGameState.statusIcon = 1;
         }
     }
     else if (gGameState.flags.followTarget)
     {
         SoundPlayLoop(4, 4, 0);
-        gGameState.unk1F4 = 1;
+        gGameState.statusIcon = 1;
     }
-    else if (gGameState.unk1F5)
+    else if (gGameState.enemyHighlighted)
     {
         SoundPlayLoop(3, 3, 0);
-        gGameState.unk1F4 = 2;
+        gGameState.statusIcon = 2;
     }
     else
     {
-        gGameState.unk1F4 = 0;
+        gGameState.statusIcon = 0;
     }
 
-    if (gGameState.unk1F4 == 1)
+    if (gGameState.statusIcon == 1)
     {
-        type = gGameState.markers[FindMarker(1)].unk6;
+        type = gGameState.markers[FindMarker(1)].param;
         if (type)
-            gGameState.unk1F4 = type + 2;
+            gGameState.statusIcon = type + 2;
     }
 
-    if (gGameState.unk1F4 == 0)
+    if (gGameState.statusIcon == 0)
         return;
-    if (gGameState.unk1F4 == 1)
-        DrawSprite(gSprite_0202C420, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
-    else if (gGameState.unk1F4 == 2)
-        DrawSprite(gSprite_0202C428, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
-    else if (gGameState.unk1F4 == 3)
-        DrawSpriteAt(gSprite_0202C440, 0, 0xE8, 0x80, 0, 0, 0);
-    else if (gGameState.unk1F4 == 4)
-        DrawSpriteAt(gSprite_0202C448, gGameState.unk126, 0xE8, 0x80, 0, 0, 0);
-    else if (gGameState.unk1F4 == 5)
-        DrawSpriteAt(gSprite_0202C4A8, gGameState.unk12A, 0xE8, 0x80, 0, 0, 0);
-    else if (gGameState.unk1F4 == 6)
-        DrawSpriteAt(gSprite_0202C498, gGameState.unk128, 0xE8, 0x80, 0, 0, 0);
-    DrawSprite(gSprite_0202C430, 0, 0xE0, blink + 0x80, 0, 0, 0, 0, 0, 0, 0);
+    if (gGameState.statusIcon == 1)
+        DrawSprite(gCharIcon0, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
+    else if (gGameState.statusIcon == 2)
+        DrawSprite(gStatusHighlightSprite, 0, 0xE8, 0x80, 0, 0, 0, 0, 0, 0, 0);
+    else if (gGameState.statusIcon == 3)
+        DrawSpriteAt(gCharIcon1, 0, 0xE8, 0x80, 0, 0, 0);
+    else if (gGameState.statusIcon == 4)
+        DrawSpriteAt(gCharIcon2, gGameState.char2Frame, 0xE8, 0x80, 0, 0, 0);
+    else if (gGameState.statusIcon == 5)
+        DrawSpriteAt(gCharIcon3, gGameState.char3Frame, 0xE8, 0x80, 0, 0, 0);
+    else if (gGameState.statusIcon == 6)
+        DrawSpriteAt(gCharIcon4, gGameState.char4Frame, 0xE8, 0x80, 0, 0, 0);
+    DrawSprite(gStatusFrameSprite, 0, 0xE0, blink + 0x80, 0, 0, 0, 0, 0, 0, 0);
 }
