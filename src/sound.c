@@ -864,42 +864,45 @@ void DrumInstrumentInit(void)
 void TrackLookupInstrument(struct SoundTrack *track, u8 key, struct InstLookup *out)
 {
     const struct SoundBankHeader *header = gSoundBank;
-        const u8 *bank = SOUND_OFFSET(header->instBanks, track->player->bankMap[track->bank]);
+    const u8 *bank = SOUND_OFFSET(header->instBanks, track->player->bankMap[track->bank]);
     u32 program = track->program * 2;
     const struct SoundInstrument *inst = (const void *)(bank + *(const u16 *)(bank + program));
 
     out->fixedPan = FALSE;
     out->isDrum = FALSE;
-        if (inst->type & 0xF0)
+    if (inst->type & 0xF0)
     {
-    if (inst->type == 0x10)
-    {
-                const u8 *split = bank + inst->arg;
-        u8 i = key - ((const u8 *)inst)[4];
+        if (inst->type == 0x10)
+        {
+            // Key split: {u16 record; u8 pan; u8} per key from the record's byte 4.
+            const u8 *split = bank + inst->arg;
+            u8 i = key - ((const u8 *)inst)[4];
 
-        out->fixedPan = TRUE;
-        out->pan = split[i * 4 + 2];
-        out->inst = (const void *)(bank + *(u16 *)(split + i * 4));
-        out->envelope = (const void *)(bank + out->inst->envelope);
-    }
-    else if (inst->type == 0x11)
-    {
-        const u16 *samples = (const void *)(bank + inst->arg);
+            out->fixedPan = TRUE;
+            out->pan = split[i * 4 + 2];
+            out->inst = (const void *)(bank + *(u16 *)(split + i * 4));
+            out->envelope = (const void *)(bank + out->inst->envelope);
+        }
+        else if (inst->type == 0x11)
+        {
+            // Drum kit: a sample per key, played by gDrumInstrument.
+            const u16 *samples = (const void *)(bank + inst->arg);
 
-        gDrumInstrument.arg = samples[key];
-        out->inst = &gDrumInstrument;
-        out->envelope = gDefaultEnvelope;
-        out->isDrum = TRUE;
-    }
-    else if (inst->type == 0x12)
-    {
-        const u8 *range = bank + inst->arg;
+            gDrumInstrument.arg = samples[key];
+            out->inst = &gDrumInstrument;
+            out->envelope = gDefaultEnvelope;
+            out->isDrum = TRUE;
+        }
+        else if (inst->type == 0x12)
+        {
+            // Key ranges: {u8 top key; u8; u16 record}.
+            const u8 *range = bank + inst->arg;
 
-        while (key > range[0])
-            range += 4;
-        out->inst = (const void *)(bank + *(u16 *)(range + 2));
-                out->envelope = (const void *)(bank + out->inst->envelope);
-    }
+            while (key > range[0])
+                range += 4;
+            out->inst = (const void *)(bank + *(u16 *)(range + 2));
+            out->envelope = (const void *)(bank + out->inst->envelope);
+        }
     }
     else
     {
@@ -1033,7 +1036,7 @@ void SoundCmdNop(u8 arg)
 // VoiceAlloc) until count PCM voices are enabled.
 void SetPcmVoiceCount(u8 count)
 {
-        s8 diff = count - gPcmVoiceCount;
+    s8 diff = count - gPcmVoiceCount;
     struct SoundVoice *voice;
     struct SoundVoice *next;
 
@@ -1042,7 +1045,6 @@ void SetPcmVoiceCount(u8 count)
     if (diff > 0)
     {
         next = gPcmDisabledVoices;
-
         while (next != NULL && diff > 0)
         {
             voice = next;
@@ -1058,7 +1060,7 @@ void SetPcmVoiceCount(u8 count)
         diff = -diff;
         while (diff > 0)
         {
-                        voice = VoiceAlloc(0, 0xFF);
+            voice = VoiceAlloc(0, 0xFF);
             if (voice == NULL)
                 break;
             VoiceListRemove(voice, &gPcmActiveVoices);
@@ -1078,7 +1080,7 @@ u32 PcmVoiceVolume(struct SoundVoice *voice)
 
     if (voice->state == 1)
     {
-                struct SoundTrack *track;
+        struct SoundTrack *track;
         struct SoundPlayer *player;
 
         volume = voice->velocity;
@@ -1103,7 +1105,7 @@ u32 PcmVoiceVolume(struct SoundVoice *voice)
     {
         volume = voice->volume = (voice->release + 0xE6) * voice->volume >> 9;
     }
-        volume >>= 8;
+    volume >>= 8;
     return volume;
 }
 
@@ -1273,7 +1275,7 @@ struct SoundVoice *VoiceAlloc(u8 type, u8 priority)
 
     if (type == 0)
     {
-                if (gPcmFreeVoices != NULL)
+        if (gPcmFreeVoices != NULL)
         {
             voice = gPcmFreeVoices;
         }

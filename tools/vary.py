@@ -35,7 +35,8 @@ def apply(src, func, reps):
         m = re.search(pat, body)
         if not m:
             return None, old
-        body = body[:m.start()] + new + body[m.end():]
+        # The match starts at old's first token, after the line's indentation: drop new's.
+        body = body[:m.start()] + new.lstrip(' \t') + body[m.end():]
     return head + body, None
 
 
