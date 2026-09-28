@@ -175,3 +175,11 @@ can't be displayed never get there. So the GC sends `noMap` = 1 and the GBA wait
 
 So the GC half of the bug is the reconnect path calling `MapNoSet` unconditionally. The GBA
 half is `Mode1State0` trusting `noMap` = 0 to mean a map is already loaded.
+
+**Slow potions in the glitched state.** Effect8 (items 8-10) drops the potion sprite from
+0x30 px above the map view (`bgOfs[3][1]`) to 0x18 px above the player marker at 1 px per
+2 frames (state 4), then flies it back up at 1 px per frame (state 7). With no map loaded,
+the view scroll is stale while the marker is in the new room's coordinates, so the distance
+(and the delay) depends on where Link stands. Measured: 7.8 s + 4.0 s glitched vs 3.1 s +
+1.6 s normal (view y 107, marker y 175: 92 px, 3.07 s predicted). A marker near or above
+the stale view's top edge makes it fast.
