@@ -111,11 +111,11 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `src/file.c .rodata 0xSTART 0xEND` in `splits.txt` places the file's `.rodata` in the shared
 `.rodata` block (see `main.c`).
 
-In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c`,
+In C (no `INCLUDE_ASM` is left in any of these files): `src/main.c`,
 `src/mode1.c`, `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c`,
 `src/heap.c`, `src/libc/rand.c`, and
-the game code from `02018884` to the sound driver (in GZLJ01, 140 of its 141 functions;
-`DrawMapMarkers` is still asm), in five objects: `src/sprite.c`, `src/map.c`,
+the game code from `02018884` to the sound driver (all of it, in every version), in five
+objects: `src/sprite.c`, `src/map.c`,
 `src/message.c`, `src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where
 they do), and `src/sound.c`. These
 and main.c, mode0.c, mode1.c, gba_com.c, multi_sio.c and sound.c define their `.rodata` in C.

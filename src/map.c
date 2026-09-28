@@ -222,33 +222,29 @@ end:
 // (gSpriteTable[type], or a special one), rotated by MapMarker.unk4, plus a highlight ring when
 // unk5_6 is set; last the extra sprite at gGameState.icons[2].x/056. Type 1 (Tingle?) is drawn at
 // half size over a second sprite chosen by unk6; type 3 (Link?) is hidden in some states.
-// Near-miss (GZLJ01): the allocation differs from the marker loop on. The original keeps pal in
-// sl (a register reloaded with 0 every iteration) and spills dx; this C either folds pal to the
-// constant 0 or, as below, keeps it as an int (with a u8 conversion). Also the second
-// `marker->type == 3` test is kept in the original but dropped here. The US builds differ:
-// no pal variable (0 inline, 12 for type 1's unk6 == 3 sprite) and frame 0 for the last sprite.
-// Also: the original's frame is 0x30 (five spill slots at sp+0x1c..0x2c, mosaic at 0x28);
-// this C gets 0x2c (four, mosaic at 0x1c), so the spilled locals differ too (not tried further).
-// The original's five slots are i (0x1c), dx as a zero-extended u16 (0x20), scale (0x24),
-// mosaic (0x28) and dy << 16 (0x2c). The kept second `type == 3` test compares the same
-// register (the `& 0x3F` type) as the first, so it is not a reload: writing one of the two as
-// gGameState.markers[i].type keeps the test but reloads the field (422 lines, 0x14 bigger).
-// Round 3: cse1 deletes the second type == 3 test (jump equivalence; the loop body starts a new
-// cse block, so the 1000-insn table flush is not it). A `u8 pal` set after the continue checks
-// stays in the loop (loop.c keeps a user variable's maybe-never set), but it is set once, so it
-// gets a REG_EQUIV 0 and, left without a hard reg (18 refs over ~1400 insns), reload puts the
-// constant back: the original gives pal a register, so the priorities still differ. Worse:
-// u8/u16/s32 pal set at the loop top or with scale, late-folding zeros (`marker->type >> 6`).
-/*
+// Matching notes: every local is declared at the top in this order, which gives the original's
+// spill slots (i, dx, scale, mosaic, then the dy << 16 temp). The original compares the type
+// twice (`type == 3 ... type == 3`); cse deletes the second test for any C form that yields the
+// same value, so `type` is a hard-register variable (FAKEMATCH): cse records no equivalences
+// for non-fixed hard registers. It is copied from `t` after the continue checks so that
+// local-alloc ties the 0x3F constant to `t` (`movs r2, #0x3f; ands r2, r0`). The icon at the end
+// reuses dx/dy, which settles the global-alloc ties (JP: dy before the highlight call's zero
+// constant, so dy gets r2 and dx's copy r6; US: mosaic, not dx, gets sl). US passes 12 for type
+// 1's unk6 == 3 sprite and frame 0 for the icon; its pal is set but never gets a register.
 #define SPRITE_FRAMES(p) ((const struct SpriteFrame *)(p))
 
 void DrawMapMarkers(void)
 {
     struct MapMarker *marker = gGameState.markers;
-    u8 mosaic = gMain.mosaic != 0;
     s32 i;
     const struct SpriteFrame *frames;
-    s32 pal = 0;
+    u8 frame;
+    s16 dx;
+    u16 scale;
+    s16 dy;
+    u8 pal2;
+    u8 pal;
+    u8 mosaic = gMain.mosaic != 0;
 
     ObjUpdateAll();
     if (gGameState.unk22B)
@@ -390,18 +386,16 @@ void DrawMapMarkers(void)
     }
 
     gGameState.unk1F5 = 0;
-    for (i = 0; i < gGameState.markerCount; i++, marker++)
+    for (i = 0; i < gGameState.markerCount; marker++, i++)
     {
-        u8 frame;
-        u16 scale;
-        s16 dx;
-        s16 dy;
-        u8 pal2;
+        register u32 type asm("r2");  // FAKEMATCH
+        u32 t = 0x3F & ((u8 *)marker)[5];
 
-        if (marker->type == 0 || marker->type > 21)
+        if (t == 0 || marker->type > 21)
             continue;
+        type = t;
         scale = 0;
-        if (!gGameState.unk1E5_1 && marker->type == 3 && gGameState.unk121 == 0 && marker->type == 3)
+        if (!gGameState.unk1E5_1 && type == 3 && gGameState.unk121 == 0 && type == 3)
         {
             if (!gGameState.unk1E5_2)
                 continue;
@@ -429,7 +423,11 @@ void DrawMapMarkers(void)
             else if (marker->unk6 == 2)
                 DrawSpriteAt(gSprite_0202C448, gGameState.unk126, dx, dy, mosaic, pal, 1);
             else if (marker->unk6 == 3)
+#ifdef VERSION_GZLJ01
                 DrawSpriteAt(gSprite_0202C4A8, gGameState.unk12A, dx, dy, mosaic, pal, 1);
+#else
+                DrawSpriteAt(gSprite_0202C4A8, gGameState.unk12A, dx, dy, mosaic, 12, 1);
+#endif
             else if (marker->unk6 == 4)
                 DrawSpriteAt(gSprite_0202C498, gGameState.unk128, dx, dy, mosaic, pal, 1);
             scale = 0x80;
@@ -500,19 +498,22 @@ void DrawMapMarkers(void)
         }
         else if (marker->type == 16)
         {
-            if ((gGameState.unk026 >> marker->unk6) & 1)
+            if (!((gGameState.unk026 >> marker->unk6) & 1))
             {
-                frame = gGameState.unk116;
-            }
-            else if (gGameState.unk11B == 16 && gGameState.unk119 == i)
-            {
-                frames = SPRITE_FRAMES(gSpriteTable[7]);
-                frame = 0;
+                if (gGameState.unk11B == 16 && gGameState.unk119 == i)
+                {
+                    frames = SPRITE_FRAMES(gSpriteTable[7]);
+                    frame = 0;
+                }
+                else
+                {
+                    frames = gSprite_0202C130;
+                    frame = 1;
+                }
             }
             else
             {
-                frames = gSprite_0202C130;
-                frame = 1;
+                frame = gGameState.unk116;
             }
         }
         else if (marker->type == 5)
@@ -561,9 +562,10 @@ void DrawMapMarkers(void)
         if (marker->unk5_6)
         {
             gGameState.unk1F5 = marker->type == 2 ? 1 : 0;
-            pal2 = 2;
             if (marker->unk5_6 == 1)
                 pal2 = 3;
+            else
+                pal2 = 2;
             DrawSprite(gSprite_0202BE28, 0, dx, dy - 8, marker->unk4 + 0x80, mosaic, 0, 0, 0, pal, pal2 + 1);
         }
         DrawSprite(frames, frame, dx, dy, marker->unk4 + 0x80, mosaic, scale, 0, 0, pal, 0);
@@ -571,15 +573,17 @@ void DrawMapMarkers(void)
 
     if (gMain.unk457 == 0 && gGameState.unk224 == 0 && gGameState.icons[2].type != 0)
     {
-        s16 x = gGameState.icons[2].x - gMain.bgOfs[3][0];
-        s16 y = gGameState.icons[2].y - gMain.bgOfs[3][1];
+        dx = gGameState.icons[2].x - gMain.bgOfs[3][0];
+        dy = gGameState.icons[2].y - gMain.bgOfs[3][1];
 
-        if ((u16)(x + 0x40) <= 0xFF && (u16)(y + 0x40) <= 0xFF)
-            DrawSpriteAt(gSprite_0202C200, gGameState.icons[2].frame, x, y, mosaic, 0, 1);
+        if ((u16)(dx + 0x40) <= 0xFF && (u16)(dy + 0x40) <= 0xFF)
+#ifdef VERSION_GZLJ01
+            DrawSpriteAt(gSprite_0202C200, gGameState.icons[2].frame, dx, dy, mosaic, 0, 1);
+#else
+            DrawSpriteAt(gSprite_0202C200, 0, dx, dy, mosaic, 0, 1);
+#endif
     }
 }
-*/
-INCLUDE_ASM(DrawMapMarkers);
 
 // Highlight the rooms on the four BG map blocks at 0x0600C000 (one room each, gGameState.seaSquare):
 // clear the palette bits of the block showing marker 1's room, then set palette bit 1 (|= 0x2000)
