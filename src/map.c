@@ -932,6 +932,29 @@ void UpdateMapView(void)
 #define FLOOR_EDGE_TILE 0x01
 #endif
 
+// The floor box: a letter (two tiles, top and bottom) and a digit. US and English put the
+// letter 0xE05C before a basement's digit and 0xE05E after an upper floor's. The other PAL
+// languages give floor 1, the ground floor, tiles of its own and count the floors above it
+// from 1 (presumably "EG", "RC", "PB", "PT"); German puts 0xE05E before a basement's digit and
+// 0xE05C before an upper floor's, French the letter after a basement's digit.
+#if PAL_LANGUAGE == 1
+#define FLOOR_BASEMENT_TILE 0xE05E
+#else
+#define FLOOR_BASEMENT_TILE 0xE05C
+#endif
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+#define FLOOR_GROUND_TILES ((const u16 []){0xE06F, 0xE07F, 0xE089, 0xE099})
+#elif PAL_LANGUAGE == 3
+#define FLOOR_GROUND_TILES ((const u16 []){0xE05E, 0xE05F, 0xE06F, 0xE07F})
+#elif PAL_LANGUAGE == 4
+#define FLOOR_GROUND_TILES ((const u16 []){0xE05E, 0xE05F, 0xE073, 0xE074})
+#endif
+#if PAL_LANGUAGE >= 1 && PAL_LANGUAGE <= 4
+#define FLOOR_FIRST 1  // the ground floor is 1, and floor 2 shows as "1"
+#else
+#define FLOOR_FIRST 0
+#endif
+
 // Draw the dungeon floor number next to the map (blank outside dungeons or with no floor).
 void DrawFloorNumber(void)
 {
@@ -963,17 +986,40 @@ void DrawFloorNumber(void)
         {
             u8 n = ~floor * 2 + 2;  // -floor * 2
 
-            map[0x21] = 0xE05C;
-            map[0x41] = 0xE05D;
+#if PAL_LANGUAGE == 2
+            map[0x21] = n + 0xE030;
+            map[0x41] = n + 0xE031;
+            map[0x22] = 0xE05C;
+            map[0x42] = 0xE05D;
+#else
+            map[0x21] = FLOOR_BASEMENT_TILE;
+            map[0x41] = FLOOR_BASEMENT_TILE + 1;
             map[0x22] = n + 0xE030;
             map[0x42] = n + 0xE031;
+#endif
         }
+#if PAL_LANGUAGE >= 1 && PAL_LANGUAGE <= 4
+        else if (gGameState.mapImage->floor == 1)
+        {
+            map[0x21] = FLOOR_GROUND_TILES[0];
+            map[0x41] = FLOOR_GROUND_TILES[1];
+            map[0x22] = FLOOR_GROUND_TILES[2];
+            map[0x42] = FLOOR_GROUND_TILES[3];
+        }
+#endif
         else
         {
-            map[0x21] = gGameState.mapImage->floor * 2 + (s16)0xE030;
-            map[0x41] = gGameState.mapImage->floor * 2 + (s16)0xE031;
+#if PAL_LANGUAGE == 1
+            map[0x21] = 0xE05C;
+            map[0x41] = 0xE05D;
+            map[0x22] = (gGameState.mapImage->floor - 1) * 2 + (s16)0xE030;
+            map[0x42] = (gGameState.mapImage->floor - 1) * 2 + (s16)0xE031;
+#else
+            map[0x21] = (gGameState.mapImage->floor - FLOOR_FIRST) * 2 + (s16)0xE030;
+            map[0x41] = (gGameState.mapImage->floor - FLOOR_FIRST) * 2 + (s16)0xE031;
             map[0x22] = 0xE05E;
             map[0x42] = 0xE05F;
+#endif
         }
     }
 }
