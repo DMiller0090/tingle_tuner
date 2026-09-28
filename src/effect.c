@@ -623,7 +623,13 @@ void Func_0201F8C4(s16 x, s16 y, u8 kind)
 // store_bit_field as (and mem 0), which folds to 0 and finds unk132's register in the jump
 // equivalence. Tried: !x, <1, u32/s8 casts, a local or pointer for unk132, != with swapped arms,
 // switch, goto, volatile/bitfield/cast stores to unk120, storing unk1FA or unk132*0, the unk1FA
-// test written other ways, a temp reassigned to 8 before the store:
+// test written other ways, a temp reassigned to 8 before the store. The cse1 dump shows the
+// store as (subreg:QI (reg:SI unk132)): the jump equivalence is SImode and cse's narrower-mode
+// constant lookup finds it; any u8 field store of 0 after `== 0` does this (a two-field test
+// file gives `strb r0` from the tested reg). Also tried (2026-09-28): while/for/do-while/switch/
+// goto forms, the test as & 0xFF, << 24, u16/s16 casts, + 1 == 1, == unk1FA, (x == 0) == 1;
+// storing idx >> 8, effect[0] >> 8, & 0x100 (cse or combine doesn't fold them to a fresh 0);
+// `s32 z = unk132 == 0; if (z)` does give a fresh `movs #0` but keeps a real scc sequence:
 //     void Effect8(void)
 //     {
 //         struct Main *main = &gMain;

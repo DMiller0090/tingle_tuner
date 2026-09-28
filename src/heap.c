@@ -27,6 +27,13 @@ void HeapInit(struct Heap *heap, u32 size)
 // and total to r3 as in the original; avail still takes r2 (the original's avail must
 // conflict with an r2 pseudo, maybe the `& 3` constant). Temporaries for `total - need`, the
 // avail if/else forms and the align-split forms don't help.
+// greg (2026-09-28): avail (pseudo 45) doesn't conflict with rest (93, r2), so it takes r2
+// after len r1 / rest r2 / total r3. In the original's align split, block + 1 is in r1 and
+// copied to r2 (`adds r2, r1, #0`) before `total - 2`; that r2 copy lives while the old avail
+// is still live (the `need <= total - 2` test can fall to `need <= avail`), which is what
+// would push avail to r4 and block to r5. Tried to get that copy: a `u16 *b = block + 1`
+// local before/after the & 3 test, a `t = total - 2` temp, `*block++ = 0`, `avail = total
+// -= 2`, `((u32)block + 2) & 3`, `(u8 *)block + 2`: all 112 lines.
 //     void *HeapAlloc(struct Heap *heap, u32 size)
 //     {
 //         bool32 align4 = FALSE;
