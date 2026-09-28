@@ -99,7 +99,7 @@ See the enum in `include/gba_com.h`. The GBA receive buffer per slot is `gGbaCom
 | 0 message | GC->GBA | `uploadConnect`: `msg_LZ.bin` | `0200A000` (0xA000) |
 | 1 control | GC->GBA | `dMap_c`, `modeDelete` | `02014130` |
 | 2 map image | GC->GBA | `dMap_c` room map | `0200A000` (shared with 0) |
-| 3 | GC->GBA? | never sent | `02014000` (0x100) |
+| 3 markers | GC->GBA | `dMap_c::mapBufferSendAGB_commonCursor` (map points) | `02014000` (0x100) |
 | 4 GbaFlg | GBA->GC | `daAgb_c::FlagsRecv` | `02014100` |
 | 5 mail | GC->GBA | `daAgbsw0_c` | `02014110` |
 | 6 item | GBA->GC | `daAgb_c::GbaItemUse` | `02014140` |
@@ -107,33 +107,45 @@ See the enum in `include/gba_com.h`. The GBA receive buffer per slot is `gGbaCom
 | 8 switch | GBA->GC | `daAgb_c::SwitchOn` | `02014120` |
 | 9 flags | GC->GBA | `daAgb_c::FlagsSend` (12 bytes) | `02014160` |
 | 10 name | GC->GBA | player name (8 bytes) | `02014170` |
-| 11 | GC->GBA? | never sent | `02014180` |
+| 11 visited | GC->GBA | `dMap_c::mapBufferSendAGB_ocean` (8 bytes) | `02014180` |
 | 12 shop | GBA->GC | `daAgb_c::Shopping` | `02014290` |
 | 13 item buy | GC->GBA | reply to 12 | `020142A0` |
-| 14 | GC->GBA? | never sent | `02014190` (0x100) |
+| 14 chart points | GC->GBA | `dMap_c::mapAGBSendIslandData` (0xC4 bytes) | `02014190` (0x100) |
 | 15 SE | GC->GBA | `daAgbsw0_c` bomb SE | `020142B0` |
 
-Slots 3, 11 and 14 have GBA handlers, but no `mDoGac_SendDataSet`/`mDoGaC_SendEntry` in the
-TWW decomp uses them, so they look like leftovers of cut features.
+Slots 3, 11 and 14 come from `d_map.cpp` functions that are still asm (`/* Nonmatching */`) in
+the TWW decomp, so a search of its C for `mDoGac_SendDataSet` misses them (read
+`build/GZLJ01/asm/d/d_map.s`). `daAgb_c::uploadConnect` sends 14 right after the name (10);
+`dScnPlay`'s draw calls `dMap_c::mapBufferSendAGB(3)` every frame outside the menu, which sends
+3 (`mapBufferSendAGB_ocean` or `_dungeon`, both through `_commonCursor`; `_dungeon` only once
+the map image went out, `mAGBMapSendStatus` 4) and on the sea also 11.
 
-- **3** is the map-marker list, and it is copied: `Mode1RecvMarkers` (`020160C8`) takes a count
-  byte, one more byte (`gGameState.gcActive`, which also drives `active`), then 8-byte markers
-  (`struct MapMarker`: `x`, `y`, a 6-bit `type` at +5) into `gGameState.markers`. It looks up
-  the type-1 marker, and if the high byte of its x or y changed it resets a set of game-state fields
-  (the US builds test the new position against `0x6FF` where JP tests the old one).
+- **3** is the map-marker list (`mAgbSendBuf`), and it is copied: `Mode1RecvMarkers`
+  (`020160C8`) takes a count byte, the GC's `agbIsActive()` (`gGameState.gcActive`, which also
+  drives `active`), then 8-byte markers (`struct MapMarker`) into `gGameState.markers`. The GC
+  builds them in `setGbaPoint_ocean`/`_dungeon`: `x`, `y` (byte-swapped), the angle's high byte,
+  the type (6 bits; enemies add a 2-bit highlight), then two bytes of the point (`param` and
+  `gbaName`). Marker 0 is the player (type 1), marker 1 the Tingle Tuner cursor (type 3; without
+  a cursor point, a copy of the player's), then up to 14 others. `Mode1RecvMarkers` looks up the
+  player's marker, and if the high byte of its x or y changed (Link entered another sea chart
+  square) it resets the examined flags, the selection and the pending switch record, and
+  schedules the square's name (`squareMsgPending`; the US builds test the new position against
+  `0x6FF` where JP tests the old one).
   `Mode0State3` waits for slot 3 before starting mode 1. `MainMode1` calls the handler each frame
   the slot has data, except in state 4 (`Mode1State4` calls it itself) and while a map change is
   pending; when it starts the fade out for a map change it resets slot 3 unread.
 - **14** is a boot-time payload: `Mode0State3` copies 0xC4 bytes of it to IWRAM `0x03002FB0`
-  (`gSlot14Data`): 49 `struct SeaChartEntry` `{x, y, big, square}`, one spot per sea chart
-  square (`square` = row * 7 + column). `HighlightMapRooms` marks each spot of the rooms shown
-  (2x2 tiles, 4x4 when `big`; square 25 only once `flags.towerRaised` is set), `MapIconCursor`
-  names the square under the cursor, and `UpdateSelection` checks whether the player marker is
-  within 8 pixels of its square's spot (32 when `big`). `MainMode1` doesn't touch it.
-- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.visitedSquares`) and reset: a
-  7x7 bitmap, one bit per sea chart square. `DarkenUnvisitedSquares` draws squares whose bit is clear
-  darkened (palette 6), `MapIconCursor` only names a square whose bit is set, and
-  `UpdateChartOverlay` tests square 25 for one map tile. It looks like the "charted" squares.
+  (`gChartPoints`): 49 `struct SeaChartEntry` `{x, y, big, square}`, one spot per sea chart
+  square (`square` = row * 7 + column), from the stage's fmap check points.
+  `HighlightMapRooms` marks each spot of the rooms shown (2x2 tiles, 4x4 when `big`; square 25,
+  the Tower of the Gods, only once `flags.towerRaised` is set), `MapIconCursor` names the square
+  under the cursor, and `UpdateSelection` checks whether the cursor's marker is within 8 pixels
+  of its square's spot (32 when `big`). `MainMode1` doesn't touch it.
+- **11** is copied by `MainMode1` (8 bytes, `CpuCopy16` to `gGameState.visitedSquares`) and
+  reset: a 7x7 bitmap, one bit per sea chart square. `DarkenUnvisitedSquares` draws squares
+  whose bit is clear darkened (palette 6), `MapIconCursor` only names a square whose bit is set, and
+  `UpdateChartOverlay` tests square 25 for one map tile. The GC sets bit n when
+  `dComIfGs_isSaveArriveGridForAgb(n)`: the squares Link has arrived at.
 
 In GZLE01 each buffer sits at the same offset from `prog_base`: `0x02010800` for slots 0/2
 and `0x0201A800 + (JP address - 0x02014000)` for the rest.
@@ -146,7 +158,7 @@ Two sides gate a Tingle Tuner item:
   (by `MapNoSet`, from the map code; cleared when the actor is created) and the stage type is
   dungeon, FF1, miniboss or sea. While it is 1, `MainMode1` fades out of the map screen and
   `Mode1State4` waits (key presses play the blocked sound). `MainLoop` sends
-  `GbaFlg.unk3 = 1` ("active") only in mode 1 state 2 with no message or menu open. The GC
+  `GbaFlg.active = 1` only in mode 1 state 2 with no message or menu open. The GC
   copies it to `field_0x673`, and `modeMove` calls `GbaItemUse` only when `isActive()` (or
   for item `0x15`). On a relink the GBA goes through mode 2 to `Mode1State0`, which keeps
   the old map (`mapLoaded = 1`) when `noMap` is 0.

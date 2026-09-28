@@ -150,7 +150,7 @@ CopyMapRow = 0x020192D8; // thumb
 ScrollMap = 0x02019350; // thumb
 // animate and draw the map markers (gGameState.markers) and the gGameState.icons[2] sprite
 DrawMapMarkers = 0x02019510; // thumb
-// on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gSlot14Data spots
+// on the room map blocks at 0x0600C000: clear marker 1's room's palette, highlight gChartPoints spots
 HighlightMapRooms = 0x02019CAC; // thumb
 // move the view toward marker type 3 (else 1), 16 px per frame at most: BG2/BG3 offsets, clamped to -8..0x680
 FollowMarkerFixedMap = 0x02019F5C; // thumb
@@ -726,7 +726,7 @@ gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
 // slot 14 payload (49 struct SeaChartEntry {x, y, big, square}), copied by Mode0State3; read by HighlightMapRooms, MapIconCursor, UpdateSelection
-gSlot14Data = 0x03002FB0; // data
+gChartPoints = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 // sound driver work area (030010F0-03002F64), see docs/layout.md "Sound driver"
 // u16[19]: SoundPlay id per player (0xFFFF none); u8[19]: set by SoundPlay until the next SoundMain
@@ -780,7 +780,7 @@ gSoundPlayers = 0x030029C4; // data
 
 // ---- EWRAM below the program: link receive buffers (gGbaComBuffers) ----
 gGbaComMessageBuf = 0x0200A000; // data
-gGbaComBuf3 = 0x02014000; // data
+gGbaComBufMarkers = 0x02014000; // data
 gGbaComBufGbaFlg = 0x02014100; // data
 gGbaComBufMail = 0x02014110; // data
 gGbaComBufSwitch = 0x02014120; // data
@@ -789,8 +789,8 @@ gGbaComBufItem = 0x02014140; // data
 gGbaComBufEffect = 0x02014150; // data
 gGbaComBufFlags = 0x02014160; // data
 gGbaComBufName = 0x02014170; // data
-gGbaComBuf11 = 0x02014180; // data
-gGbaComBuf14 = 0x02014190; // data
+gGbaComBufVisited = 0x02014180; // data
+gGbaComBufChartPoints = 0x02014190; // data
 gGbaComBufShop = 0x02014290; // data
 gGbaComBufItemBuy = 0x020142A0; // data
 gGbaComBufSE = 0x020142B0; // data

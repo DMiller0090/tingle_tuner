@@ -155,4 +155,3 @@ and so is the sound bank's format (see "Sound driver" and "Raw tail block" there
   layout.md).
 - Whether the US message data renumbered its `F6` voice-clip codes; if not, the US lost an
   entry of `gMsgSoundIds` without adjusting `PlayMsgSound` (layout.md, sound IDs).
-- What slots 3, 11 and 14 were for; no GC code sends them (see protocol.md).

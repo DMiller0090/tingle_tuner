@@ -590,7 +590,7 @@ void DrawMapMarkers(void)
 
 // Highlight the rooms on the four BG map blocks at 0x0600C000 (one room each, gGameState.seaSquare):
 // clear the palette bits of the block showing marker 1's room, then set palette bit 1 (|= 0x2000)
-// on a 2x2 or 4x4 tile square around every gSlot14Data entry in each block's room. Room 0x19's
+// on a 2x2 or 4x4 tile square around every gChartPoints entry in each block's room. Room 0x19's
 // entries only show once flags.towerRaised is set.
 #define CLEAR_PAL(p) (*(p) &= 0x1FFF, (p)++)
 #define CLEAR_PAL_4(p) CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p)
@@ -630,7 +630,7 @@ void HighlightMapRooms(void)
             continue;
         for (j = 0; j <= 0x30; j++)
         {
-            struct SeaChartEntry *e = &gSlot14Data[j];
+            struct SeaChartEntry *e = &gChartPoints[j];
 
             if (gGameState.seaSquare[i] == e->square)
             {
@@ -1365,7 +1365,7 @@ void MapIconCursor(struct MapIcon *icon)
     {
         for (i = 0; i < 49; i++)
         {
-            if (gSlot14Data[i].square == square)
+            if (gChartPoints[i].square == square)
             {
                 if (square == 25 && !gGameState.flags.towerRaised)
                 {
@@ -1376,7 +1376,7 @@ void MapIconCursor(struct MapIcon *icon)
                     if (square == 32 && gGameState.flags.hasCabanaDeed)
                         ShowMessage(0x13E, 1);
                     else
-                        ShowMessage(0x14E + gSlot14Data[i].square, 1);
+                        ShowMessage(0x14E + gChartPoints[i].square, 1);
 #ifndef VERSION_GZLJ01
                     gGameState.msgWaitTimer = 0;
 #endif
@@ -1702,27 +1702,27 @@ s32 UpdateSelection(void)
         square = (gGameState.markers[player].x >> 8) + (gGameState.markers[player].y >> 8) * 7;
         for (i = 0; i < 49; i++)
         {
-            if (gSlot14Data[i].square != square)
+            if (gChartPoints[i].square != square)
                 continue;
             if (square == 25 && !gGameState.flags.towerRaised)
                 return 0;
-            if (gSlot14Data[i].big)
+            if (gChartPoints[i].big)
             {
-                ex = (gSlot14Data[i].x - 16) & 0xF8;
-                ey = (gSlot14Data[i].y - 16) & 0xF8;
+                ex = (gChartPoints[i].x - 16) & 0xF8;
+                ey = (gChartPoints[i].y - 16) & 0xF8;
                 r = 32;
             }
             else
             {
-                ex = gSlot14Data[i].x - 8;
-                ey = gSlot14Data[i].y - 8;
+                ex = gChartPoints[i].x - 8;
+                ey = gChartPoints[i].y - 8;
                 r = 8;
             }
             if ((u8)(gGameState.markers[player].x - ex) > r)
                 continue;
             if ((u8)(gGameState.markers[player].y - ey) > r)
                 continue;
-            gGameState.selectedSquare = gSlot14Data[i].square + 1;
+            gGameState.selectedSquare = gChartPoints[i].square + 1;
             gGameState.selection = 1;
             return 0;
         }

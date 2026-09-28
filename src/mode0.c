@@ -155,13 +155,13 @@ void Mode0State2(void)
     {
         if (gGameState.flags.dungeonNo == 0)
         {
-            if (GbaComRecvStatusCheck(GBACOM_SLOT_NAME) && GbaComRecvStatusCheck(GBACOM_SLOT_14))
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_NAME) && GbaComRecvStatusCheck(GBACOM_SLOT_CHART_POINTS))
                 gMain.modeState++;
         }
         else
         {
             if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE) && GbaComRecvStatusCheck(GBACOM_SLOT_NAME)
-             && GbaComRecvStatusCheck(GBACOM_SLOT_14))
+             && GbaComRecvStatusCheck(GBACOM_SLOT_CHART_POINTS))
             {
                 gGameState.mapLoaded = 1;
                 LoadMapImage();
@@ -189,11 +189,11 @@ void Mode0State3(void)
         gGameState.mapLoaded = 0;
         GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
     }
-    if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
     {
         Mode1RecvMarkers();
         GbaComRecvDataGet(gGameState.playerName, GBACOM_SLOT_NAME, sizeof(gGameState.playerName));
-        GbaComRecvDataGet(gSlot14Data, GBACOM_SLOT_14, sizeof(gSlot14Data));
+        GbaComRecvDataGet(gChartPoints, GBACOM_SLOT_CHART_POINTS, sizeof(gChartPoints));
         gMain.mode = 1;
         gMain.modeState = 0;
         gGameState.mapLoaded = 1;
@@ -209,7 +209,7 @@ void Mode0State3(void)
     {
         SoundPlayLoop(5, 5, 0);
     }
-    if (GbaComCheckDataStatus(GBACOM_SLOT_3, GBACOM_STATUS_IDLE))
+    if (GbaComCheckDataStatus(GBACOM_SLOT_MARKERS, GBACOM_STATUS_IDLE))
     {
         if (--gMode0Work.linkTimeout == 0)
         {

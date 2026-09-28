@@ -622,7 +622,7 @@ void Mode1State3(void)
 // The US builds check the new marker position instead of the old one.
 void Mode1RecvMarkers(void)
 {
-    u8 count = GBACOM_BUF_3[0];
+    u8 count = GBACOM_BUF_MARKERS[0];
     u8 *m;
     s32 i;
     s32 j;
@@ -633,11 +633,11 @@ void Mode1RecvMarkers(void)
 
     if (gMain.mode == 1)
     {
-        if (GBACOM_BUF_3[1] != 0)
+        if (GBACOM_BUF_MARKERS[1] != 0)
         {
             // Both searches' results are unused. (do/while (1): a for or while loop
             // gets its exit test copied to the bottom, the original's doesn't.)
-            m = GBACOM_BUF_3 + 2;
+            m = GBACOM_BUF_MARKERS + 2;
             j = 0;
             do
             {
@@ -658,7 +658,7 @@ void Mode1RecvMarkers(void)
         {
             s16 x;
 
-            m = GBACOM_BUF_3 + 2;
+            m = GBACOM_BUF_MARKERS + 2;
             j = 0;
             do
             {
@@ -707,8 +707,8 @@ void Mode1RecvMarkers(void)
             }
         }
     }
-    gGameState.markerCount = GBACOM_BUF_3[0];
-    gGameState.gcActive = GBACOM_BUF_3[1];
+    gGameState.markerCount = GBACOM_BUF_MARKERS[0];
+    gGameState.gcActive = GBACOM_BUF_MARKERS[1];
     if (gGameState.flags.busy)
         gGameState.active = 0;
     else if (gGameState.gcActive == 0)
@@ -716,7 +716,7 @@ void Mode1RecvMarkers(void)
         if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0)
             gGameState.active = 1;
         else
-            gGameState.active = GBACOM_BUF_3[1];
+            gGameState.active = GBACOM_BUF_MARKERS[1];
     }
     else
     {
@@ -725,16 +725,16 @@ void Mode1RecvMarkers(void)
     if (gGameState.flags.isFree || gGameState.selection)
     {
         // The first two markers swap places.
-        CpuCopy16(&GBACOM_BUF_3[2], &gGameState.markers[1], 8);
-        CpuCopy16(&GBACOM_BUF_3[10], &gGameState.markers[0], 8);
+        CpuCopy16(&GBACOM_BUF_MARKERS[2], &gGameState.markers[1], 8);
+        CpuCopy16(&GBACOM_BUF_MARKERS[10], &gGameState.markers[0], 8);
         if (gGameState.markerCount > 2)
-            CpuCopy16(&GBACOM_BUF_3[18], &gGameState.markers[2], (gGameState.markerCount - 2) * 8);
+            CpuCopy16(&GBACOM_BUF_MARKERS[18], &gGameState.markers[2], (gGameState.markerCount - 2) * 8);
     }
     else
     {
-        CpuCopy16(&GBACOM_BUF_3[2], gGameState.markers, gGameState.markerCount * 8);
+        CpuCopy16(&GBACOM_BUF_MARKERS[2], gGameState.markers, gGameState.markerCount * 8);
     }
-    GbaComDataStatusReset(GBACOM_SLOT_3);
+    GbaComDataStatusReset(GBACOM_SLOT_MARKERS);
 }
 
 // Reset the per-map state (Mode1State4 after a map change). The object loop counts up: agbcc
@@ -796,7 +796,7 @@ void Mode1State4(void)
             SoundPlay(SE_KEY_BLOCKED, 0);
         if (gGameState.flags.restarting)
         {
-            if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                 Mode1RecvMarkers();
         }
         else if (!(gGameState.flags.busy & 2))  // no event running
@@ -808,11 +808,11 @@ void Mode1State4(void)
                 {
                     if (gGameState.markerDelay != 0)
                     {
-                        if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                        if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                             Mode1RecvMarkers();
                         gGameState.markerDelay--;
                     }
-                    else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                    else if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                     {
                         if (GbaComRecvStatusCheck(GBACOM_SLOT_MAP_IMAGE))
                             GbaComDataStatusReset(GBACOM_SLOT_MAP_IMAGE);
@@ -836,11 +836,11 @@ void Mode1State4(void)
             {
                 if (gGameState.markerDelay != 0)
                 {
-                    if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                    if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                         Mode1RecvMarkers();
                     gGameState.markerDelay--;
                 }
-                else if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
+                else if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
                 {
                     Mode1RecvMarkers();
                     gMain.mapImageMode = gMain.inDungeon;
@@ -1047,11 +1047,11 @@ void MainMode1(void)
                 if (gGameState.menuOpen)
                     gGameState.menuOpen = 0;
             }
-            if (GbaComRecvStatusCheck(GBACOM_SLOT_3))
-                GbaComDataStatusReset(GBACOM_SLOT_3);
+            if (GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
+                GbaComDataStatusReset(GBACOM_SLOT_MARKERS);
         }
     }
-    else if (gMain.modeState != 4 && GbaComRecvStatusCheck(GBACOM_SLOT_3))
+    else if (gMain.modeState != 4 && GbaComRecvStatusCheck(GBACOM_SLOT_MARKERS))
     {
         Mode1RecvMarkers();
     }
@@ -1208,10 +1208,10 @@ void MainMode1(void)
     }
 
     // Slot 11: 8 bytes to visitedSquares.
-    if (GbaComRecvStatusCheck(GBACOM_SLOT_11))
+    if (GbaComRecvStatusCheck(GBACOM_SLOT_VISITED))
     {
-        CpuCopy16(GBACOM_BUF_11, gGameState.visitedSquares, 8);
-        GbaComDataStatusReset(GBACOM_SLOT_11);
+        CpuCopy16(GBACOM_BUF_VISITED, gGameState.visitedSquares, 8);
+        GbaComDataStatusReset(GBACOM_SLOT_VISITED);
     }
 
     if (gMain.modeState == 2)

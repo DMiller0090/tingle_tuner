@@ -456,7 +456,7 @@ extern struct GameState gGameState;
 // EWRAM below the program: per-line BG0HOFS tables that VBlankIntr's HBlank DMA reads
 // (gGameState.scrollTable picks one).
 extern u16 gBgScrollTables[][160];
-// The same tables by constant address, as the game code addresses them (see GBACOM_BUF_3).
+// The same tables by constant address, as the game code addresses them (see GBACOM_BUF_MARKERS).
 #define BG_SCROLL_TABLE_0 ((u16 *)(PROG_BASE - 0x4C0))
 #define BG_SCROLL_TABLE_1 ((u16 *)(PROG_BASE - 0x380))
 
@@ -528,18 +528,20 @@ struct Mode0Work
 
 extern struct Mode0Work gMode0Work;
 
-// One entry of the slot 14 data: an island or other named place on the sea chart.
+// One entry of the slot 14 data: the point of one sea chart square (its island), which the
+// GC's dMap_c::mapAGBSendIslandData builds from the stage's fmap check points
+// (mFmapChkPntData); unused entries are {0, 0, 0, 0xFF}.
 struct SeaChartEntry
 {
-    /*0x0*/ u8 x;       // pixels within its square?
+    /*0x0*/ u8 x;       // pixels within its square
     /*0x1*/ u8 y;
     /*0x2*/ u8 big;     // UpdateSelection: within 32 pixels (on an 8-pixel grid) rather than 8
-    /*0x3*/ u8 square;  // sea chart square (row * 7 + column); its name sound is 0x14E + square
+    /*0x3*/ u8 square;  // sea chart square (row * 7 + column); its name message is 0x14E + square
 };
 
 // Slot 14 data (IWRAM 0x03002FB0), received once at boot by Mode0State3: one entry per
 // sea chart square.
-extern struct SeaChartEntry gSlot14Data[49];
+extern struct SeaChartEntry gChartPoints[49];
 
 #ifndef VERSION_GZLJ01
 void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);
