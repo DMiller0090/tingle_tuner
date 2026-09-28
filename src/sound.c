@@ -87,7 +87,7 @@ struct SoundCmd
 };
 
 typedef void (*SoundSeqHook)(void *track, u8 arg);  // sequence command CA
-typedef void (*SoundNoteHook)(void *voice);         // notes of players with flags bit 0
+typedef void (*SoundNoteHook)(void *track, u8 key, u8 velocity, u32 length);  // notes of players with flags bit 0
 
 extern SoundNoteHook gSoundNoteHook;
 extern SoundSeqHook gSoundSeqHook;
@@ -340,6 +340,8 @@ extern const struct SoundBankHeader *gSoundBank;
 void TrackStop(struct SoundTrack *track);
 void TrackSetBank(struct SoundTrack *track, u32 bank);
 u8 TrackExecute(struct SoundTrack *track);
+void TrackNoteOn(struct SoundTrack *track, u8 key, u8 velocity, u32 length);
+u32 TrackReadVarLen(struct SoundTrack *track);
 void VoiceNoteOff(struct SoundVoice *voice);
 void PlayerStop(u32 index);
 void PlayerStartSongData(u32 index, const void *song, const void *bankMap);
@@ -1608,7 +1610,205 @@ void TrackStop(struct SoundTrack *track)
     }
 }
 
-INCLUDE_ASM(TrackExecute);
+// One frame of a track: run its byte code (docs/layout.md) until it waits, then count the
+// wait down by the player's tempo. Returns 0 while playing, 1 without a track or player, 2
+// when it ended (FF with an empty call stack). Jump offsets are little-endian u16s.
+u8 TrackExecute(struct SoundTrack *track)
+{
+    struct SoundPlayer *player;
+    u8 cmd;
+    u32 len;
+    u8 velocity;
+    u16 ofs;
+    const u8 *base;
+
+    if (track == NULL || track->player == NULL)
+        return 1;
+    player = track->player;
+    if (player->paused)
+    {
+        TrackReleaseNotes(track);
+        return 0;
+    }
+    while (track->wait <= 0)
+    {
+        cmd = *track->pc++;
+        if (cmd < 0xC0)
+        {
+            if (cmd < 0x60)
+            {
+                len = track->lastLength;
+                velocity = track->velocity;
+            }
+            else
+            {
+                len = (u16)TrackReadVarLen(track);
+                track->lastLength = len;
+                velocity = *track->pc++;
+                track->velocity = velocity;
+                cmd -= 0x60;
+            }
+            len *= 150;
+            if (gSoundNoteHook != NULL && (player->flags & 1))
+                gSoundNoteHook(track, cmd, velocity, len);
+            else
+                TrackNoteOn(track, cmd, velocity, len);
+            if (track->notesWait == TRUE)
+                track->wait += len;
+        }
+        else if (cmd == 0xC0)
+        {
+            len = track->lastWait;
+            len *= 150;
+            track->wait += len;
+        }
+        else if (cmd == 0xC1)
+        {
+            len = (u16)TrackReadVarLen(track);
+            track->lastWait = len;
+            len *= 150;
+            track->wait += len;
+        }
+        else if ((cmd & 0xF0) == 0xD0)
+        {
+            u8 arg = cmd & 0xF;
+
+            track->sweep1D = arg;
+            track->sweep1E = *track->pc++ + track->transpose;
+            track->sweep22 = *track->pc++;
+            if (arg & 1)
+                track->sweep20 = *track->pc++;
+            else
+                track->sweep20 = 0;
+            track->sweep1C = 1;
+        }
+        else
+        {
+            switch (cmd)
+            {
+            case 0xFF:
+                if (track->sp == track->stack)
+                {
+                    TrackStop(track);
+                    return 2;
+                }
+                track->pc = *--track->sp;
+                break;
+            case 0xE8:
+                track->sweep1C = 0;
+                break;
+            case 0xF0:
+                ((u8 *)&ofs)[0] = *track->pc++;
+                ((u8 *)&ofs)[1] = *track->pc++;
+                base = (const u8 *)player->seqOffsets;
+                goto jump;
+            case 0xF4:
+                ((u8 *)&ofs)[0] = *track->pc++;
+                ((u8 *)&ofs)[1] = *track->pc++;
+                *track->sp++ = track->pc;
+                base = (const u8 *)player->seqOffsets;
+            jump:
+                base += ofs;
+                track->pc = base;
+                break;
+            case 0xC2:
+                track->program = *track->pc++;
+                break;
+            case 0xC7:
+                TrackSetBank(track, *track->pc++);
+                break;
+            case 0xC3:
+                track->pan = *track->pc++;
+                break;
+            case 0xC4:
+                track->priority = *track->pc++;
+                break;
+            case 0xE0:
+                track->volume = *track->pc++;
+                break;
+            case 0xEA:
+                track->player->unk40 = *track->pc++;
+                break;
+            case 0xE1:
+                track->bend = *track->pc++;
+                break;
+            case 0xE2:
+                track->bendRange = *track->pc++;
+                break;
+            case 0xE9:
+                track->transpose = *track->pc++;
+                break;
+            case 0xE3:
+                track->unk4C = *track->pc++;
+                break;
+            case 0xC5:
+            case 0xC6:
+                TrackReleaseNotes(track);
+                track->tie = (cmd == 0xC5);
+                break;
+            case 0xC8:
+                track->notesWait = TRUE;
+                break;
+            case 0xC9:
+                track->notesWait = FALSE;
+                break;
+            case 0xCA:
+                if (gSoundSeqHook != NULL)
+                    gSoundSeqHook(track, *track->pc++);
+                else
+                    track->pc++;
+                break;
+            case 0xE4:
+                player->tempo = TrackReadVarLen(track);
+                break;
+            case 0xE5:
+                track->vibrato.delay = *track->pc++;
+                break;
+            case 0xE7:
+                track->vibrato.depth = *track->pc++;
+                break;
+            case 0xE6:
+                track->vibrato.speed = *track->pc++;
+                break;
+            case 0xF8:
+            {
+                u8 n = *track->pc++;
+                struct SoundTrack *t;
+
+                ((u8 *)&ofs)[0] = *track->pc++;
+                ((u8 *)&ofs)[1] = *track->pc++;
+                if (player->tracks[n] == NULL)
+                {
+                    t = TrackAlloc();
+                    player->tracks[n] = t;
+                }
+                else
+                {
+                    t = player->tracks[n];
+                    TrackStop(t);
+                }
+                TrackStart(t, player, (const u8 *)player->seqOffsets + ofs);
+                t->sampleSet = track->sampleSet;
+                t->bank = track->bank;
+                t->program = track->program;
+                t->pan = track->pan;
+                t->unk4C = track->unk4C;
+                t->volume = track->volume;
+                t->cmdVolume = track->cmdVolume;
+                t->priority = track->priority;
+                t->bend = track->bend;
+                t->bendRange = track->bendRange;
+                t->transpose = track->transpose;
+                break;
+            }
+            }
+        }
+    }
+    track->wait -= player->tempo;
+    track->wait -= player->tempoOfs;
+    return 0;
+}
+
 
 void TrackAddVoice(struct SoundTrack *track, struct SoundVoice *voice)
 {
