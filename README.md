@@ -50,7 +50,7 @@ Extract the clients from **unmodified** retail discs (SHA-1 checked against `con
 ```sh
 python tools/extract.py GZLJ01 path/to/jp-disc.iso
 python tools/extract.py GZLE01 path/to/us-disc.iso     # extracts GZLE01 and GZLE01_ud
-python tools/extract.py GZLP01_0 path/to/eu-disc.iso   # extracts all ten PAL clients
+python tools/extract.py GZLP01_0 path/to/pal-disc.iso  # extracts all ten PAL clients
 ```
 
 ## Build
