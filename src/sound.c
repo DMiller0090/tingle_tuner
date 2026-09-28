@@ -1364,117 +1364,132 @@ done:
 
 // This frame's frequency value: the base plus the pitch sweep, the track's bend (a PCM step
 // scales; a GB channel's register value counts down from 0x800), and vibrato.
-// Near-miss (86 masked diff lines): the GB vibrato result shares one `0x800 - t` tail, which
-// fixed the freq/sweep swap and the extra saved register. Left: in the GB negative-vibrato arm
-// the original loads 0x800, negates v in place, then subtracts ((0x800 - freq) * (-v * depth
-// + 0x80000)); every operand order / `v = -v` / temp form tried computes 0x800 - freq first
-// (or flips the freq/sweep r2/r3 priority tie), so v, depth and t get r3/r4/r1, not r1/r3/r0.
-//     u32 VoiceUpdatePitch(struct SoundVoice *voice)
-//     {
-//         u32 freq = voice->baseFreq;
-//         struct SoundTrack *track = voice->track;
-//         struct VoiceSweep *sweep = &voice->sweep;
-//         struct VoiceVibrato *vib;
-//         u32 depth;
-//
-//         if (sweep->delay != 0)
-//         {
-//             sweep->delay--;
-//         }
-//         else if (sweep->frames != 0)
-//         {
-//             sweep->offset += sweep->step;
-//             if (--sweep->frames == 0)
-//                 sweep->offset = sweep->target;
-//         }
-//         freq += sweep->offset;
-//         if (track->bend != 0)
-//         {
-//             u32 bend;
-//
-//             if (track->bend > 0)
-//             {
-//                 bend = track->bend;
-//                 bend *= gPcmPitchTable[track->bendRange + 0x30];
-//                 bend += 0x400000;
-//                 if (voice->type == 0)
-//                 {
-//                     bend >>= 7;
-//                     freq *= bend;
-//                     freq >>= 15;
-//                 }
-//                 else
-//                 {
-//                     freq = 0x800 - freq;
-//                     freq <<= 22;
-//                     freq /= bend;
-//                     freq = 0x800 - freq;
-//                 }
-//             }
-//             else
-//             {
-//                 bend = -track->bend;
-//                 bend *= gPcmPitchTable[track->bendRange + 0x30];
-//                 bend += 0x400000;
-//                 if (voice->type == 0)
-//                 {
-//                     freq <<= 15;
-//                     bend >>= 7;
-//                     freq /= bend;
-//                 }
-//                 else
-//                 {
-//                     freq = 0x800 - freq;
-//                     bend >>= 7;
-//                     freq *= bend;
-//                     freq >>= 15;
-//                     if (freq < 0x800)
-//                         freq = 0x800 - freq;
-//                     else
-//                         freq = 0;
-//                 }
-//             }
-//         }
-//         vib = &voice->vibrato;
-//         depth = vib->params->depth;
-//         if (depth != 0)
-//         {
-//             if (vib->delay == 0)
-//             {
-//                 s8 v = gVibratoTable[vib->phase >> 1];
-//
-//                 if (voice->type == 0)
-//                 {
-//                     if (v >= 0)
-//                         freq += v * freq * depth >> 19;
-//                     else
-//                     {
-//                         freq <<= 12;
-//                         freq /= (-v * depth >> 3) + 0x10000;
-//                         freq <<= 4;
-//                     }
-//                 }
-//                 else
-//                 {
-//                     u32 t;
-//                     if (v >= 0)
-//                         t = ((0x800 - freq) << 19) / (v * depth + 0x80000);
-//                     else
-//                         t = (0x800 - freq) * (0x80000 - v * depth) >> 19;
-//                     freq = 0x800 - t;
-//                 }
-//                 vib->phase += vib->params->speed;
-//                 if ((vib->phase >> 1) > 0xFF)
-//                     vib->phase -= 0x200;
-//             }
-//             else
-//             {
-//                 vib->delay--;
-//             }
-//         }
-//         return freq;
-//     }
-INCLUDE_ASM(VoiceUpdatePitch);
+// Each bend arm has its own `bend` (one shared variable outranks freq in global-alloc and
+// swaps freq/sweep into r3/r2). The GB vibrato arms each build their value in a local `t`
+// starting from 0x800 and end in `freq = 0x800; freq -= t;` (cross-jumped into one tail).
+u32 VoiceUpdatePitch(struct SoundVoice *voice)
+{
+    u32 freq = voice->baseFreq;
+    struct SoundTrack *track = voice->track;
+    struct VoiceSweep *sweep = &voice->sweep;
+    struct VoiceVibrato *vib;
+    u32 depth;
+
+    if (sweep->delay != 0)
+    {
+        sweep->delay--;
+    }
+    else if (sweep->frames != 0)
+    {
+        sweep->offset += sweep->step;
+        if (--sweep->frames == 0)
+            sweep->offset = sweep->target;
+    }
+    freq += sweep->offset;
+    if (track->bend != 0)
+    {
+        if (track->bend > 0)
+        {
+            u32 bend = track->bend;
+
+            bend *= gPcmPitchTable[track->bendRange + 0x30];
+            bend += 0x400000;
+            if (voice->type == 0)
+            {
+                bend >>= 7;
+                freq *= bend;
+                freq >>= 15;
+            }
+            else
+            {
+                freq = 0x800 - freq;
+                freq <<= 22;
+                freq /= bend;
+                freq = 0x800 - freq;
+            }
+        }
+        else
+        {
+            u32 bend = -track->bend;
+
+            bend *= gPcmPitchTable[track->bendRange + 0x30];
+            bend += 0x400000;
+            if (voice->type == 0)
+            {
+                freq <<= 15;
+                bend >>= 7;
+                freq /= bend;
+            }
+            else
+            {
+                freq = 0x800 - freq;
+                bend >>= 7;
+                freq *= bend;
+                freq >>= 15;
+                if (freq < 0x800)
+                    freq = 0x800 - freq;
+                else
+                    freq = 0;
+            }
+        }
+    }
+    vib = &voice->vibrato;
+    depth = vib->params->depth;
+    if (depth != 0)
+    {
+        if (vib->delay == 0)
+        {
+            s8 v = gVibratoTable[vib->phase >> 1];
+
+            if (voice->type == 0)
+            {
+                if (v >= 0)
+                    freq += v * freq * depth >> 19;
+                else
+                {
+                    freq <<= 12;
+                    freq /= (-v * depth >> 3) + 0x10000;
+                    freq <<= 4;
+                }
+            }
+            else
+            {
+                if (v >= 0)
+                {
+                    u32 t;
+
+                    t = 0x800;
+                    t -= freq;
+                    t <<= 19;
+                    t /= v * depth + 0x80000;
+                    freq = 0x800;
+                    freq -= t;
+                }
+                else
+                {
+                    u32 t;
+                    s32 n;
+
+                    t = 0x800;
+                    n = -v;
+                    t -= freq;
+                    t *= n * depth + 0x80000;
+                    t >>= 19;
+                    freq = 0x800;
+                    freq -= t;
+                }
+            }
+            vib->phase += vib->params->speed;
+            if ((vib->phase >> 1) > 0xFF)
+                vib->phase -= 0x200;
+        }
+        else
+        {
+            vib->delay--;
+        }
+    }
+    return freq;
+}
 
 // Mix every active PCM voice into gPcmMixBuffer, release the voices whose gate ran out, and
 // clip the mix into the DMA buffers.
