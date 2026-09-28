@@ -99,50 +99,50 @@ void MultiSioSendDataSet(void *sendp)
     gMultiSioArea.sendFlag = TRUE;
 }
 
-// Nearly matches: the packet pointer and the checksum get each other's registers.
-// u32 MultiSioRecvDataCheck(void *recvp)
-// {
-//     vu32 zero = 0;
-//     struct MultiSioPacket *swap;
-//     u8 recvFlag;
-//     s32 i;
-//
-//     REG_IME = 0;
-//     swap = gMultiSioArea.recvCheckBufp;
-//     gMultiSioArea.recvCheckBufp = gMultiSioArea.lastRecvBufp;
-//     gMultiSioArea.lastRecvBufp = swap;
-//     recvFlag = gMultiSioArea.recvFlag;
-//     gMultiSioArea.recvFlag = FALSE;
-//     REG_IME = 1;
-//     gMultiSioArea.recvSuccessFlags = 0;
-//
-//     if (recvFlag)
-//     {
-//         for (i = 0; i < MULTI_SIO_PLAYERS_MAX; i++)
-//         {
-//             s32 sum;
-//             u16 *packet;
-//             u32 *data;
-//             s32 j;
-//
-//             packet = (u16 *)&gMultiSioArea.recvCheckBufp[i];
-//             sum = 0;
-//
-//             for (j = 0; j < 10; j++)
-//                 sum += packet[j];
-//             data = ((struct MultiSioPacket *)packet)->data;
-//             if ((s16)sum == -1)
-//             {
-//                 CpuCopy32(data, (u8 *)recvp + i * 16, 16);
-//                 gMultiSioArea.recvSuccessFlags |= 1 << i;
-//             }
-//             CpuFill32(0, data, 16);
-//         }
-//     }
-//     gMultiSioArea.connectedFlags |= gMultiSioArea.recvSuccessFlags;
-//     return gMultiSioArea.recvSuccessFlags;
-// }
-INCLUDE_ASM(MultiSioRecvDataCheck);
+// The packet pointer is set in two steps (base, then the byte offset computed first): the
+// extra set raises its allocation priority above the checksum's, as in the original.
+u32 MultiSioRecvDataCheck(void *recvp)
+{
+    vu32 zero = 0;
+    struct MultiSioPacket *swap;
+    u8 recvFlag;
+    s32 i;
+
+    REG_IME = 0;
+    swap = gMultiSioArea.recvCheckBufp;
+    gMultiSioArea.recvCheckBufp = gMultiSioArea.lastRecvBufp;
+    gMultiSioArea.lastRecvBufp = swap;
+    recvFlag = gMultiSioArea.recvFlag;
+    gMultiSioArea.recvFlag = FALSE;
+    REG_IME = 1;
+    gMultiSioArea.recvSuccessFlags = 0;
+
+    if (recvFlag)
+    {
+        for (i = 0; i < MULTI_SIO_PLAYERS_MAX; i++)
+        {
+            u32 ofs;
+            u16 *packet;
+            s32 sum;
+            s32 j;
+
+            ofs = i * sizeof(struct MultiSioPacket);
+            packet = (u16 *)gMultiSioArea.recvCheckBufp;
+            packet = (u16 *)((u8 *)packet + ofs);
+            sum = 0;
+            for (j = 0; j < 10; j++)
+                sum += packet[j];
+            if ((s16)sum == -1)
+            {
+                CpuCopy32(((struct MultiSioPacket *)packet)->data, (u8 *)recvp + i * 16, 16);
+                gMultiSioArea.recvSuccessFlags |= 1 << i;
+            }
+            CpuFill32(0, ((struct MultiSioPacket *)packet)->data, 16);
+        }
+    }
+    gMultiSioArea.connectedFlags |= gMultiSioArea.recvSuccessFlags;
+    return gMultiSioArea.recvSuccessFlags;
+}
 
 void MultiSioVSync(void)
 {

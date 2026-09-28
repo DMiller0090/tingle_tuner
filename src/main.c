@@ -44,7 +44,10 @@ void AgbMain(void)
 }
 
 // Near-miss: everything matches except that the original picks r2, not r1, for the
-// gMain.intrCheck offset in the last statement.
+// gMain.intrCheck offset in the last statement. That 0x414 is a reload (greg dump:
+// "Spilling for insn ... Spilling reg 1"), not a pseudo, so r1 must be busy at that insn in
+// the original (maybe the address is reloaded at the dummy ldrh, whose output is r1). REG_IF
+// forms, the DMA0CNT store form, a shared u16/u32 flag and a gMain pointer don't change it.
 /*
 void VBlankIntr(void)
 {

@@ -162,12 +162,12 @@ void Mode1Func_02015298(void)
     Mode1Func_0201521C();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
-// Near-miss: the original computes &gGameState.unk106 early, into r6 (right after the
-// unk21E store, though unk106 is stored much later), which shifts r6/r7 through the rest.
-/*
+// FAKEMATCH? The original computes &gGameState.unk106 right after the unk21E store (into r6)
+// though unk106 is stored much later: a pointer assigned there reproduces it.
 void Mode1State0(void)
 {
     s32 i;
+    u8 *unk106;
 
     if (!gGameState.flagsReceived)
         return;
@@ -186,11 +186,16 @@ void Mode1State0(void)
     gGameState.unk0FC = 1;
     gGameState.unk21D = 0;
     gGameState.unk21E = 0;
+    unk106 = &gGameState.unk106;
     gGameState.targetDir = 0xFF;
     gGameState.unk21F = 0;
     gGameState.unk220 = 0;
     gGameState.dungeonChests = gGameState.flags.dungeonChests;
+#ifdef VERSION_GZLJ01
     gGameState.unk157 = 8;
+#else
+    gGameState.unk157 = 6;
+#endif
     gGameState.unk0FD = 0;
     gGameState.unk140 = 0xFFFF;
     gGameState.unk1F8 = -1;
@@ -200,7 +205,7 @@ void Mode1State0(void)
     gGameState.unk11D = 0;
     gGameState.unk010 = 0;
     gGameState.unk11C = 0;
-    gGameState.unk106 = 0;
+    *unk106 = 0;
     gGameState.unk030 = 0;
     gGameState.unk120 = 0;
     gGameState.switchMsg = -1;
@@ -266,8 +271,6 @@ void Mode1State0(void)
     gMain.hblankScroll = TRUE;
     gMain.modeState = 1;
 }
-*/
-INCLUDE_ASM(Mode1State0);
 // The screen comes in with a wave (per-line BG0HOFS by HBlank DMA, double-buffered) that
 // dies down; then the dungeon music starts and the game goes to state 2.
 void Mode1State1(void)
@@ -338,21 +341,16 @@ void Mode1State5(void)
     UpdateMap();
     Func_0201CFE8();
 }
-// Near-miss: the original loads GBACOM_BUF_SWITCH + 1 into r2 after the first store; this
-// loads it first (assigning p after the store puts it in r1 instead).
-/*
+// Send the switch packet (5 bytes and a checksum of its two words) and show its message.
 void Mode1SendSwitch(u8 soundArg)
 {
-    u8 *p;
-
-    p = GBACOM_BUF_SWITCH + 1;
     GBACOM_BUF_SWITCH[0] = gGameState.switchNo;
-    *p++ = gGameState.switchStageNo;
-    *p++ = gGameState.switchRoomNo;
-    *p++ = gGameState.switchType;
-    *p = gGameState.switchNo2;
+    GBACOM_BUF_SWITCH[1] = gGameState.switchStageNo;
+    GBACOM_BUF_SWITCH[2] = gGameState.switchRoomNo;
+    GBACOM_BUF_SWITCH[3] = gGameState.switchType;
+    GBACOM_BUF_SWITCH[4] = gGameState.switchNo2;
     GbaComSendDataSet(GBACOM_BUF_SWITCH, 6, GBACOM_SLOT_SWITCH,
-                      ((u32 *)GBACOM_BUF_SWITCH)[0] + *(u32 *)p);
+                      ((u32 *)GBACOM_BUF_SWITCH)[0] + ((u32 *)GBACOM_BUF_SWITCH)[1]);
     ShowMessage(gGameState.switchMsg, soundArg);
     gGameState.unk21C = 1;
     gGameState.unk206 = 0x100;
@@ -362,8 +360,6 @@ void Mode1SendSwitch(u8 soundArg)
         gGameState.switchType = 0;
     }
 }
-*/
-INCLUDE_ASM(Mode1SendSwitch);
 // The main state: sounds for the GC's flags, the timed marker/switch action (slot 3 marker
 // type 7 sends a switch), the BG1 slide, then the START/A/B/R keys.
 void Mode1State2(void)
