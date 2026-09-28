@@ -166,13 +166,11 @@ void LoadMode1Graphics(void)
     InitMapBgs();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
-// FAKEMATCH? The original computes &gGameState.squareMsgPending right after the hudRightSlide
-// store (into r6) though squareMsgPending is stored much later: a pointer assigned there
-// reproduces it.
+// squareMsgPending is cleared twice, like msgLoopSound and nextMsg: flow deletes the first
+// store as dead, but its address (computed there, into r6) is what the second one uses.
 void Mode1State0(void)
 {
     s32 i;
-    u8 *squareMsgPending;
 
     if (!gGameState.flagsReceived)
         return;
@@ -191,7 +189,7 @@ void Mode1State0(void)
     gGameState.aButtonAction = 1;
     gGameState.hudLeftSlide = 0;
     gGameState.hudRightSlide = 0;
-    squareMsgPending = &gGameState.squareMsgPending;
+    gGameState.squareMsgPending = 0;
     gGameState.targetDir = 0xFF;
     gGameState.hudLeftHidden = 0;
     gGameState.hudRightHidden = 0;
@@ -210,7 +208,7 @@ void Mode1State0(void)
     gGameState.revealedType13 = 0;
     gGameState.revealedType5 = 0;
     gGameState.revealedType12 = 0;
-    *squareMsgPending = 0;
+    gGameState.squareMsgPending = 0;
     gGameState.squareMsgTimer = 0;
     gGameState.viewLocked = 0;
     gGameState.switchMsg = -1;
