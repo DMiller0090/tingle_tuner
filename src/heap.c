@@ -20,13 +20,13 @@ void HeapInit(struct Heap *heap, u32 size)
 
 // First fit, merging free neighbours on the way. A multiple-of-4 request gets a 4-aligned
 // payload: a block whose payload isn't aligned is split into an empty block and the rest.
-// Near-miss: same code, but block/total/avail/rest get r4/r2/r3/r1 where the original has
-// r5/r3/r4/r2. The header `size | 1` is written at the store so loop.c hoists it after the
-// 0xFFFE mask, as in the original. The rest of the diff looks like it comes from the rest store:
-// the original keeps `total - need` in r1 apart from its `- 2` (r0), so rest (allocated first)
-// can't take r1 and total then can't take r2; agbcc ties the two temporaries into r0.
-// Temporaries/user vars for `total - need`, other operand orders and the align-split forms
-// don't change it.
+// Near-miss (112 masked diff lines): same code, but avail/block get r2/r4 where the original
+// has r4/r5 (and the registers derived from them). The header `size | 1` is written at the
+// store so loop.c hoists it after the 0xFFFE mask, as in the original. Keeping `total - need`
+// in len (a global pseudo, so local-alloc can't tie it to the `- 2` result) moves rest to r2
+// and total to r3 as in the original; avail still takes r2 (the original's avail must
+// conflict with an r2 pseudo, maybe the `& 3` constant). Temporaries for `total - need`, the
+// avail if/else forms and the align-split forms don't help.
 //     void *HeapAlloc(struct Heap *heap, u32 size)
 //     {
 //         bool32 align4 = FALSE;
@@ -97,7 +97,8 @@ void HeapInit(struct Heap *heap, u32 size)
 //                     {
 //                         u16 *rest = (u16 *)((u8 *)block + need);
 //
-//                         *rest = (total - need - 2) & ~HEAP_BLOCK_USED;
+//                         len = total - need;
+//                         *rest = (len - 2) & ~HEAP_BLOCK_USED;
 //                         if (firstFree > rest)
 //                             heap->firstFree = rest;
 //                     }
