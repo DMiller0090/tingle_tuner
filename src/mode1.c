@@ -162,12 +162,12 @@ void Mode1Func_02015298(void)
     Mode1Func_0201521C();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
-// Near-miss: the original computes &gGameState.unk106 early, into r6 (right after the
-// unk21E store, though unk106 is stored much later), which shifts r6/r7 through the rest.
-/*
+// FAKEMATCH? The original computes &gGameState.unk106 right after the unk21E store (into r6)
+// though unk106 is stored much later: a pointer assigned there reproduces it.
 void Mode1State0(void)
 {
     s32 i;
+    u8 *unk106;
 
     if (!gGameState.flagsReceived)
         return;
@@ -186,11 +186,16 @@ void Mode1State0(void)
     gGameState.unk0FC = 1;
     gGameState.unk21D = 0;
     gGameState.unk21E = 0;
+    unk106 = &gGameState.unk106;
     gGameState.targetDir = 0xFF;
     gGameState.unk21F = 0;
     gGameState.unk220 = 0;
     gGameState.dungeonChests = gGameState.flags.dungeonChests;
+#ifdef VERSION_GZLJ01
     gGameState.unk157 = 8;
+#else
+    gGameState.unk157 = 6;
+#endif
     gGameState.unk0FD = 0;
     gGameState.unk140 = 0xFFFF;
     gGameState.unk1F8 = -1;
@@ -200,7 +205,7 @@ void Mode1State0(void)
     gGameState.unk11D = 0;
     gGameState.unk010 = 0;
     gGameState.unk11C = 0;
-    gGameState.unk106 = 0;
+    *unk106 = 0;
     gGameState.unk030 = 0;
     gGameState.unk120 = 0;
     gGameState.switchMsg = -1;
@@ -266,8 +271,6 @@ void Mode1State0(void)
     gMain.hblankScroll = TRUE;
     gMain.modeState = 1;
 }
-*/
-INCLUDE_ASM(Mode1State0);
 // The screen comes in with a wave (per-line BG0HOFS by HBlank DMA, double-buffered) that
 // dies down; then the dungeon music starts and the game goes to state 2.
 void Mode1State1(void)
