@@ -229,6 +229,10 @@ end:
 // no pal variable (0 inline, 12 for type 1's unk6 == 3 sprite) and frame 0 for the last sprite.
 // Also: the original's frame is 0x30 (five spill slots at sp+0x1c..0x2c, mosaic at 0x28);
 // this C gets 0x2c (four, mosaic at 0x1c), so the spilled locals differ too (not tried further).
+// The original's five slots are i (0x1c), dx as a zero-extended u16 (0x20), scale (0x24),
+// mosaic (0x28) and dy << 16 (0x2c). The kept second `type == 3` test compares the same
+// register (the `& 0x3F` type) as the first, so it is not a reload: writing one of the two as
+// gGameState.markers[i].type keeps the test but reloads the field (422 lines, 0x14 bigger).
 /*
 #define SPRITE_FRAMES(p) ((const struct SpriteFrame *)(p))
 
@@ -575,13 +579,19 @@ INCLUDE_ASM(DrawMapMarkers);
 // clear the palette bits of the block showing marker 1's room, then set palette bit 1 (|= 0x2000)
 // on a 2x2 or 4x4 tile square around every gSlot14Data entry in each block's room. Room 0x19's
 // entries only show once flags.unkA_4 is set.
-// Near-miss: the original keeps (y >> 8) * 7 narrowed to u16 before adding it to room, and
-// allocates registers differently from there on (the unrolled loop's 0x1FFF lands in r2, not r4).
-// The u16 row temp b below gives the narrowing, so the entry block matches (430 diff lines,
-// was 432). What remains starts at the first loop: the original keeps i in r1, the hoisted
-// constant 1 in r2 and gGameState in r4; here 1 is a HImode pseudo (the & 1 on s16 >> 8 is
-// shortened) with low priority, so it lands in r4 and gGameState gets copied to r1. Casting
-// the shifts to s32/u32, 1u and s32 temps for x >> 8 / y >> 8 did not change it.
+// Near-miss: the original keeps (y >> 8) * 7 narrowed to u16 before adding it to room; the u16
+// row temp b below gives that. The first loop's counter is its own variable n (the original
+// keeps it in r1 and the second loop's i in r5, so they are separate pseudos): with that the
+// entry block and the first loop match (412 diff lines; the old shared-i version was 428 once
+// gSlot14Data became struct SeaChartEntry[], and the old `u8 *e = &gSlot14Data[j * 4]` form
+// now indexes 16-byte steps). What remains starts at the palette clear: the original has map
+// in r3, 0x1FFF in r2 and the countdown in r5; here map (the top global-alloc priority, 393
+// refs) takes r2 first, so 0x1FFF gets r3 and the counter r4; everything after is shifted
+// (the second loop's i r2 instead of r5, x/y r2/r0 instead of r5/r1). Tried with no gain: a
+// separate counter or pointer for the clear loop, reusing i or k for it, a counting-down
+// for, a u16/s32 mask variable, *map++ &= and map[k] forms, `+` instead of `|` for the block
+// index, s32/u8 temps for the block index, `* 0x800`, and `i < 4`. Earlier: casting the
+// shifts to s32/u32, 1u and s32 temps for x >> 8 / y >> 8.
 /*
 #define CLEAR_PAL(p) (*(p) &= 0x1FFF, (p)++)
 #define CLEAR_PAL_4(p) CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p)
@@ -592,15 +602,15 @@ void HighlightMapRooms(void)
 {
     u8 m = FindMarker(1);
     u16 room, b;
-    s32 i, j, k;
+    s32 n, i, j, k;
     u16 *map;
 
     room = gGameState.markers[m].x >> 8;
     b = (gGameState.markers[m].y >> 8) * 7;
     room += b;
-    for (i = 0; i <= 3; i++)
+    for (n = 0; n <= 3; n++)
     {
-        if (gGameState.seaSquare[i] == room)
+        if (gGameState.seaSquare[n] == room)
         {
             map = (u16 *)(0x0600C000 + ((((gGameState.markers[m].x >> 8) & 1) | (((gGameState.markers[m].y >> 8) & 1) << 1)) << 11));
             for (j = 0; j < 32; j++)
@@ -616,24 +626,24 @@ void HighlightMapRooms(void)
             continue;
         for (j = 0; j <= 0x30; j++)
         {
-            u8 *e = &gSlot14Data[j * 4];
+            struct SeaChartEntry *e = &gSlot14Data[j];
 
-            if (gGameState.seaSquare[i] == e[3])
+            if (gGameState.seaSquare[i] == e->square)
             {
                 u16 x, y;
                 s32 size;
                 s32 row;
 
-                if (e[2])
+                if (e->big)
                 {
-                    x = (e[0] >> 3) - 2;
-                    y = (e[1] >> 3) - 2;
+                    x = (e->x >> 3) - 2;
+                    y = (e->y >> 3) - 2;
                     size = 4;
                 }
                 else
                 {
-                    x = (e[0] >> 3) - 1;
-                    y = (e[1] >> 3) - 1;
+                    x = (e->x >> 3) - 1;
+                    y = (e->y >> 3) - 1;
                     size = 2;
                 }
                 map = (u16 *)(0x0600C000 + (i << 11)) + (y * 32 + x);
@@ -1084,6 +1094,17 @@ u32 MarkerDistance(u8 arg)
 // part's x/y then lose their s16 narrowing and the diff grows to 180 lines; sharing x/y is
 // what keeps it), s16/u16 x and y, one-expression sin loads, u32 level and a separate u32
 // distance. Priorities in the original: level > the unk224 zero > gGameState (r4, r5, r6).
+// Diagnosis (2026-09-28): the original's sin block has angle*2 in r3, which local-alloc only
+// picks if the sin x is itself a local (one-death) pseudo that took r2 first; so the sin x/y
+// (and the ArcTan2 dx/dy) are block-local variables. Written that way (s32 dx, dy in the
+// FindMarker block and s32 sx, sy set as `sx = gSinTable[angle]; sx >>= 3;`) the first two
+// blocks match, but combine drops the lsls/asrs #0x10 on both DrawSprite coordinates (it
+// tracks the sign-bit copies of the in-block ldrsh >> 3); the shared x/y here keep them only
+// because combine's record_value_for_reg marks a reg invalid when an earlier value in the block
+// mentions it. With the locals, the globals also flip (zero r4, gGameState r5, level r6; 180
+// lines). Tried for the extensions with no luck: (u16)/(s16) casts, u16/u32/s16 locals, one-
+// or two-statement shifts, `/ 8`, adding 0xB8 in the local; for the globals: level = 0 via
+// targetNear, u32/u8 level, a separate distance.
 //     void UpdateTargetCompass(void)
 //     {
 //         u8 angle;
