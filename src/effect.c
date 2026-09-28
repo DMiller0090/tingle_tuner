@@ -653,7 +653,9 @@ void Effect8(void)
             if (gGameState.effectDelay == 0)
             {
                 // FAKEMATCH: without x (found with decomp-permuter), cse stores effectDelay's
-                // register (known to be 0 here) instead of a fresh 0.
+                // register (known to be 0 here) instead of a fresh 0. Not it: a u8/u16/u32
+                // `arg = 0` (any declaration order; 18 lines), a block-local price,
+                // `!gGameState.effectDelay`, passing gGameState.viewLocked (8 lines each).
                 x = 0;
                 gGameState.viewLocked = 0;
                 gGameState.effectDelay = 8;
