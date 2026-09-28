@@ -200,8 +200,8 @@ void MainLoop(void)
             *(u16 *)(GBACOM_BUF_GBA_FLG + 4) = gMain.bgOfs[3][0] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 6) = gMain.bgOfs[3][1] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 0) = gMain.heldKeys;
-            if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0
-             && gMain.modeState == 2)
+            if (gGameState.inMessage == 0 && gGameState.selectWinOpen == 0 && gGameState.chartOpen == 0
+             && gGameState.menuOpen == 0 && gMain.modeState == 2)
                 *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = TRUE;
             else
                 *(u8 *)(GBACOM_BUF_GBA_FLG + 3) = FALSE;
