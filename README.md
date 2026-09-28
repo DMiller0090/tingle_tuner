@@ -99,9 +99,12 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but `VBlankIntr`),
 `src/mode1.c` (all but `Mode1State0` and `Mode1SendSwitch`), `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c` (all but
 `MultiSioRecvDataCheck`), `src/heap.c` (`HeapInit`, `HeapCompact`), `src/libc/rand.c`, and
-most of the game code from `02018884` to the sound driver (124 of its 141 functions; a few
-are C in GZLJ01 only), in five objects: `src/sprite.c`, `src/map.c`, `src/message.c`,
-`src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where they do). These
+most of the game code from `02018884` to the sound driver (in GZLJ01, 124 of its 141 functions;
+the US `TextDrawGlyph` and `DrawChar` are still asm), in five objects: `src/sprite.c`, `src/map.c`,
+`src/message.c`, `src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where
+they do), and `src/sound.c` (all but eight near-misses: `SoundPlay`, `SoundPlayLoop`,
+`CgbVoiceVolume`, `VoiceUpdatePitch`, `VoiceNoteOff`, `PlayerGetState`, `SoundCmdSetTrackBend`,
+`SoundCmdTracks`). These
 and main.c, mode0.c, mode1.c, gba_com.c, multi_sio.c and sound.c define their `.rodata` in C.
 Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
 doesn't match with agbcc or old_agbcc yet: the SDK's newlib was built with other flags,
