@@ -610,213 +610,213 @@ void Func_0201E584(void)
     }
 }
 
+// The left panel is one tile wider in the US versions.
+#ifdef VERSION_GZLJ01
+#define HUD_LEFT_WIDTH 4
+#else
+#define HUD_LEFT_WIDTH 5
+#endif
+
 // Slide the two HUD panels at the top of the screen in and out (unk21F/unk21D: the left one,
 // unk220/unk21E: the right one with the held item and its price) depending on the game's
 // state, and draw them.
-// Nearly matches (106 masked diff lines, all in the price digits). The unk220 clear condition
-// needs its last three clauses grouped: written flat, fold merges the first two clauses
-// (same trailing `unk121 == 0`) into one test. What remains: in cases 0 and 1 the original
-// keeps the digit doubled ((u8)x * 2) in r3 and loads 0x4031 from the pool in case 0; putting
-// the doubled digit in its own variable (u16/u32 t, or tile) moves the register allocation
-// of the whole function (500+ lines).
-//     void UpdateHudPanels(void)
-//     {
-//         u16 *map;
-//         u16 tile;
-//         s32 i;
-//
-//         if (gGameState.unk224 != 0)
-//             gGameState.unk0FC = 2;
-//         else if (gGameState.unk11A != 0)
-//             gGameState.unk0FC = 0;
-//         else
-//             gGameState.unk0FC = 1;
-//
-//         if (gGameState.unk21F == 0)
-//         {
-//             if (gMain.modeState != 2 || !gGameState.unk1E5_1
-//              || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
-//              || gGameState.unk1CC != 0
-//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
-//                  && gGameState.unk104 == 0))
-//                 gGameState.unk21F = 1;
-//         }
-//         else if (gGameState.unk1E5_1 && gGameState.unk1CC == 0 && gMain.modeState == 2)
-//         {
-//             if (((gGameState.flags.dungeonNo != 0 || gGameState.unk224 == 0) && gGameState.flags.busy == 0
-//                  && gGameState.unk104 != 0)
-//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0))
-//                 gGameState.unk21F = 0;
-//         }
-//
-//         if (gGameState.unk220 == 0)
-//         {
-//             if (gGameState.unk1CC == 0)
-//             {
-//                 if (gMain.modeState != 2 || (!gGameState.unk1E5_1 && gGameState.unk1DE != 11)
-//                  || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
-//                  || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
-//                      && gGameState.unk104 == 0)
-//                  || gGameState.unk121 != 0)
-//                     gGameState.unk220 = 1;
-//             }
-//         }
-//         else if (gGameState.unk1E5_1 && gMain.modeState == 2)
-//         {
-//             if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.unk104 != 0
-//                  && gGameState.unk121 == 0)
-//              || ((gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
-//                   && gGameState.unk104 != 0 && gGameState.unk121 == 0)
-//                  || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
-//                  || gGameState.unk1CC != 0))
-//                 gGameState.unk220 = 0;
-//         }
-//
-//         if (gGameState.unk21F != 0)
-//         {
-//             if (gGameState.unk21D <= 3)
-//             {
-//                 gGameState.unk21D++;
-//                 map = (u16 *)0x06006440 + (0x1C - gGameState.unk21D);
-//                 tile = 0xE01B;
-//                 for (i = 0; i < gGameState.unk21D; i++)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile | 0x800;
-//                     tile ^= 0x400;
-//                     map++;
-//                 }
-//             }
-//             else
-//             {
-//                 gGameState.unk21D = 4;
-//             }
-//         }
-//         else
-//         {
-//             tile = gHudPanelTiles[gGameState.unk0FC];
-//             map = (u16 *)0x06006470;
-//             if (gGameState.unk21D != 0)
-//             {
-//                 gGameState.unk21D--;
-//                 for (i = 4; i != gGameState.unk21D; i--)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile + 0x10;
-//                     tile++;
-//                     map++;
-//                 }
-//                 tile = 0xE01B;
-//                 for (; i != 0; i--)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile | 0x800;
-//                     tile ^= 0x400;
-//                     map++;
-//                 }
-//             }
-//             else
-//             {
-//                 for (i = 0; i < 4; i++)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile + 0x10;
-//                     tile++;
-//                     map++;
-//                 }
-//             }
-//         }
-//
-//         if (gGameState.unk220 != 0)
-//         {
-//             if (gGameState.unk21E <= 3)
-//             {
-//                 gGameState.unk21E++;
-//                 map = (u16 *)0x06006440 + (0x16 - gGameState.unk21E);
-//                 tile = 0xE01B;
-//                 for (i = 0; i < gGameState.unk21E; i++)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile | 0x800;
-//                     tile ^= 0x400;
-//                     map++;
-//                 }
-//             }
-//             else
-//             {
-//                 gGameState.unk21E = 4;
-//             }
-//         }
-//         else if (gGameState.unk21E != 0)
-//         {
-//             gGameState.unk21E--;
-//             if (gGameState.unk0FD == 0)
-//             {
-//                 u8 n = gGameState.unk21E;
-//                 u8 num;
-//
-//                 map = (u16 *)0x06006440 + (0x15 - n);
-//                 switch (n)
-//                 {
-//                 case 0:
-//                     num = gGameState.items[gGameState.unk1DE].price % 10;
-//                     map[0] = num * 2 + 0x4030;
-//                     map[0x20] = num * 2 + 0x4031;
-//                     break;
-//                 case 1:
-//                     num = gGameState.items[gGameState.unk1DE].price / 10;
-//                     if (num != 0)
-//                     {
-//                         map[0] = num * 2 + 0x4030;
-//                         map[0x20] = num * 2 + 0x4031;
-//                     }
-//                     else
-//                     {
-//                         map[0] = 0xD09F;
-//                         map[0x20] = 0xD09F;
-//                     }
-//                     break;
-//                 case 2:
-//                     tile = gGameState.items[gGameState.unk1DE].tile;
-//                     map[0] = tile + 1;
-//                     map[0x20] = tile + 1 + 0x10;
-//                     break;
-//                 case 3:
-//                     tile = gGameState.items[gGameState.unk1DE].tile;
-//                     map[0] = tile;
-//                     map[0x20] = tile + 0x10;
-//                     break;
-//                 }
-//                 map++;
-//                 tile = 0xE01B;
-//                 for (i = gGameState.unk21E; i != 0; i--)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile | 0x800;
-//                     tile ^= 0x400;
-//                     map++;
-//                 }
-//             }
-//             else
-//             {
-//                 map = (u16 *)0x06006464;
-//                 tile = 0xB080;
-//                 for (i = 4; i != gGameState.unk21E; i--)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile + 0x10;
-//                     tile++;
-//                     map++;
-//                 }
-//                 tile = 0xE01B;
-//                 for (; i != 0; i--)
-//                 {
-//                     map[0] = tile;
-//                     map[0x20] = tile | 0x800;
-//                     tile ^= 0x400;
-//                     map++;
-//                 }
-//             }
-//         }
-//     }
-INCLUDE_ASM(UpdateHudPanels);
+void UpdateHudPanels(void)
+{
+    u16 *map;
+    u16 tile;
+    s32 i;
+
+    if (gGameState.unk224 != 0)
+        gGameState.unk0FC = 2;
+    else if (gGameState.unk11A != 0)
+        gGameState.unk0FC = 0;
+    else
+        gGameState.unk0FC = 1;
+
+    if (gGameState.unk21F == 0)
+    {
+        if (gMain.modeState != 2 || !gGameState.unk1E5_1
+         || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
+         || gGameState.unk1CC != 0
+         || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
+             && gGameState.unk104 == 0))
+            gGameState.unk21F = 1;
+    }
+    else if (gGameState.unk1E5_1 && gGameState.unk1CC == 0 && gMain.modeState == 2)
+    {
+        if (((gGameState.flags.dungeonNo != 0 || gGameState.unk224 == 0) && gGameState.flags.busy == 0
+             && gGameState.unk104 != 0)
+         || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0))
+            gGameState.unk21F = 0;
+    }
+
+    if (gGameState.unk220 == 0)
+    {
+        if (gGameState.unk1CC == 0)
+        {
+            if (gMain.modeState != 2 || (!gGameState.unk1E5_1 && gGameState.unk1DE != 11)
+             || (gGameState.flags.dungeonNo != 0 && gGameState.flags.busy != 0 && gGameState.unk104 == 0)
+             || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy != 0
+                 && gGameState.unk104 == 0)
+             || gGameState.unk121 != 0)
+                gGameState.unk220 = 1;
+        }
+    }
+    else if (gGameState.unk1E5_1 && gMain.modeState == 2)
+    {
+        if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.unk104 != 0
+             && gGameState.unk121 == 0)
+         || ((gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
+              && gGameState.unk104 != 0 && gGameState.unk121 == 0)
+             || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
+             || gGameState.unk1CC != 0))
+            gGameState.unk220 = 0;
+    }
+
+    if (gGameState.unk21F != 0)
+    {
+        if (gGameState.unk21D <= HUD_LEFT_WIDTH - 1)
+        {
+            gGameState.unk21D++;
+            map = (u16 *)0x06006440 + (0x18 + HUD_LEFT_WIDTH - gGameState.unk21D);
+            tile = 0xE01B;
+            for (i = 0; i < gGameState.unk21D; i++)
+            {
+                map[0] = tile;
+                map[0x20] = tile | 0x800;
+                tile ^= 0x400;
+                map++;
+            }
+        }
+        else
+        {
+            gGameState.unk21D = HUD_LEFT_WIDTH;
+        }
+    }
+    else
+    {
+        tile = gHudPanelTiles[gGameState.unk0FC];
+        map = (u16 *)0x06006470;
+        if (gGameState.unk21D != 0)
+        {
+            gGameState.unk21D--;
+            for (i = HUD_LEFT_WIDTH; i != gGameState.unk21D; i--)
+            {
+                map[0] = tile;
+                map[0x20] = tile + 0x10;
+                tile++;
+                map++;
+            }
+            tile = 0xE01B;
+            for (; i != 0; i--)
+            {
+                map[0] = tile;
+                map[0x20] = tile | 0x800;
+                tile ^= 0x400;
+                map++;
+            }
+        }
+        else
+        {
+            for (i = 0; i < HUD_LEFT_WIDTH; i++)
+            {
+                map[0] = tile;
+                map[0x20] = tile + 0x10;
+                tile++;
+                map++;
+            }
+        }
+    }
+
+    if (gGameState.unk220 != 0)
+    {
+        if (gGameState.unk21E <= 3)
+        {
+            gGameState.unk21E++;
+            map = (u16 *)0x06006440 + (0x16 - gGameState.unk21E);
+            tile = 0xE01B;
+            for (i = 0; i < gGameState.unk21E; i++)
+            {
+                map[0] = tile;
+                map[0x20] = tile | 0x800;
+                tile ^= 0x400;
+                map++;
+            }
+        }
+        else
+        {
+            gGameState.unk21E = 4;
+        }
+    }
+    else if (gGameState.unk21E != 0)
+    {
+        gGameState.unk21E--;
+        if (gGameState.unk0FD == 0)
+        {
+            u8 n = gGameState.unk21E;
+
+            // The price digits and item tile reuse i (the original keeps them in i's register).
+            map = (u16 *)0x06006440 + (0x15 - n);
+            switch (n)
+            {
+            case 0:
+                i = (u8)(gGameState.items[gGameState.unk1DE].price % 10) * 2;
+                map[0] = i + 0x4030;
+                map[0x20] = i + 0x4031;
+                break;
+            case 1:
+                i = (u8)(gGameState.items[gGameState.unk1DE].price / 10) * 2;
+                if (i != 0)
+                {
+                    map[0] = i + 0x4030;
+                    map[0x20] = i + 0x4031;
+                }
+                else
+                {
+                    map[0] = 0xD09F;
+                    map[0x20] = 0xD09F;
+                }
+                break;
+            case 2:
+                i = gGameState.items[gGameState.unk1DE].tile;
+                map[0] = i + 1;
+                map[0x20] = i + 1 + 0x10;
+                break;
+            case 3:
+                i = gGameState.items[gGameState.unk1DE].tile;
+                map[0] = i;
+                map[0x20] = i + 0x10;
+                break;
+            }
+            map++;
+            tile = 0xE01B;
+            for (i = gGameState.unk21E; i != 0; i--)
+            {
+                map[0] = tile;
+                map[0x20] = tile | 0x800;
+                tile ^= 0x400;
+                map++;
+            }
+        }
+        else
+        {
+            map = (u16 *)0x06006464;
+            tile = 0xB080;
+            for (i = 4; i != gGameState.unk21E; i--)
+            {
+                map[0] = tile;
+                map[0x20] = tile + 0x10;
+                tile++;
+                map++;
+            }
+            tile = 0xE01B;
+            for (; i != 0; i--)
+            {
+                map[0] = tile;
+                map[0x20] = tile | 0x800;
+                tile ^= 0x400;
+                map++;
+            }
+        }
+    }
+}
