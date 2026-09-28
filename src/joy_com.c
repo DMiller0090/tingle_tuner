@@ -70,7 +70,7 @@ void JoyComIntr(void)
     u16 cnt;
     u32 recv;
     struct JoyComPacket *pkt;
-    u8 unused[4];  // FAKEMATCH: the original has an unused 4-byte stack slot
+    u8 unused[4];  // unused; agbcc still gives it the original's 4-byte stack slot (likely authentic)
     s32 i;
 
     cnt = REG_JOYCNT;
