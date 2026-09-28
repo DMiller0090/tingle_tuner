@@ -1532,11 +1532,9 @@ void Func_0201B2C0(void)
 // What the player's marker (type 3) is on: returns the index of a marker within 8 pixels
 // (and sets unk11B to its type), else looks the position up in the slot 14 table of sea
 // chart squares (setting unk135 to the square's id + 1). unk11A: something is selected.
-// Near-miss, written with gSlot14Data as struct SeaChartEntry[49]: same code shape, but
-// the registers differ throughout (the original keeps gGameState in r3 inside the marker loop).
-// Also: the original spills to [sp, #4] where this uses [sp] (one more stack slot), and it
-// tests the type from r6 with a copy to r0 after the first compare (not tried further).
-/*
+// Only the first type test uses `type`; the rest re-read the field, which cse turns into a
+// copy of type's register (the `adds r0, r6, #0` after the first compare). `r` is s16: the
+// comparisons then use a widened copy of it.
 s32 Func_0201B3A4(void)
 {
     u8 player;
@@ -1545,7 +1543,7 @@ s32 Func_0201B3A4(void)
     u8 square;
     u16 ex;
     u16 ey;
-    s32 r;
+    s16 r;
 
     if (gGameState.unk121 != 0)
     {
@@ -1581,7 +1579,8 @@ s32 Func_0201B3A4(void)
     for (i = 0; i < gGameState.markerCount; i++)
     {
         type = gGameState.markers[i].type;
-        if (type == 1 || type == 3 || type == 4 || type == 0x11 || type == 0x12)
+        if (type == 1 || gGameState.markers[i].type == 3 || gGameState.markers[i].type == 4
+         || gGameState.markers[i].type == 0x11 || gGameState.markers[i].type == 0x12)
             continue;
         if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16)
             continue;
@@ -1711,8 +1710,6 @@ none:
     gGameState.unk11A = 0;
     return 0;
 }
-*/
-INCLUDE_ASM(Func_0201B3A4);
 
 // Play the sound for what the cursor is on: unk135 if set, else the selected marker's.
 // Near-miss: the original computes the (s16) ids in the shifted domain, ((v << 16) +
