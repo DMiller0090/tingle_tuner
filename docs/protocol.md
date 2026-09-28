@@ -207,3 +207,50 @@ image the Tuner received (measured: Windfall's 392x472 map drawn in GT, view (25
 (324, 175), potion 3.07 s + 1.58 s, i.e. Windfall speed). With a real map the view is clamped at
 `mapY` >= 0, so a stale marker within 60 px of that map's top edge shortens the effect to
 `marker.y + 32` px: faster than normal.
+
+## Short link drops
+
+A drop of the link shorter than about 3 GC frames doesn't look like a disconnect to either side,
+but it does lose packets:
+
+- **GBA**: `JoyComMain` only restarts the link (and `GbaComMain` only enters mode 2, the
+  "link lost" screen) after 10 frames without a JOY interrupt (`idleFrames > 9`).
+- **GC**: a failed transfer sets `field_0x4`, `mDoGaC_Connect` calls `mDoGaC_ComClose` (every
+  slot to status 9) and probes again once per frame. `mDoGaC_GbaLink` stays 1 while the context
+  is known and fewer than 3 probes have run since the link was last up (`field_0x10e < 3`), so
+  `daAgb_c` carries on. The probe resets the GBA (`JOYCNT_RESET`); the GBA's `CODE_OK` step
+  sets all its slots idle and empties its send queue, and `mDoGaC_ComRestart` empties the GC's
+  (`field_0x9`/`0xa`). `mDoGaC_ContextCheck` sets `mReConnect`.
+
+Whatever either side had queued is gone, and neither side resends it. Only when 3 or more probes
+fail does `mDoGaC_GbaLink` return 0 for a frame; retail `daAgb_Execute` then clears the item
+timer `field_0x65c` and `field_0x66b`, cuts a running hover or shield to 10 frames, and resets the
+cursor.
+
+**Skipping the Tingle Bomb wait** (GZLJ01, watched live 2026-09-28). After a Tingle Bomb two
+timers block items: the GC's `field_0x65c` = 120 (4 s; `modeMove` calls `onActive` only at 0,
+and `GbaItemUse` refuses everything but 0x15 while inactive), and the GBA's 180-frame
+`EffectBombBlast` with `itemsEnabled` = 0, which START (the item menu) and B need. Retail
+`UseItem` doesn't clear `itemsEnabled` for a bomb; that happens when the GC's reply (slot 7,
+effect 2) arrives. Drop the link after the GC has read the request but before the reply reached
+the GBA, and the GC uses the bomb (bomb spawned, rupees charged, timer 120) while the GBA never
+locks. Measured: GC received the request at 12.312 s, transfer error at 12.329, `GbaItemUse` ran at
+12.333 (reply queued), `ComClose` at 12.339 wiped it; 2 probes, GBA `idleFrames` peaked at 5,
+linked again at 12.441. The green Ting was started at 12.912. The GC timer is untouched but
+doesn't matter: a Ting's `StartEffectIntro` animation is 333 GBA frames (plus the message) before
+it sends 0x14, which went out at 18.739, after the timer ran out (16.337), and was accepted. The window
+is from the GC reading the request to the reply landing, about one GC frame; earlier loses the
+request (no bomb), later lets the reply through.
+
+**Other items.** The drop only removes a GBA wait that starts when the reply arrives and lasts
+longer than the GC's own lock:
+
+| Item (request) | GBA wait starts | Lost reply |
+|---|---|---|
+| Tingle Bomb (2) -> effect 2 / 15 | on the reply (180 frames) | skips it; GC timer 120 |
+| Tingle Bomb on Link (2) -> effect 14 | on the reply (300 + 180 frames) | skips it, but GC timer 270 (9 s) refuses a 0x14 sent within 9 s |
+| A, nothing selected (16) | on the reply (`StartLookEffect`, 120 frames) | skips it; no GC timer |
+| Ting 8-10 (0x14, then 8-10) | at `UseItem` (`StartTingEffect`) | nothing to skip; losing the 8-10 reply leaves the GBA at `effectStep` 5 until a map change |
+| Balloon / shield (0x11 / 0x12, then 3 / 4) | on the 0x11 / 0x12 reply | losing it cancels the item (0x11 / 0x12 do nothing on the GC); the effect then runs off the GC's `flags.timer`, so losing the 3 / 4 reply changes nothing |
+| Roulette (5) | on the reply | losing it cancels the roll (nothing charged yet); losing a later 0x13 reply leaves the GBA at `effectStep` 5 |
+| Shop (slot 12) | dialogue waits for slot 13 | lost reply leaves the dialogue stuck (keys masked) until a map change |
