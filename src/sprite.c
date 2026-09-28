@@ -315,7 +315,11 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
 }
 
 // DrawSpriteAt for a bare part list, keeping the parts' palettes.
-// Near-miss: x and the ~0x10 mosaic mask swap registers (sb/r8); everything else matches.
+// Near-miss: x and the ~0x10 mosaic/hFlip mask swap registers (sb/r8); everything else matches.
+// prio.py: x's narrowed copy (refs 2, live 43, priority 465) goes before the mask (refs 5,
+// live 226, 442) and the ~0xC mask (423); the original needs x between them (live 46-47).
+// Tried: u16/s32 x (asm label), for loops, part as the parameter, every order of the three
+// initialisations, shake as u8/u32/s16, operand orders of the x and y sums.
 /*
 void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
 {

@@ -484,103 +484,106 @@ bool32 SendItemUse(u8 item, u8 arg)
 }
 
 // Use the item in menu entry `item` (16: from the other button?). Returns FALSE if it can't be
-// used right now.
-// Nearly matches: the register allocation (item in r4, the entry in r5 and &items in r6)
-// only comes out right when the marker test is written relative to gGameState.items, e.g.
-// `((u8 *)gGameState.items)[FindMarker(1) * 8 - 0xF6]`, and even then items - 0xF6 is
-// computed before adding the index instead of after (`adds r0, r6, r0; subs r0, #0xf6`).
-//     bool32 UseItem(u8 item)
-//     {
-//         struct ItemSlot *entry = &gGameState.items[item];
-//         u8 price;
-//
-//         if (item == 0)
-//             return FALSE;
-//         if (!gMain.linked)
-//             return TRUE;
-//         if (gGameState.markers[FindMarker(1)].unk6 != 0
-//          && ((item >= 3 && item <= 5) || item == 8 || item == 9 || item == 10 || item == 16))
-//         {
-//             if (item == 16)
-//                 ShowMessage(0x1F, 1);
-//             else
-//                 ShowMessage(0xE, 1);
-//             return FALSE;
-//         }
-//         if (item == 6)
-//         {
-//             ShowMessage(0xD, 1);
-//         }
-//         else if (item == 11)
-//         {
-//             gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0x88;
-//             SetSelectedItem(gGameState.unk1DE);
-//             Func_0201FCA0();
-//         }
-//         else if (item == 1)
-//         {
-//             if (gMain.unk457 == 0)
-//             {
-//                 if (MarkerDistance(1) <= 24)
-//                 {
-//                     ShowMessage(0xC, 1);
-//                 }
-//                 else if (gGameState.icons[2].type == 0)
-//                 {
-//                     u8 i = FindMarker(3);
-//
-//                     gGameState.icons[2].type = 3;
-//                     gGameState.icons[2].x = gGameState.markers[i].x;
-//                     gGameState.icons[2].y = gGameState.markers[i].y;
-//                     SoundPlay(0xB - SOUND_ID_SHIFT, 0);
-//                 }
-//                 else
-//                 {
-//                     ShowMessage(0x1A6, 1);
-//                 }
-//             }
-//             else
-//             {
-//                 ShowMessage(0xE, 1);
-//             }
-//         }
-//         else if (item >= 3 && item <= 4)
-//         {
-//             if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
-//                 goto no_money;
-//             SendItemUse(item == 3 ? 0x11 : 0x12, 0);
-//         }
-//         else if (item >= 8 && item <= 10)
-//         {
-//             if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
-//             {
-//                 ShowMessage(0xF, 1);
-//                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
-//             }
-//             else
-//             {
-//                 gGameState.effect[0] = item;
-//                 Func_0201F878();
-//             }
-//         }
-//         else
-//         {
-//             if (item == 5 && gGameState.rupees - gGameState.rupeeDelta < entry->price)
-//             {
-//             no_money:
-//                 ShowMessage(0xF, 1);
-//                 SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
-//                 return FALSE;
-//             }
-//             if (item == 16 || item == 5)
-//                 price = 0;
-//             else
-//                 price = entry->price;
-//             SendItemUse(item, price);
-//         }
-//         return TRUE;
-//     }
-INCLUDE_ASM(UseItem);
+// used right now. FindMarker's result goes through a u8 local: indexing with the call directly
+// puts the index first in the address sum.
+bool32 UseItem(u8 item)
+{
+    struct ItemSlot *entry = &gGameState.items[item];
+    u8 price;
+    u8 m;
+
+    if (item == 0)
+        return FALSE;
+    if (!gMain.linked)
+        return TRUE;
+    m = FindMarker(1);
+    if (gGameState.markers[m].unk6 != 0
+     && ((item >= 3 && item <= 5) || item == 8 || item == 9 || item == 10 || item == 16))
+    {
+        if (item == 16)
+            ShowMessage(0x1F, 1);
+        else
+            ShowMessage(0xE, 1);
+        return FALSE;
+    }
+    if (item == 6)
+    {
+        ShowMessage(0xD, 1);
+    }
+    else if (item == 11)
+    {
+#ifdef VERSION_GZLJ01
+        gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0x88;
+#else
+        gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0x8A;
+#endif
+        SetSelectedItem(gGameState.unk1DE);
+        Func_0201FCA0();
+    }
+    else if (item == 1)
+    {
+        if (gMain.unk457 == 0)
+        {
+            if (MarkerDistance(1) <= 24)
+            {
+                ShowMessage(0xC, 1);
+            }
+            else if (gGameState.icons[2].type == 0)
+            {
+                u8 i = FindMarker(3);
+
+                gGameState.icons[2].type = 3;
+                gGameState.icons[2].x = gGameState.markers[i].x;
+                gGameState.icons[2].y = gGameState.markers[i].y;
+                SoundPlay(0xB - SOUND_ID_SHIFT, 0);
+            }
+            else
+            {
+                ShowMessage(0x1A6, 1);
+            }
+        }
+        else
+        {
+            ShowMessage(0xE, 1);
+        }
+    }
+    else if (item >= 3 && item <= 4)
+    {
+        if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
+            goto no_money;
+        SendItemUse(item == 3 ? 0x11 : 0x12, 0);
+    }
+    else if (item >= 8 && item <= 10)
+    {
+        if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
+        {
+            ShowMessage(0xF, 1);
+            SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+        }
+        else
+        {
+            gGameState.effect[0] = item;
+            Func_0201F878();
+        }
+    }
+    else
+    {
+        if (item == 5 && gGameState.rupees - gGameState.rupeeDelta < entry->price)
+        {
+        no_money:
+            ShowMessage(0xF, 1);
+            SoundPlay(0x1A - SOUND_ID_SHIFT, 0);
+            return FALSE;
+        }
+        if (item == 16 || item == 5)
+            price = 0;
+        else
+            price = entry->price;
+        SendItemUse(item, price);
+    }
+    return TRUE;
+}
+
 
 void Func_0201E584(void)
 {
@@ -610,11 +613,12 @@ void Func_0201E584(void)
 // Slide the two HUD panels at the top of the screen in and out (unk21F/unk21D: the left one,
 // unk220/unk21E: the right one with the held item and its price) depending on the game's
 // state, and draw them.
-// Nearly matches. The conditions of the second `else if` (unk220) come out with one jump
-// threaded differently (the original re-tests dungeonNo and unk224 after the unk224 test
-// fails), and in cases 0 and 1 the original keeps the digit doubled ((u8)x * 2, in r3, the
-// same register as the tile in cases 2 and 3); writing it that way shifts the register
-// allocation of the whole function.
+// Nearly matches (106 masked diff lines, all in the price digits). The unk220 clear condition
+// needs its last three clauses grouped: written flat, fold merges the first two clauses
+// (same trailing `unk121 == 0`) into one test. What remains: in cases 0 and 1 the original
+// keeps the digit doubled ((u8)x * 2) in r3 and loads 0x4031 from the pool in case 0; putting
+// the doubled digit in its own variable (u16/u32 t, or tile) moves the register allocation
+// of the whole function (500+ lines).
 //     void UpdateHudPanels(void)
 //     {
 //         u16 *map;
@@ -661,10 +665,10 @@ void Func_0201E584(void)
 //         {
 //             if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.unk104 != 0
 //                  && gGameState.unk121 == 0)
-//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
-//                  && gGameState.unk104 != 0 && gGameState.unk121 == 0)
-//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
-//              || gGameState.unk1CC != 0)
+//              || ((gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
+//                   && gGameState.unk104 != 0 && gGameState.unk121 == 0)
+//                  || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
+//                  || gGameState.unk1CC != 0))
 //                 gGameState.unk220 = 0;
 //         }
 //

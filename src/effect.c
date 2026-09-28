@@ -160,59 +160,59 @@ void Func_0201EDC4(void)
 }
 
 // Draw the item effect sprite (kind 0: gSprite_0202C928, else gSprite_0202C940) at a map
-// position. Nearly matches, but the original sign-extends x and y again before each
-// subtraction (agbcc drops that, since only the low half reaches DrawSpriteAt), and y and
-// the mosaic flag swap r7/r8:
-//     void Func_0201EDF8(s16 x, s16 y, u8 kind)
-//     {
-//         u32 mosaic = gMain.mosaic != 0;
-//         const struct SpriteFrame *anim;
-//         u8 flip;
-//
-//         if (kind == 0)
-//         {
-//             if (gGameState.unk12E == 0)
-//             {
-//                 gGameState.unk12F ^= 1;
-//                 gGameState.unk12E = gSprite_0202C928[gGameState.unk12F].duration;
-//                 anim = gSprite_0202C928;
-//             }
-//             else
-//             {
-//                 gGameState.unk12E--;
-//                 anim = gSprite_0202C928;
-//             }
-//             flip = 0;
-//             if (gGameState.effect[0] == 12)
-//                 flip = 16;
-//             DrawSpriteAt(anim, gGameState.unk12F, x - gMain.bgOfs[3][0] + 3,
-//                          y - gMain.bgOfs[3][1] - 24, mosaic, flip, 1);
-//         }
-//         else
-//         {
-//             if (gGameState.unk130 == 0)
-//             {
-//                 gGameState.unk131 ^= 1;
-//                 gGameState.unk130 = gSprite_0202C940[gGameState.unk131].duration;
-//                 anim = gSprite_0202C940;
-//             }
-//             else
-//             {
-//                 gGameState.unk130--;
-//                 anim = gSprite_0202C940;
-//             }
-//             flip = 0;
-//             if (gGameState.effect[0] == 12)
-//                 flip = 8;
-//             if (gGameState.unk131 == 0)
-//                 DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] - 4,
-//                              y - gMain.bgOfs[3][1], mosaic, flip, 1);
-//             else
-//                 DrawSpriteAt(anim, gGameState.unk131, x - gMain.bgOfs[3][0] + 4,
-//                              y - gMain.bgOfs[3][1], mosaic, flip, 1);
-//         }
-//     }
-INCLUDE_ASM(Func_0201EDF8);
+// position. The scroll is subtracted as an s16, which keeps the arithmetic in int (x and y
+// get sign-extended after the scroll load).
+void Func_0201EDF8(s16 x, s16 y, u8 kind)
+{
+    u32 mosaic = gMain.mosaic != 0;
+    const struct SpriteFrame *anim;
+    u8 flip;
+
+    if (kind == 0)
+    {
+        if (gGameState.unk12E == 0)
+        {
+            gGameState.unk12F ^= 1;
+            gGameState.unk12E = gSprite_0202C928[gGameState.unk12F].duration;
+            anim = gSprite_0202C928;
+        }
+        else
+        {
+            gGameState.unk12E--;
+            anim = gSprite_0202C928;
+        }
+        if (gGameState.effect[0] == 12)
+            flip = 16;
+        else
+            flip = 0;
+        DrawSpriteAt(anim, gGameState.unk12F, x - (s16)gMain.bgOfs[3][0] + 3,
+                     y - (s16)gMain.bgOfs[3][1] - 24, mosaic, flip, 1);
+    }
+    else
+    {
+        if (gGameState.unk130 == 0)
+        {
+            gGameState.unk131 ^= 1;
+            gGameState.unk130 = gSprite_0202C940[gGameState.unk131].duration;
+            anim = gSprite_0202C940;
+        }
+        else
+        {
+            gGameState.unk130--;
+            anim = gSprite_0202C940;
+        }
+        if (gGameState.effect[0] == 12)
+            flip = 8;
+        else
+            flip = 0;
+        if (gGameState.unk131 == 0)
+            DrawSpriteAt(anim, gGameState.unk131, x - (s16)gMain.bgOfs[3][0] - 4,
+                         y - (s16)gMain.bgOfs[3][1], mosaic, flip, 1);
+        else
+            DrawSpriteAt(anim, gGameState.unk131, x - (s16)gMain.bgOfs[3][0] + 4,
+                         y - (s16)gMain.bgOfs[3][1], mosaic, flip, 1);
+    }
+}
 
 // Draw the flags.timer count (two digits) at x, y; a sound plays when it changes.
 void DrawTimerCount(s16 x, s16 y)
@@ -586,40 +586,44 @@ void Func_0201F878(void)
 }
 
 // Draws the title sprite at (x, y) on BG3's map, bobbing; kind 1 adds gSprite_0202C490 with a
-// palette per effect, kind 2 flips it and adds gSprite_0202C928 at (unk036, unk038).
-// Doesn't match: the original keeps x, y and bob in registers (spilling copies of kind and
-// mosaic instead) and loads BG3's scroll as a folded gMain+0x432 constant in the first and
-// last calls; this keeps the address in a register:
-//     s16 bob = gBobOffsets_020244DA[(gMain.frameCount & 0x30) >> 4];
-//     u8 mosaic = gMain.mosaic != 0;
-//     u8 flags = 0;
-//     u8 palette;
-//
-//     if (kind == 2)
-//         flags = 8;
-//     DrawSpriteAt(gSprite_0202C938, 0, (s16)x - gMain.bgOfs[3][0] + bob,
-//                  (s16)y - gMain.bgOfs[3][1], mosaic, flags, 1);
-//     if (kind == 1)
-//     {
-//         if (gGameState.effect[0] == 8)
-//             palette = 8;
-//         else if (gGameState.effect[0] == 9)
-//             palette = 15;
-//         else
-//             palette = 4;
-//         DrawSprite(gSprite_0202C490, 0, (s16)x - gMain.bgOfs[3][0] + (bob + 11),
-//                    (s16)y - gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, palette);
-//     }
-//     else if (kind == 2)
-//     {
-//         DrawSpriteAt(gSprite_0202C928, 0, gGameState.unk036 - gMain.bgOfs[3][0] + bob,
-//                      gGameState.unk038 - gMain.bgOfs[3][1], mosaic, 16, 1);
-//     }
-INCLUDE_ASM(Func_0201F8C4);
+// palette per effect, kind 2 flips it and adds gSprite_0202C928 at (unk036, unk038). One
+// variable holds the flip flags and then the palette.
+void Func_0201F8C4(s16 x, s16 y, u8 kind)
+{
+    s16 bob = gBobOffsets_020244DA[(gMain.frameCount & 0x30) >> 4];
+    u8 mosaic = gMain.mosaic != 0;
+    u8 flags = 0;
+
+    if (kind == 2)
+        flags = 8;
+    DrawSpriteAt(gSprite_0202C938, 0, x - (s16)gMain.bgOfs[3][0] + bob,
+                 y - (s16)gMain.bgOfs[3][1], mosaic, flags, 1);
+    if (kind == 1)
+    {
+        if (gGameState.effect[0] == 8)
+            flags = 8;
+        else if (gGameState.effect[0] == 9)
+            flags = 15;
+        else
+            flags = 4;
+        DrawSprite(gSprite_0202C490, 0, x - (s16)gMain.bgOfs[3][0] + (s16)(bob + 11),
+                   y - (s16)gMain.bgOfs[3][1] + 26, 0xC0, mosaic, 0, 0, 0, 0, flags);
+    }
+    else if (kind == 2)
+    {
+        flags = 16;
+        DrawSpriteAt(gSprite_0202C928, 0, gGameState.unk036 - gMain.bgOfs[3][0] + bob,
+                     gGameState.unk038 - gMain.bgOfs[3][1], mosaic, flags, 1);
+    }
+}
 
 // Item effects 8-10: the title sprite drops in over the type 1 marker and sends the item use.
 // Doesn't match by one instruction: in state 2 the original stores a fresh 0 to unk120 where this
-// reuses the register holding unk132 (known to be 0):
+// reuses the register holding unk132 (known to be 0). cse does that: byte stores go through
+// store_bit_field as (and mem 0), which folds to 0 and finds unk132's register in the jump
+// equivalence. Tried: !x, <1, u32/s8 casts, a local or pointer for unk132, != with swapped arms,
+// switch, goto, volatile/bitfield/cast stores to unk120, storing unk1FA or unk132*0, the unk1FA
+// test written other ways, a temp reassigned to 8 before the store:
 //     void Effect8(void)
 //     {
 //         struct Main *main = &gMain;
