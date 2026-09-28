@@ -429,7 +429,14 @@ const struct SoundBankHeader gSoundBankHeader =
 };
 
 // The US bank drops SE sequence 7 (voice clip 6), so the SE indices from 8 on are one lower.
+#ifdef VERSION_PAL
+// The PAL bank also reorders the sequences of sound IDs 2-5 (voice clips) and US 0x25: JP SE
+// 4, 5, 8, 6 and 9 are 8, 4, 7, 5 and 6.
+#define SOUND_SE(se) ((se) == 4 ? 8 : (se) == 5 ? 4 : (se) == 6 ? 5 : (se) == 8 ? 7 : (se) == 9 ? 6 \
+                      : (se) < 8 ? (se) : (se) - SOUND_ID_SHIFT)
+#else
 #define SOUND_SE(se) ((se) < 8 ? (se) : (se) - SOUND_ID_SHIFT)
+#endif
 #define SOUND(se, player, flags) (SOUND_SE(se) | ((player) << 16) | (flags))
 
 const u32 gSoundTable[] =
