@@ -20,7 +20,7 @@ const u16 gTwoChoiceIds[5] =
     0x3E, 0x41, 0x43, 0x45, 0x1A6
 };
 
-const u16 gTwoChoiceSounds[10] =
+const u16 gTwoChoiceMsgIds[10] =
 {
     0x41, 0x3D,
     0x47, 0x3D,
@@ -34,7 +34,7 @@ const u16 gThreeChoiceIds[7] =
     0x3F, 0x40, 0xD2, 0xD4, 0xD8, 0xDB, 0xDD
 };
 
-const u16 gThreeChoiceSounds[21] =
+const u16 gThreeChoiceMsgIds[21] =
 {
     0x41, 0x43, 0x3D,
     0x41, 0x45, 0x3D,
@@ -612,7 +612,7 @@ u8 ChoiceMenuUpdate_(void)
         {
             while (gTwoChoiceIds[i] != gGameState.unk142)
                 i++;
-            if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0xFFFF)
+            if (gTwoChoiceMsgIds[i * 2 + gGameState.unk14F] == 0xFFFF)
             {
                 gGameState.unk151 = 0;
                 gGameState.unk150 = 0;
@@ -621,15 +621,15 @@ u8 ChoiceMenuUpdate_(void)
                 gGameState.unk13E = 300;
                 return 3;
             }
-            if (gTwoChoiceSounds[i * 2 + gGameState.unk14F] == 0x1A7)
+            if (gTwoChoiceMsgIds[i * 2 + gGameState.unk14F] == 0x1A7)
                 gGameState.unk11E = 1;
-            ShowMessage(gTwoChoiceSounds[i * 2 + gGameState.unk14F], gGameState.unk226);
+            ShowMessage(gTwoChoiceMsgIds[i * 2 + gGameState.unk14F], gGameState.unk226);
         }
         else
         {
             while (gThreeChoiceIds[i] != gGameState.unk142)
                 i++;
-            if (gThreeChoiceSounds[i * 3 + gGameState.unk14F] == 0xFFFF)
+            if (gThreeChoiceMsgIds[i * 3 + gGameState.unk14F] == 0xFFFF)
             {
                 gGameState.unk151 = 0;
                 gGameState.unk150 = 0;
@@ -637,7 +637,7 @@ u8 ChoiceMenuUpdate_(void)
                 gGameState.unk14E = 0;
                 return 3;
             }
-            ShowMessage(gThreeChoiceSounds[i * 3 + gGameState.unk14F], gGameState.unk226);
+            ShowMessage(gThreeChoiceMsgIds[i * 3 + gGameState.unk14F], gGameState.unk226);
         }
         gGameState.unk151 = 0;
         gGameState.unk150 = 0;

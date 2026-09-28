@@ -59,7 +59,7 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 |--------|--------|--------|----------|
 | `02014800` | `0201B000` | `crt0.s` | stock AGB SDK: `_start`, header, `start_vector`, `intr_main` |
 | `02014A0C` | `0201B20C` | `main.c` | `AgbMain` ... `MainLoop` (ends `02015054`); `.rodata` `02023DEC–02023E38` |
-| `02015054` | `0201B854` | `mode1.c` | `InitDisplayIntr`, `SeedRandom`, `UpdateRandom`, the HUD/graphics helpers, `Mode1State0-5`, `Mode1RecvMarkers` (slot 3), `MainMode1` (ends `02017190`); `.rodata` `02023E38-02023E90`: an unreferenced 12-byte block, `gDungeonSounds`, `gMode1StateFuncs`, two u16 tables. The tables on both sides of `gMode1StateFuncs` put them in one object with `MainMode1`. The random/display functions have no `.rodata` or other marker, so whether they are a separate object can't be told from the binary; they stay in mode1.c |
+| `02015054` | `0201B854` | `mode1.c` | `InitDisplayIntr`, `SeedRandom`, `UpdateRandom`, the HUD/graphics helpers, `Mode1State0-5`, `Mode1RecvMarkers` (slot 3), `MainMode1` (ends `02017190`); `.rodata` `02023E38-02023E90`: an unreferenced 12-byte block, `gDungeonMsgIds`, `gMode1StateFuncs`, two u16 tables. The tables on both sides of `gMode1StateFuncs` put them in one object with `MainMode1`. The random/display functions have no `.rodata` or other marker, so whether they are a separate object can't be told from the binary; they stay in mode1.c |
 | `02017190` | `0201D980` | `gba_com.c` | app-side link API over JoyCom (status per slot, send/recv) |
 | `020173B8` | `0201DBA8` | `multi_sio.c` | Nintendo MultiSio (`"MultiSioSync010316"` is its `.rodata`); nothing calls it |
 | `02017824` | `0201E014` | `joy_com.c` | JOY bus link: init/stop, IRQ handler (copied to IWRAM), send queue (ends `02018158`) |
@@ -102,7 +102,7 @@ within the range the tables allow, made by who calls the functions in between:
   `InitMapView`). The easing helpers have no `.rodata` and nothing separates them from
   `DrawSprite`, so they share `sprite.c`.
 - `map.c` / `message.c` at `Func_0201BA2C`: the text renderer's functions are only called
-  from the message code; `Func_0201B8C8` calls `Func_0201B7D4` (whose `gSounds_02024278`
+  from the message code; `Func_0201B8C8` calls `Func_0201B7D4` (whose `gMsgIds_02024278`
   ends the map block) and both are cursor messages from `Mode1State2`.
 - `message.c` / `item_menu.c` at `DrawSlotCursor`: the item menu's first table is
   `gShopItemsInit`; `MsgReset` ... `MsgClose` are message functions.
@@ -175,9 +175,8 @@ plays SE index `entry + 1` when restarted within 150 frames of stopping. `SoundP
 the disassembly for `bl`; the US calls are the JP ones with `SOUND_ID_SHIFT` applied). "SE"
 is the sequence index in the SE set, "msg" the `F6 xx` message codes (`Func_0201C484`, via
 `gSoundIds_0202430E`) that play the ID in JP. Voice clips (player 4) are Tingle's sampled
-voice. Several game-code names say "sound" for what are message IDs: `ShowMessage`'s
-argument, `gDungeonSounds`, `gChestSounds`, `gSounds_02024278`, `gTwoChoiceSounds`,
-`gThreeChoiceSounds` and `switchSound` all hold message numbers.
+voice. Tables passed to `ShowMessage` (`gDungeonMsgIds`, `gChestMsgIds`, `gMsgIds_02024278`,
+the choice tables, `switchMsg`) hold message numbers, not sound IDs.
 
 | JP | US | SE | pl. | what plays it |
 |----|----|----|-----|---------------|
@@ -401,7 +400,7 @@ pointers through `__attribute__((packed))` copies of the structs, hence the byte
   reproduces both the JP and US files byte for byte.
 - **`gMode1Unused_02023E38`** (`7D 7A 01 00 B2 B3 00 2B 00 00 00 FF`; still unexplained): it
   sits right after `main.c`'s last table (`gMainModeFuncs`, which ends at `02023E38`) and before
-  `gDungeonSounds`, and is byte-identical in all three builds (US `0202AA94`/`0202ACC8`),
+  `gDungeonMsgIds`, and is byte-identical in all three builds (US `0202AA94`/`0202ACC8`),
   even though the US replaced the Japanese font. No word anywhere in the program points into
   it or near it. What it is not:
   - Text in the message font (`gMode1BgTiles` + 0x2000): "7 4 い あ x y あ わ あ あ あ"; in the US

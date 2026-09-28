@@ -457,12 +457,12 @@ gIntrTableInit = 0x02023DEC; // data
 gOamHiddenEntry = 0x02023E24; // data
 gMainModeFuncs = 0x02023E2C; // data
 gMode1Unused_02023E38 = 0x02023E38; // data
-gDungeonSounds = 0x02023E44; // data
+gDungeonMsgIds = 0x02023E44; // data
 gMode1StateFuncs = 0x02023E68; // data
 // BG map entry of the rupee icon per wallet size (MainMode1)
 gRupeeIconTiles = 0x02023E80; // data
 // sound per dungeon chest bit (flags.dungeonChests), played by MainMode1
-gChestSounds = 0x02023E86; // data
+gChestMsgIds = 0x02023E86; // data
 gGbaComBuffers = 0x02023E90; // data
 MultiSioLibVer = 0x02023ED0; // data
 gMode0BobOffsets = 0x02023EE4; // data
@@ -497,7 +497,7 @@ gTriangleIslandPos = 0x0202426A; // data
 gTempleMarkerPos = 0x02024270; // data
 // sound per marker unk6 for type 0x13 markers (Func_0201B7D4)
 gTable_02024274 = 0x02024274; // data
-gSounds_02024278 = 0x02024278; // data
+gMsgIds_02024278 = 0x02024278; // data
 // u32 per text colour, ANDed with the glyph's 4bpp rows
 gTextColorMasks = 0x0202429C; // data
 // message code 0xF5 argument -> Tingle animation (gGameState.unk226)
@@ -540,9 +540,9 @@ gObjBurstVelY = 0x02024556; // data
 gObjBurstStateFuncs = 0x02024560; // data
 // graphics (.rodata after the code's own tables); LZ77 except the two palettes (raw 0x200)
 gTwoChoiceIds = 0x020242B8; // data
-gTwoChoiceSounds = 0x020242C2; // data
+gTwoChoiceMsgIds = 0x020242C2; // data
 gThreeChoiceIds = 0x020242D6; // data
-gThreeChoiceSounds = 0x020242E4; // data
+gThreeChoiceMsgIds = 0x020242E4; // data
 gSoundIds_0202430E = 0x0202430E; // data
 gMode1BgTiles = 0x02024568; // data
 gMode1BgPalette = 0x02026650; // data

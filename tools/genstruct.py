@@ -6,7 +6,7 @@ A header opts in with a block like:
 
     // genstruct GameState 0x240
     // 0x000 struct GbaComFlags flags  // comment
-    // 0x03A u16 switchSound
+    // 0x03A u16 switchMsg
     // 0x1E5 bits u8 a:1 b:1 c:6       // several bitfields in one byte
     // end genstruct
     struct GameState

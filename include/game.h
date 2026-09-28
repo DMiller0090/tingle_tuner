@@ -60,7 +60,7 @@ struct ItemSlot
 // 0x034 s16 unk034  // title sprite y
 // 0x036 s16 unk036
 // 0x038 s16 unk038
-// 0x03A u16 switchSound  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
+// 0x03A u16 switchMsg  // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
 // 0x03C u8 switchNo  // 0xFF: none
 // 0x03D u8 switchStageNo
 // 0x03E u8 switchRoomNo
@@ -246,7 +246,7 @@ struct GameState
     /*0x034*/ s16 unk034;                     // title sprite y
     /*0x036*/ s16 unk036;
     /*0x038*/ s16 unk038;
-    /*0x03A*/ u16 switchSound;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
+    /*0x03A*/ u16 switchMsg;                // switch record sent in slot 8 (daAgb_Switch, daAgb_c::SwitchOn)
     /*0x03C*/ u8 switchNo;                    // 0xFF: none
     /*0x03D*/ u8 switchStageNo;
     /*0x03E*/ u8 switchRoomNo;
@@ -742,7 +742,7 @@ void DrawChoiceCursor(void);
 #define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))
 extern const u32 gTextColorMasks[];
 extern const u16 gSoundIds_0202430E[];
-extern const s16 gSounds_02024278[];
+extern const s16 gMsgIds_02024278[];
 void DrawQuestMarkers(void);
 // One OAM entry as bitfields (gOamBuffer holds 128 of them).
 struct OamData16
@@ -771,9 +771,9 @@ extern const u16 gTable_02024274[2];
 s32 ChoiceMenuUpdate(void);  // the definition returns u8
 // Per question (unk142): the ids, then the sound per choice (0xFFFF: none).
 extern const u16 gTwoChoiceIds[];
-extern const u16 gTwoChoiceSounds[];  // [id index * 2 + choice]
+extern const u16 gTwoChoiceMsgIds[];  // [id index * 2 + choice]
 extern const u16 gThreeChoiceIds[];
-extern const u16 gThreeChoiceSounds[];  // [id index * 3 + choice]
+extern const u16 gThreeChoiceMsgIds[];  // [id index * 3 + choice]
 void UpdateTargetCompass(void);
 void Func_0201E584(void);
 

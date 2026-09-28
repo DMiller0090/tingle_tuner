@@ -25,7 +25,7 @@ void Mode1Func_02016350(void);
 const u8 gMode1Unused_02023E38[12] = {0x7D, 0x7A, 0x01, 0x00, 0xB2, 0xB3, 0x00, 0x2B, 0x00, 0x00, 0x00, 0xFF};
 
 // Sound per dungeon number (gGameState.flags.dungeonNo), played by Mode1State1.
-const s16 gDungeonSounds[18] = {50, 51, 52, 53, 54, 55, 82, 83, 84, 85, 86, 86, 138, 142, 135, 137, 141, 57};
+const s16 gDungeonMsgIds[18] = {50, 51, 52, 53, 54, 55, 82, 83, 84, 85, 86, 86, 138, 142, 135, 137, 141, 57};
 
 void (*const gMode1StateFuncs[])(void) =
 {
@@ -40,7 +40,7 @@ void (*const gMode1StateFuncs[])(void) =
 // BG map entry of the rupee icon (tile 0x44) per wallet size: the palette gives its colour.
 const u16 gRupeeIconTiles[3] = {0xC044, 0xA044, 0x4044};
 // Sound per dungeon chest bit (flags.dungeonChests: WT, ET, TOTG, FW, DRC).
-const s16 gChestSounds[5] = {0xE6, 0xE7, 0xE8, 0xEA, 0xE9};
+const s16 gChestMsgIds[5] = {0xE6, 0xE7, 0xE8, 0xEA, 0xE9};
 
 void Mode1SendSwitch(u8 soundArg);
 
@@ -203,7 +203,7 @@ void Mode1State0(void)
     gGameState.unk106 = 0;
     gGameState.unk030 = 0;
     gGameState.unk120 = 0;
-    gGameState.switchSound = -1;
+    gGameState.switchMsg = -1;
     gGameState.switchType = 0;
     gGameState.unk140 = -1;
     gGameState.unk1F8 = -1;
@@ -245,7 +245,7 @@ void Mode1State0(void)
         UpdateMap();
     }
     MsgReset();
-    gGameState.switchSound = 0xFFFF;
+    gGameState.switchMsg = 0xFFFF;
     gGameState.unk21C = 0;
     gGameState.unk206 = 0x300;
     ItemMenuInit();
@@ -284,7 +284,7 @@ void Mode1State1(void)
     if (--gGameState.waveAmplitude == 0)
     {
         gMain.hblankScroll = FALSE;
-        ShowMessage(gDungeonSounds[gGameState.flags.dungeonNo], 2);
+        ShowMessage(gDungeonMsgIds[gGameState.flags.dungeonNo], 2);
         SoundPlay(0, 0);
         gGameState.unk21C = 1;
         gMain.modeState = 2;
@@ -353,7 +353,7 @@ void Mode1SendSwitch(u8 soundArg)
     *p = gGameState.switchNo2;
     GbaComSendDataSet(GBACOM_BUF_SWITCH, 6, GBACOM_SLOT_SWITCH,
                       ((u32 *)GBACOM_BUF_SWITCH)[0] + *(u32 *)p);
-    ShowMessage(gGameState.switchSound, soundArg);
+    ShowMessage(gGameState.switchMsg, soundArg);
     gGameState.unk21C = 1;
     gGameState.unk206 = 0x100;
     if ((u8)(gGameState.switchType - 1) > 2 && gGameState.switchType != 14 && gGameState.switchType != 15)
@@ -705,7 +705,7 @@ void Mode1RecvMarkers(void)
                 gGameState.unk11A = 0;
                 if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
                     GbaComDataStatusReset(GBACOM_SLOT_MAIL);
-                gGameState.switchSound = 0xFFFF;
+                gGameState.switchMsg = 0xFFFF;
                 gGameState.switchType = 0;
             }
         }
@@ -758,7 +758,7 @@ void Mode1Func_02016350(void)
     gGameState.unk030 = 0;
     gGameState.unk120 = 0;
     gGameState.unk15A = 0;
-    gGameState.switchSound = 0xFFFF;
+    gGameState.switchMsg = 0xFFFF;
     gGameState.switchType = 0;
     gGameState.unk140 = -1;
     gGameState.unk1F8 = -1;
@@ -914,7 +914,7 @@ void MainMode1(void)
             if (gGameState.unk1E1 & (1 << i))
                 chest = i;
         }
-        ShowMessage(gChestSounds[chest], 1);
+        ShowMessage(gChestMsgIds[chest], 1);
     }
 
     if (gGameState.unk238 != gGameState.flags.unkB_7)
@@ -1074,7 +1074,7 @@ void MainMode1(void)
             if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk224 == 0
              && gGameState.unk1FB == 0)
             {
-                GbaComRecvDataGet(&gGameState.switchSound, GBACOM_SLOT_MAIL, 8);
+                GbaComRecvDataGet(&gGameState.switchMsg, GBACOM_SLOT_MAIL, 8);
                 if (gGameState.switchType == 5 || gGameState.switchType == 6
                  || gGameState.switchType == 9 || gGameState.switchType == 7
                  || gGameState.switchType == 11 || gGameState.switchType == 12
@@ -1116,7 +1116,7 @@ void MainMode1(void)
             }
             else if (GBACOM_BUF_MAIL[5] == 0)
             {
-                GbaComRecvDataGet(&gGameState.switchSound, GBACOM_SLOT_MAIL, 8);
+                GbaComRecvDataGet(&gGameState.switchMsg, GBACOM_SLOT_MAIL, 8);
                 gGameState.unk0E5 = 0;
             }
             else

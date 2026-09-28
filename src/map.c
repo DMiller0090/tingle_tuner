@@ -85,7 +85,7 @@ const u16 gTable_02024274[2] =
     0xCC, 0xE0
 };
 
-const s16 gSounds_02024278[18] =
+const s16 gMsgIds_02024278[18] =
 {
     0x13, 0x38, 0x5E, 0x0, 0x3D, 0x3E, 0x3E, 0x3E, 0x3E,
     0x3E, 0x3E, 0x3E, 0x3E, 0x3E, 0x3E, 0x3F, 0x40, 0x0
@@ -1718,7 +1718,7 @@ void Func_0201B7D4(void)
             ShowMessage(gGameState.unk135 + 0x14D, 1);
     }
     else if (gGameState.markers[idx].type == 0x13)
-        ShowMessage(gSounds_02024278[gGameState.markers[idx].unk6 - 1], 1);
+        ShowMessage(gMsgIds_02024278[gGameState.markers[idx].unk6 - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
         ShowMessage(0x5D, 1);
     else if (gGameState.markers[idx].unk7 <= 0x23)
@@ -1793,8 +1793,8 @@ void Func_0201B8C8(void)
     case 0:
         if (gGameState.switchType == 15)
         {
-            gGameState.unk1F8 = gGameState.switchSound;
-            gGameState.switchSound = 0x302;
+            gGameState.unk1F8 = gGameState.switchMsg;
+            gGameState.switchMsg = 0x302;
         }
         if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
         {
