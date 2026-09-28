@@ -349,7 +349,9 @@ pointers through `__attribute__((packed))` copies of the structs, hence the byte
 
 - **GZLJ01 vs GZLE01**: same modules in the same order. Changes are mostly in game code
   (text/UI; the matcher pairs 337 vs 339 functions, with a few added or reshaped functions).
-  Libraries are identical.
+  Libraries are identical. One layout difference found while matching: the US HUD's left
+  panel (`UpdateHudPanels`) is 5 tiles wide instead of 4 (`HUD_LEFT_WIDTH` in item_menu.c;
+  the last entry of `gHudPanelTiles` differs to match).
 - **GZLE01 vs GZLE01_ud** (`client_ud.bin`): byte-identical except one function,
   `ItemMenuUpdate` (`02024AB8`, JP `0201DEAC`), which grows by `0x234` bytes. Everything after it
   shifts by `0x234`, and `.rodata`/`.data` are the same apart from relocated pointers. The

@@ -102,7 +102,7 @@ Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but `VBlankIntr`),
 `src/mode1.c`, `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c`,
 `src/heap.c` (all but `HeapAlloc`), `src/libc/rand.c`, and
-most of the game code from `02018884` to the sound driver (in GZLJ01, 130 of its 141 functions;
+most of the game code from `02018884` to the sound driver (in GZLJ01, 133 of its 141 functions;
 the US `TextDrawGlyph` is still asm), in five objects: `src/sprite.c`, `src/map.c`,
 `src/message.c`, `src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where
 they do), and `src/sound.c`. These
