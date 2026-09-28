@@ -464,12 +464,15 @@ void Effect7(void)
         if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
             gGameState.msgOpen = 0;
+#ifndef VERSION_GZLJ01_demo
             if ((*(u32 *)gGameState.effect & 0xFFFFFF00) == 0)
             {
                 ShowMessage(0x3C, 14);
                 gGameState.dialogStep = 4;
             }
-            else if (gGameState.effect[1])
+            else
+#endif
+            if (gGameState.effect[1])
             {
                 ShowMessage(0x40, 14);
                 gGameState.dialogStep = 1;
