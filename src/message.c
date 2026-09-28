@@ -275,7 +275,8 @@ void TextClearCanvas(void)
 // Near-miss: same code shape, but the original keeps src in its stack slot and mask2 in r9
 // (and dst's incremented copy in r0 across the inner loop); agbcc gives src a register here.
 /*
-void TextBlitGlyph(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
+void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst) asm("TextBlitGlyph");
+void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
 {
     s32 shift, n, m, i;
     u32 mask, mask2, w, *prev;
