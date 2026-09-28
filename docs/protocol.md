@@ -154,6 +154,13 @@ Two sides gate a Tingle Tuner item:
   `GbaItemUse` answers items 3-5, 0x11 and 0x12 with a deny message in `CheckAgbHover` rooms
   while `mBombDeny` is set.
 
-The disconnect glitch that lets items work in otherwise blocked places needs `noMap` = 0 (it
-only works in dungeon/sea stages unless the GC check is patched), so what it bypasses is
-presumably one of the GC-side checks. Not confirmed.
+**The disconnect glitch** (observed live in GZLJ01 `GanonA`, 2026-09-27): the stage is a
+dungeon-type stage, but `field_0x670` stays 0 there, because `MapNoSet` is only called from
+`dMap_c::mapAGBSendMapMain` when a map image is sent (send status case 2), and rooms whose map
+can't be displayed never get there. So the GBA sits on its wait screen. On a reconnect
+(`mDoGaC_getReConnect()`), `mapAGBSendMapMain` calls `agbMapNoSetCall` directly (d_map.cpp
+~1511) without the map-display check: `MapNoSet(8, 1, 0)` ran, `field_0x670` became 1,
+`noMap` dropped to 0 on the next `FlagsSend`, the GBA reached state 2, sent "active", and a
+Tingle Bomb went through. `mReConnect` is only set by `mDoGaC_ContextCheck` when
+`field_0x128[0].field_0x0` is already 1 (the first matching context only sets it), which
+plausibly is why it takes two disconnects. That part was not watched live.
