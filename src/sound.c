@@ -1364,8 +1364,11 @@ done:
 
 // This frame's frequency value: the base plus the pitch sweep, the track's bend (a PCM step
 // scales; a GB channel's register value counts down from 0x800), and vibrato.
-// Near-miss: same code shape; freq and the sweep pointer swap r2/r3, and the vibrato pointer
-// and depth take r7/r6 (one more saved register) where the original has r4/r3.
+// Near-miss (86 masked diff lines): the GB vibrato result shares one `0x800 - t` tail, which
+// fixed the freq/sweep swap and the extra saved register. Left: in the GB negative-vibrato arm
+// the original loads 0x800, negates v in place, then subtracts ((0x800 - freq) * (-v * depth
+// + 0x80000)); every operand order / `v = -v` / temp form tried computes 0x800 - freq first
+// (or flips the freq/sweep r2/r3 priority tie), so v, depth and t get r3/r4/r1, not r1/r3/r0.
 //     u32 VoiceUpdatePitch(struct SoundVoice *voice)
 //     {
 //         u32 freq = voice->baseFreq;
@@ -1453,10 +1456,12 @@ done:
 //                 }
 //                 else
 //                 {
+//                     u32 t;
 //                     if (v >= 0)
-//                         freq = 0x800 - ((0x800 - freq) << 19) / (v * depth + 0x80000);
+//                         t = ((0x800 - freq) << 19) / (v * depth + 0x80000);
 //                     else
-//                         freq = 0x800 - ((0x800 - freq) * (-v * depth + 0x80000) >> 19);
+//                         t = (0x800 - freq) * (0x80000 - v * depth) >> 19;
+//                     freq = 0x800 - t;
 //                 }
 //                 vib->phase += vib->params->speed;
 //                 if ((vib->phase >> 1) > 0xFF)
