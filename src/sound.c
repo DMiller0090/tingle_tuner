@@ -1058,7 +1058,6 @@ void TrackLookupInstrument(struct SoundTrack *track, u8 key, struct InstLookup *
 void VoicesInit(void)
 {
     s32 i;
-    struct PackedVoice *voices;
 
     gCgbWaveLoaded = NULL;
     for (i = 0; i < 4; i++)
@@ -1085,9 +1084,8 @@ void VoicesInit(void)
         PACKED_PCM_VOICES[i].next = &PACKED_PCM_VOICES[i + 1];
         PACKED_PCM_VOICES[i].prev = &PACKED_PCM_VOICES[i - 1];
     }
-    voices = PACKED_PCM_VOICES;  // FAKEMATCH: indexing PACKED_PCM_VOICES hoists &[6]
-    voices[6].prev = &voices[5];
-    voices[6].next = NULL;
+    PACKED_PCM_VOICES[i].prev = &PACKED_PCM_VOICES[i - 1];
+    PACKED_PCM_VOICES[i].next = NULL;
     gPcmActiveVoices = NULL;
     gPcmDisabledVoices = NULL;
 }
