@@ -430,7 +430,11 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
 // registers differently. Writing row/col in both mode arms gives the original's duplicated
 // arms. A separate dst2 for the right halves gets the high registers right (x r9, color r10,
 // &glyphWidth r8, gGameState spilled to sp+8) but not the low ones (original: row r4, x << 24 r5,
-// y r6, dst r7).
+// y r6, dst r7), 104 lines: dst2's short life makes dst the top-priority pseudo (5263), and it
+// takes r4. With the single dst below, dst r7 and y r6 are right, but row/x << 24 come out r5/r4
+// and local-alloc puts y2 in r4 (the original shares r5 with x << 24). Also tried: a separate
+// left-half dstL (102), dstL plus a `struct GameState *g` local (96, but g loads too early),
+// y2 as u16/u32/s32, x2 as u32, a `u8 *w = &glyphWidth` local, x2 reused for the 4th blit.
 /*
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
 {
@@ -522,6 +526,13 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
 // move_movables' test (threshold * savings * lifetime >= insn_count, threshold dropping by 3 per
 // move) says two to four more pass-1 moves before the size field's 0x3F would do it. Tried: x
 // as its own biv, loop forms and directions, types of i/x, a tile variable, a y - shake temp.
+// Numbers from `agbcc -dL`: threshold starts at 28, pass 1 has 77 insns; it moves -17, -512 (each
+// a QI/HI const + SI copy, 2 moves), 0x3F, -1024 (2), 0x25, -13 (2), then fails 15 (threshold
+// -2). With 6-8 moves before 0x3F instead of 4, 0x3F and -1024 still move and 0x25/-13 fail (y -
+// shake and x & 0x1FF are the only other candidates there, both life 1). Also tried: a local
+// struct with u32/u8/s16 bitfield bases or a second struct type for one piece (the constants'
+// modes don't change: 2 lines), x in one piece as (i + 17) * 8 (hoists 0x1FF in pass 1, one
+// extra move, but then 0x1FF is loaded differently: 6 lines), u8/u16/s16/u32 y, shake and t.
 /*
 #define TEXT_BOX_PIECE(p, Y, X, TILE, VFLIP)     p->y = Y;                                    p->mosaic = 0;                               p->x = X;                                    VFLIP                                        p->size = 0;                                 p->tileNum = TILE;                           p->priority = 0;                             p->paletteNum = 8;                           p++;                                         gMain.unk450++;
 
@@ -1270,6 +1281,13 @@ end:
 // gets close; reading frame through a second extern at the same address (asm(".set")) gets 268
 // lines, so the original's gcse didn't reach those blocks. Also register allocation (base r6 /
 // frame r7 / gMain r8). Case 4 writes the unk202 store in both arms (cross-jumped in the original).
+// In the original each case ends `ldr r0, =gGameState; movs r2, #0x8A; lsls r2, r2, #2;
+// adds r0, r0, r2; b` to one shared `ldrb r7, [r0]`, and the DrawSprite args after the switch reload gGameState
+// too. gcse did run there: the fresh loads at 0201D174 and 0201D812 are followed by
+// `adds r6, r0, #0`, PRE's copy into its reaching register (r6), so only the unk228 reads' address
+// wasn't treated as redundant. Frame-read forms tried (masked lines): plain field 534, a
+// `u8 *pf = &unk228` local 743 (vu8 739), `*(u8 *)((u8 *)&gGameState + 0x228)` 300, the same
+// through vu8 296, an integer address 296 (the vu8 field read below is 296).
 /*
 void Func_0201CFE8(void)
 {
