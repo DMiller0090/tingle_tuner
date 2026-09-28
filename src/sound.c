@@ -2648,18 +2648,20 @@ void SoundCmdSetTrackVolume(u16 player, u32 mask, u8 volume)
     SoundCmdPush();
 }
 
-// Near-miss: the original shifts player first (`lsls r0, r0, #0x10` before range's
-// `lsls r2, r2, #0x18`); every parameter type and operand order tried leaves that one swap.
-//     void SoundCmdSetTrackBend(u16 player, u32 mask, u8 range, s8 bend)
-//     {
-//         struct SoundCmd *cmd = gSoundCmdWrite;
-//
-//         cmd->cmd = SOUND_CMD_SET_TRACK_BEND;
-//         cmd->a = (range << 8) | (player << 16) | (u8)bend;
-//         cmd->b = mask;
-//         SoundCmdPush();
-//     }
-INCLUDE_ASM(SoundCmdSetTrackBend);
+// player and range are narrowed in place: the original shifts player before range's lsls
+// (u16/u8 parameters leave player's shift at its use).
+void SoundCmdSetTrackBend(u32 player, u32 mask, u32 range, s8 bend)
+{
+    struct SoundCmd *cmd;
+
+    player <<= 16;
+    range = (u8)range;
+    cmd = gSoundCmdWrite;
+    cmd->cmd = SOUND_CMD_SET_TRACK_BEND;
+    cmd->a = (range << 8) | player | (u8)bend;
+    cmd->b = mask;
+    SoundCmdPush();
+}
 
 void SoundCmdSetTrackPan(u16 player, u32 mask, u8 pan)
 {
