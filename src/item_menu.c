@@ -613,11 +613,12 @@ void Func_0201E584(void)
 // Slide the two HUD panels at the top of the screen in and out (unk21F/unk21D: the left one,
 // unk220/unk21E: the right one with the held item and its price) depending on the game's
 // state, and draw them.
-// Nearly matches. The conditions of the second `else if` (unk220) come out with one jump
-// threaded differently (the original re-tests dungeonNo and unk224 after the unk224 test
-// fails), and in cases 0 and 1 the original keeps the digit doubled ((u8)x * 2, in r3, the
-// same register as the tile in cases 2 and 3); writing it that way shifts the register
-// allocation of the whole function.
+// Nearly matches (106 masked diff lines, all in the price digits). The unk220 clear condition
+// needs its last three clauses grouped: written flat, fold merges the first two clauses
+// (same trailing `unk121 == 0`) into one test. What remains: in cases 0 and 1 the original
+// keeps the digit doubled ((u8)x * 2) in r3 and loads 0x4031 from the pool in case 0; putting
+// the doubled digit in its own variable (u16/u32 t, or tile) moves the register allocation
+// of the whole function (500+ lines).
 //     void UpdateHudPanels(void)
 //     {
 //         u16 *map;
@@ -664,10 +665,10 @@ void Func_0201E584(void)
 //         {
 //             if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.unk104 != 0
 //                  && gGameState.unk121 == 0)
-//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
-//                  && gGameState.unk104 != 0 && gGameState.unk121 == 0)
-//              || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
-//              || gGameState.unk1CC != 0)
+//              || ((gGameState.flags.dungeonNo == 0 && gGameState.unk224 == 0 && gGameState.flags.busy == 0
+//                   && gGameState.unk104 != 0 && gGameState.unk121 == 0)
+//                  || (gGameState.flags.dungeonNo == 0 && gGameState.unk224 != 0)
+//                  || gGameState.unk1CC != 0))
 //                 gGameState.unk220 = 0;
 //         }
 //
