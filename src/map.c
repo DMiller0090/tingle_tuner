@@ -1739,10 +1739,6 @@ INCLUDE_ASM(Func_0201B7D4);
 
 // Act on the current selection (unk119: a marker, or unk135): 0: send the switch record,
 // 1: a random reaction sound, 2: play the selection's sound via Func_0201B7D4.
-// Near-miss: same code shape, but the original keeps result in r1 (reusing its 1 as the
-// mask in the type 16 test) where agbcc puts it in r4, and orders the dispatch compares
-// as == 2, == 0.
-/*
 void Func_0201B8C8(void)
 {
     u8 result = 0;
@@ -1751,15 +1747,17 @@ void Func_0201B8C8(void)
     {
         if (gGameState.markers[gGameState.unk119].type == 12)
         {
-            result = 1;
             if (gGameState.unk11C)
                 result = 2;
+            else
+                result = 1;
         }
         else if (gGameState.markers[gGameState.unk119].type == 13)
         {
-            result = 1;
             if (gGameState.unk11D)
                 result = 2;
+            else
+                result = 1;
         }
         else if (gGameState.markers[gGameState.unk119].type == 5)
         {
@@ -1769,51 +1767,57 @@ void Func_0201B8C8(void)
         }
         else if (gGameState.markers[gGameState.unk119].type == 16)
         {
-            result = 1;
             if ((gGameState.unk026 >> gGameState.markers[gGameState.unk119].unk6) & 1)
                 result = 2;
+            else
+                result = 1;
         }
         else
         {
-            result = 2;
             if (gGameState.markers[gGameState.unk119].type == 7)
                 result = 1;
+            else
+                result = 2;
         }
     }
     else if (gGameState.unk135)
     {
         result = 2;
     }
-    switch (result)
+    if (result != 2)
     {
-    case 2:
+        if (result == 0)
+        {
+            if (gGameState.switchType == 15)
+            {
+                gGameState.unk1F8 = gGameState.switchMsg;
+                gGameState.switchMsg = 0x302;
+            }
+            if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
+            {
+                Mode1SendSwitch(3);
+                SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
+            }
+        }
+        else
+        {
+            if ((gMain.random & 0xFF) > 0xCB)
+                ShowMessage(0x17, 1);
+            else if ((gMain.random & 0xFF) > 0x65)
+                ShowMessage(0x16, 1);
+            else
+                ShowMessage(0x15, 1);
+            gGameState.unk156 = gMain.random % 60 + 30;
+            if (gGameState.markers[gGameState.unk119].type != 7)
+                gGameState.unk11A = 2;
+        }
+    }
+    else
+    {
         Func_0201B7D4();
         SoundPlay(2, 0);
-        break;
-    case 0:
-        if (gGameState.switchType == 15)
-        {
-            gGameState.unk1F8 = gGameState.switchMsg;
-            gGameState.switchMsg = 0x302;
-        }
-        if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
-        {
-            Mode1SendSwitch(3);
-            SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
-        }
-        break;
-    default:
-        if ((gMain.random & 0xFF) > 0xCB)
-            ShowMessage(0x17, 1);
-        else if ((gMain.random & 0xFF) > 0x65)
-            ShowMessage(0x16, 1);
-        else
-            ShowMessage(0x15, 1);
-        gGameState.unk156 = gMain.random % 60 + 30;
-        if (gGameState.markers[gGameState.unk119].type != 7)
-            gGameState.unk11A = 2;
-        break;
     }
 }
-*/
-INCLUDE_ASM(Func_0201B8C8);
+
+// The original pads the end of this object with zeros (agbcc would pad with nops).
+asm(".align 2, 0");
