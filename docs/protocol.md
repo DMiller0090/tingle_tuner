@@ -137,3 +137,23 @@ TWW decomp uses them, so they look like leftovers of cut features.
 
 In GZLE01 each buffer sits at the same offset from `prog_base`: `0x02010800` for slots 0/2
 and `0x0201A800 + (JP address - 0x02014000)` for the rest.
+
+## Where items may be used
+
+Two sides gate a Tingle Tuner item:
+
+- **GBA**: `flags.noMap` (GC `field_0xa_7`) is 0 only when `daAgb_c::field_0x670` is set
+  (by `MapNoSet`, from the map code; cleared when the actor is created) and the stage type is
+  dungeon, FF1, miniboss or sea. While it is 1, `MainMode1` fades out of the map screen and
+  `Mode1State4` waits (key presses play the blocked sound). `MainLoop` sends
+  `GbaFlg.unk3 = 1` ("active") only in mode 1 state 2 with no message or menu open. The GC
+  copies it to `field_0x673`, and `modeMove` calls `GbaItemUse` only when `isActive()` (or
+  for item `0x15`). On a relink the GBA goes through mode 2 to `Mode1State0`, which keeps
+  the old map (`unk10E = 1`) when `noMap` is 0.
+- **GC**: `uploadInitCheck` refuses rooms with `CheckAgbCom` or, off the sea, no map display;
+  `GbaItemUse` answers items 3-5, 0x11 and 0x12 with a deny message in `CheckAgbHover` rooms
+  while `mBombDeny` is set.
+
+The disconnect glitch that lets items work in otherwise blocked places needs `noMap` = 0 (it
+only works in dungeon/sea stages unless the GC check is patched), so what it bypasses is
+presumably one of the GC-side checks. Not confirmed.

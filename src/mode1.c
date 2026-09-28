@@ -220,7 +220,7 @@ void Mode1State0(void)
     gGameState.unk117 = gSpriteTable[19][4];
     gGameState.unk118 = 0;
     Mode1Func_02015298();
-    if (gGameState.flags.unkA_0)
+    if (gGameState.flags.noMap)
     {
         gMain.unk457 = 1;
         gGameState.unk10E = 0;
@@ -793,7 +793,7 @@ void Mode1State4(void)
     }
     if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
         GbaComDataStatusReset(GBACOM_SLOT_MAIL);
-    if (!gGameState.flags.unkA_0)
+    if (!gGameState.flags.noMap)
     {
         if (gMain.newKeys)
             SoundPlay(SE_KEY_BLOCKED, 0);
@@ -1027,7 +1027,7 @@ void MainMode1(void)
     }
 
     // Map change: fade out (state 3); Mode1State4 waits for the new map.
-    if (gGameState.flags.unkA_0 || gMain.inDungeon != gMain.unk457
+    if (gGameState.flags.noMap || gMain.inDungeon != gMain.unk457
      || GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL)
      || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVING)
      || GbaComCheckDataStatus(GBACOM_SLOT_MAP_IMAGE, GBACOM_STATUS_RECEIVED)

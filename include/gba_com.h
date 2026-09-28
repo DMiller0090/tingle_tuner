@@ -72,7 +72,8 @@ struct GbaComFlags
                                 //   (none before Korl or after all three)
             u8 pearlsToPlace:3; // field_0x9_4..2: Din's, Farore's, Nayru's pearl not placed yet
             u8 bossesToBeat:2;  // field_0x9_1..0: WT, ET boss not beaten yet
-    /*0xA*/ u8 unkA_0:1;        // field_0xa_7
+    /*0xA*/ u8 noMap:1;         // field_0xa_7: 0 only in a dungeon, FF1, miniboss or sea stage once
+                                //   MapNoSet ran; 1 keeps the GBA on the Mode1State4 wait screen
             u8 busy:2;          // bit 0: field_0xa_6 dMenu_flag(), bit 1: field_0xa_5
             //                     dComIfGp_event_runCheck() (the GBA reads them as one field)
             u8 unkA_3:1;        // field_0xa_4

@@ -151,7 +151,7 @@ void Mode0State2(void)
         gGameState.unk10E = 0;
         GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
     }
-    if (!gGameState.flags.unkA_0)
+    if (!gGameState.flags.noMap)
     {
         if (gGameState.flags.dungeonNo == 0)
         {
