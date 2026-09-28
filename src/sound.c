@@ -2749,67 +2749,65 @@ void SoundCmdPlayer(struct SoundCmd *cmd)
 }
 
 // Commands 100-103: a = player << 16 | value, b = mask of the player's tracks (shifted out).
-// Near-miss: in the bend case the range, bend and the constant 1 get other registers
-// (r2/r4/r6 in the original); the types and a shared value variable change nothing.
-//     void SoundCmdTracks(struct SoundCmd *cmd)
-//     {
-//         u32 a = cmd->a;
-//         struct SoundPlayer *player = &gSoundPlayers[a >> 16];
-//         s32 i = 0;
-//
-//         switch (cmd->cmd)
-//         {
-//         case SOUND_CMD_MUTE_TRACKS:
-//         {
-//             u8 mute = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                     player->tracks[i]->mute = mute;
-//             }
-//             break;
-//         }
-//         case SOUND_CMD_SET_TRACK_VOLUME:
-//         {
-//             u8 volume = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                     player->tracks[i]->cmdVolume = volume;
-//             }
-//             break;
-//         }
-//         case SOUND_CMD_SET_TRACK_BEND:
-//         {
-//             u8 range = (a & 0xFF00) >> 8;
-//             u8 bend = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                 {
-//                     player->tracks[i]->bendRange = range;
-//                     player->tracks[i]->bend = bend;
-//                 }
-//             }
-//             break;
-//         }
-//         case SOUND_CMD_SET_TRACK_PAN:
-//         {
-//             u8 pan = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                     player->tracks[i]->pan = pan;
-//             }
-//             break;
-//         }
-//         }
-//     }
-INCLUDE_ASM(SoundCmdTracks);
+// In the bend case the bend narrows a in place (a u8 local gets another register).
+void SoundCmdTracks(struct SoundCmd *cmd)
+{
+    u32 a = cmd->a;
+    struct SoundPlayer *player = &gSoundPlayers[a >> 16];
+    s32 i = 0;
+
+    switch (cmd->cmd)
+    {
+    case SOUND_CMD_MUTE_TRACKS:
+    {
+        u8 mute = a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+                player->tracks[i]->mute = mute;
+        }
+        break;
+    }
+    case SOUND_CMD_SET_TRACK_VOLUME:
+    {
+        u8 volume = a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+                player->tracks[i]->cmdVolume = volume;
+        }
+        break;
+    }
+    case SOUND_CMD_SET_TRACK_BEND:
+    {
+        u8 range = (a & 0xFF00) >> 8;
+        a = (u8)a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+            {
+                player->tracks[i]->bendRange = range;
+                player->tracks[i]->bend = a;
+            }
+        }
+        break;
+    }
+    case SOUND_CMD_SET_TRACK_PAN:
+    {
+        u8 pan = a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+                player->tracks[i]->pan = pan;
+        }
+        break;
+    }
+    }
+}
 
 // Commands 200-201: a = the argument, b = mask of players (shifted out).
 void SoundCmdPlayers(struct SoundCmd *cmd)
