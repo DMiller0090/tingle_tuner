@@ -10,6 +10,7 @@ link lives in the main TWW decomp (`d_a_agb.cpp`, `m_Do_gba_com.cpp`, `JUTGba.cp
 | `GZLJ01`    | `client.bin`     | `0x02014800` | matching (asm + C) |
 | `GZLE01`    | `client_u.bin`   | `0x0201B000` | matching (asm + C) |
 | `GZLE01_ud` | `client_ud.bin`  | `0x0201B000` | matching (asm + C); second USA build, unused by the game code |
+| `GZLJ01_demo` | `client.bin` of the JP store demo | `0x02014800` | matching (C); earlier JP build, see docs/layout.md |
 
 ## What the binary is
 
