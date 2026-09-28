@@ -1746,7 +1746,7 @@ none:
 }
 
 // Show the message for what the cursor is on: the square's name (0x14E + square; square 32,
-// the Private Oasis, has 0x13E once Link has the Cabana Deed), a friend's (gFriendMsgIds), or
+// the Private Oasis, has 0x13E once Link has the Cabana Deed; not in the demo), a friend's (gFriendMsgIds), or
 // the marker's by its gbaName.
 // The ids are computed in the shifted domain, ((v << 16) + (c << 16)) >> 16, which agbcc only
 // emits for an explicit shift pair (ID below). The square is tested with a switch: its index
@@ -1759,6 +1759,9 @@ void ShowSelectionMsg(void)
     u8 idx = gGameState.selectedMarker;
 
     if (gGameState.selectedSquare != 0)
+#ifdef VERSION_GZLJ01_demo
+        ShowMessage(gGameState.selectedSquare + 0x14D, 1);
+#else
     {
         switch (gGameState.selectedSquare)
         {
@@ -1774,6 +1777,7 @@ void ShowSelectionMsg(void)
             break;
         }
     }
+#endif
     else if (gGameState.markers[idx].type == 0x13)
         ShowMessage(gFriendMsgIds[gGameState.markers[idx].param - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
