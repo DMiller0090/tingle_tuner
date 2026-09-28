@@ -1109,7 +1109,83 @@ u32 PcmVoiceVolume(struct SoundVoice *voice)
     return volume;
 }
 
+// The NRx2 envelope byte for a GB voice at the start of each envelope step (8 = no change
+// otherwise): the start volume and a hardware step toward the step's target. For the wave
+// channel, the output level (0-4).
+// Near-miss: the original clears newStep before loading the velocity, and keeps the result
+// in r6 (newStep's register) where this uses r1.
+//     u8 CgbVoiceVolume(struct SoundVoice *voice, u8 loud)
+//     {
+//         u8 newStep;
+//
+//         u32 volume = voice->velocity;
+//         u32 end;
+//         u16 frames;
+//         u8 nr2;
+//
+//         newStep = FALSE;
+//         if (voice->env.frames == 0)
+//             newStep = TRUE;
+//         EnvelopeStep(voice);
+//         if (!newStep)
+//             return 8;
+//         if (loud)
+//             volume <<= 1;
+//         volume <<= 15;
+//         volume *= voice->track->volume;
+//         volume >>= 14;
+//         volume *= voice->track->cmdVolume;
+//         volume >>= 7;
+//         volume *= voice->track->player->unk40;
+//         volume >>= 7;
+//         volume *= voice->track->player->volume;
+//         volume >>= 8;
+//         volume *= voice->track->player->fadeVolume;
+//         if (voice->type == 3)
+//         {
+//             volume >>= 22;
+//             voice->volume = volume;
+//             volume *= 5;
+//             volume >>= 7;
+//             if (volume > 4)
+//                 volume = 4;
+//             return volume;
+//         }
+//         volume >>= 15;
+//         voice->volume = volume;
+//         volume *= voice->env.level;
+//         volume >>= 25;
+//         if (volume & ~0xF)
+//             volume = 15;
+//         voice->volume = voice->volume * voice->env.target >> 25;
+//         if (voice->volume & ~0xF)
+//             voice->volume = 15;
+//         end = voice->volume;
+//         if (end != volume)
+//         {
+//             s32 diff;
+//
+//             frames = voice->env.frames;
+//             frames += 15;
+//             diff = end - volume;
+//             if (diff < 0)
+//                 diff = -diff;
+//             frames = frames / diff;
+//             if (frames != 0)
+//                 goto step;
+//         }
+//         nr2 = (volume << 4) | 8;
+//         return nr2;
+//     step:
+//         if (frames & 0xFFF8)
+//             frames = 7;
+//         nr2 = (volume << 4) | frames;
+//         if (volume < end)
+//             nr2 |= 8;
+//         return nr2;
+//     }
 INCLUDE_ASM(CgbVoiceVolume);
+
 
 INCLUDE_ASM(VoiceUpdatePitch);
 
