@@ -5,12 +5,24 @@
 
 // Sound IDs (SoundPlay: gSoundTable index). IDs 0-6 are voice clips on player 4; the US
 // table drops ID 6 (and its clip), so the IDs from 7 on are one lower.
+// German and French also drop voice clip 2 (ID 2) and the rupee counter's end sound (JP ID 9):
+// IDs 3-5 are one lower, 7 and 8 two lower (SE_FREE_OFF is the one call among them), and the
+// IDs from 10 on three lower.
 #ifdef VERSION_GZLJ01
 #define SOUND_ID_SHIFT 0
+#elif PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+#define SOUND_ID_SHIFT 3
 #else
 #define SOUND_ID_SHIFT 1
 #endif
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+#define SE_FREE_OFF         5
+#else
+#define SE_FREE_OFF         (7 - SOUND_ID_SHIFT)  // flags.isFree goes off; L released after panning
+#endif
+#if PAL_LANGUAGE != 1 && PAL_LANGUAGE != 2
 #define SE_RUPEE_COUNT_END  (9 - SOUND_ID_SHIFT)
+#endif
 #define SE_TITLE            (0x16 - SOUND_ID_SHIFT)  // Mode0State0
 #define SE_LINKED           (0x1F - SOUND_ID_SHIFT)  // Mode0State3: all boot data received
 #define SE_KEY_BLOCKED      (0x1C - SOUND_ID_SHIFT)  // key pressed while the screen waits

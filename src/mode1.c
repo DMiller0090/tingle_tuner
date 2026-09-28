@@ -84,7 +84,11 @@ void UpdateRupeeCounter(void)
         if (gMain.modeState == 2)
         {
             if (gGameState.rupeeDelta == 0)
+            {
+#ifdef SE_RUPEE_COUNT_END
                 SoundPlay(SE_RUPEE_COUNT_END, 0);
+#endif
+            }
             else if (gGameState.rupeeDelta & 1)
             {
                 if (step < 0)
@@ -400,7 +404,7 @@ void Mode1State2(void)
         if (gGameState.flags.isFree)
             SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
         else
-            SoundPlay(7 - SOUND_ID_SHIFT, 0);
+            SoundPlay(SE_FREE_OFF, 0);
     }
     UpdateSelectWindow();
     if (gGameState.selectWinStep != 0)

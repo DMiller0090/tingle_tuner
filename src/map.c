@@ -845,7 +845,7 @@ void UpdateMap(void)
         {
             if (gGameState.mapScrolling == 1)
             {
-                SoundPlay(7 - SOUND_ID_SHIFT, 0);
+                SoundPlay(SE_FREE_OFF, 0);
                 gGameState.mapScrolling = 0;
             }
             if (gGameState.viewLocked == 0)

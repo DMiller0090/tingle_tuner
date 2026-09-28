@@ -46,13 +46,19 @@ const u16 gThreeChoiceMsgIds[21] =
 };
 
 // Sound per message sound code (PlayMsgSound); codes 0x20-0x22 are SoundPlayLoop IDs.
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+// (German and French: without voice clip 2 and the rupee end sound, JP 9, which msg 14 then
+// plays as JP 8)
+#define SE(id) ((id) < 3 ? (id) : (id) < 7 ? (id) - 1 : (id) < 9 ? (id) - 2 : (id) - SOUND_ID_SHIFT)
+#else
 #define SE(id) ((id) < 7 ? (id) : (id) - SOUND_ID_SHIFT)
+#endif
 const u16 gMsgSoundIds[] =
 {
     SE(0x1F), SE(0x1A), SE(0x1B), SE(0x2B), SE(0x2A), SE(0x29), SE(0x1C), SE(0x1E),
     SE(0x1D), SE(0x23), 0, 0, SE(0x13), SE(0x13), SE(0x13), SE(0x13),
-    SE(0x12), SE(0x11), SE(0x10), SE(0x08), SE(0x09), 3, 3, 1,
-    4, SE(0x24), 5,
+    SE(0x12), SE(0x11), SE(0x10), SE(0x08), SE(0x09), SE(3), SE(3), SE(1),
+    SE(4), SE(0x24), SE(5),
 #ifdef VERSION_GZLJ01
     6,  // voice clip 6, not in the US sound bank
 #endif
