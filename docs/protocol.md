@@ -252,6 +252,19 @@ before the handshake finished (mode 2). It also costs a map reload: with `GbaLin
 (`Mode1State3`), waits for the map (`Mode1State4`) and fades back in: about 214 GBA frames
 (3.6 s), about as long as the 180-frame blast it replaces. So it doesn't speed up bomb chains.
 
+**Striped map after a disconnect at a stage transition** (GZLJ01, `M_Dra09` room 9, watched
+2026-09-28). The map screen showed identical columns of stray tiles. The GBA's map image had an
+all-zero header (width, height, `tilesSize`, `mapWidth` 0) with `tiles` and `map` both
+`0x0200A000`, and from offset 0x1BC on it matched the GC's image for the room byte for byte
+(0x5580 bytes, `mAGBMapSendStatus` 4). So the image was arriving when the GBA wiped the buffer:
+`InitMapView` clears all 0xA000 bytes when `mapImageMode` != 0 and `mapLoaded` == 0, which is what
+`Mode1State0` does on a relink while `noMap` is still 1. The JOY interrupt kept writing the rest in
+place, `LoadMapImage` then turned the zeroed header's offsets into the buffer's own address, and
+with `mapWidth` 0 every row of the view draws the same map entries from the header, over whatever
+tiles were already in VRAM. The GC resends the map after its link check fails, so the first
+words of the image can land before the GBA gets from mode 2 to `Mode1State0`. The next map change
+loads a proper image.
+
 **Other items.** The drop only removes a GBA wait that starts when the reply arrives and lasts
 longer than the GC's own lock:
 
