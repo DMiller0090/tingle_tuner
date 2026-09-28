@@ -2496,12 +2496,16 @@ void PlayerSetPause(u32 index, u8 on)
     gSoundPlayers[index].paused = on;
 }
 
-// Near-miss: the original adds 0x42 to the table address before the index.
-//     u32 PlayerGetState(u32 index)
-//     {
-//         return gSoundPlayers[index].state;
-//     }
-INCLUDE_ASM(PlayerGetState);
+// FAKEMATCH: the original adds the state offset to the table address after scaling the index
+// and before adding it; `gSoundPlayers[index].state` adds it last.
+u32 PlayerGetState(u32 index)
+{
+    u8 *p = (u8 *)gSoundPlayers;
+
+    index *= sizeof(struct SoundPlayer);
+    p += 0x42;  // state
+    return p[index];
+}
 
 
 // The command queue: the API writes commands at gSoundCmdWrite, SoundCmdFlush (from
