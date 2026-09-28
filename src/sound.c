@@ -181,21 +181,47 @@ struct SoundVoice
     /*0x09*/ u8 key;
     /*0x0A*/ u8 velocity;
     /*0x0B*/ u8 unk0B[5];
-    /*0x10*/ u16 cgbFreq;  // GB channels: the frequency register value
-    /*0x12*/ u8 unk12[2];
+    /*0x10*/ union { u32 pcm; u16 cgb; } freq;  // PCM: 16.16 step; GB: the frequency register
     /*0x14*/ u32 volume;   // GB channels: 0-15
-    /*0x18*/ u8 unk18[3];
-    /*0x1B*/ u8 unk1B;
+    /*0x18*/ u16 gate;     // frames until the note is released
+    /*0x1A*/ u8 unk1A;     // the track's E3 value
+    /*0x1B*/ u8 fixedPan;  // the instrument's key split sets pan
     /*0x1C*/ u8 pan;
     /*0x1D*/ u8 unk1D[0x23];
     /*0x40*/ struct VoiceEnvelope env;
     /*0x54*/ u8 unk54[4];
     /*0x58*/ u8 release;  // released: volume * (0xE6 + release) / 512 per frame
-    /*0x59*/ u8 unk59[0xF];
+    /*0x59*/ u8 unk59[3];
+    /*0x5C*/ const struct SoundSample *sample;
+    /*0x60*/ u8 unk60[8];
     /*0x68*/ struct SoundVoice *prev;  // in gPcmActiveVoices / gPcmFreeVoices
     /*0x6C*/ struct SoundVoice *next;
     /*0x70*/ struct SoundVoice *trackPrev;
     /*0x74*/ struct SoundVoice *trackNext;
+};
+
+// A sample in the bank: s8 data at the header's rate.
+struct SoundSample
+{
+    /*0x0*/ u32 length;
+    /*0x4*/ u32 rate;       // Hz; the instrument's base key plays at it
+    /*0x8*/ u32 loopStart;
+    /*0xC*/ u32 loopEnd;    // 0: one-shot
+    /*0x10*/ s8 data[1];
+};
+
+struct SoundInstrument;
+
+// What TrackLookupInstrument resolves a note to.
+struct InstLookup
+{
+    /*0x00*/ const struct SoundInstrument *inst;
+    /*0x04*/ const struct EnvelopeStep *envelope;
+    /*0x08*/ const u8 *dutyList;  // GB square channels: per-frame duties (flags bit 0)
+    /*0x0C*/ const u8 *wave;      // GB wave channel
+    /*0x10*/ u8 pan;
+    /*0x11*/ u8 fixedPan;
+    /*0x12*/ u8 isDrum;
 };
 
 // An instrument record in a bank (8 bytes), see docs/layout.md "Raw tail block".
@@ -231,11 +257,16 @@ struct SoundInstrument
 #define REG_FIFO_B        (*(vu32 *)0x040000A4)
 #define REG_TM0CNT        (*(vu32 *)0x04000100)
 
-#define PCM_FRAME_SAMPLES 176  // per channel at 10512 Hz
+#define PCM_SAMPLE_RATE 10512
+#define PCM_FRAME_SAMPLES 176  // per channel and frame
 
 extern u8 gPcmEnabled;
 extern struct SoundInstrument gDrumInstrument;
+extern struct SoundVoice gPcmVoices[7];
 extern struct SoundVoice gCgbVoices[4];
+extern s16 gPcmMixBuffer[PCM_FRAME_SAMPLES * 2];
+
+typedef void (*PcmClipFunc)(s16 *mix, s8 *dest, s16 *mixEnd);
 extern struct SoundVoice *gPcmActiveVoices;
 extern struct SoundVoice *gPcmFreeVoices;
 extern struct SoundVoice *gPcmDisabledVoices;
@@ -258,6 +289,8 @@ void PcmEchoMix(void);
 void PcmInit(s8 *buffers);
 struct SoundVoice *VoiceAlloc(u8 type, u8 priority);
 u32 EnvelopeStep(struct SoundVoice *voice);
+u32 VoiceUpdatePitch(struct SoundVoice *voice);
+u8 PcmMixVoice(struct SoundVoice *voice, u32 volume, u32 step, u8 pan);
 void VoiceListRemove(struct SoundVoice *voice, struct SoundVoice **list);
 void VoiceListPush(struct SoundVoice *voice, struct SoundVoice **list);
 void VoiceListInsert(struct SoundVoice *voice);
@@ -826,7 +859,58 @@ void DrumInstrumentInit(void)
     gDrumInstrument.baseKey = 0x30;
 }
 
-INCLUDE_ASM(TrackLookupInstrument);
+// Resolve the track's program for key through key splits, drum kits and key ranges to an
+// instrument record and its envelope (and a GB channel's wave or duty list).
+void TrackLookupInstrument(struct SoundTrack *track, u8 key, struct InstLookup *out)
+{
+    const struct SoundBankHeader *header = gSoundBank;
+        const u8 *bank = SOUND_OFFSET(header->instBanks, track->player->bankMap[track->bank]);
+    u32 program = track->program * 2;
+    const struct SoundInstrument *inst = (const void *)(bank + *(const u16 *)(bank + program));
+
+    out->fixedPan = FALSE;
+    out->isDrum = FALSE;
+        if (inst->type & 0xF0)
+    {
+    if (inst->type == 0x10)
+    {
+                const u8 *split = bank + inst->arg;
+        u8 i = key - ((const u8 *)inst)[4];
+
+        out->fixedPan = TRUE;
+        out->pan = split[i * 4 + 2];
+        out->inst = (const void *)(bank + *(u16 *)(split + i * 4));
+        out->envelope = (const void *)(bank + out->inst->envelope);
+    }
+    else if (inst->type == 0x11)
+    {
+        const u16 *samples = (const void *)(bank + inst->arg);
+
+        gDrumInstrument.arg = samples[key];
+        out->inst = &gDrumInstrument;
+        out->envelope = gDefaultEnvelope;
+        out->isDrum = TRUE;
+    }
+    else if (inst->type == 0x12)
+    {
+        const u8 *range = bank + inst->arg;
+
+        while (key > range[0])
+            range += 4;
+        out->inst = (const void *)(bank + *(u16 *)(range + 2));
+                out->envelope = (const void *)(bank + out->inst->envelope);
+    }
+    }
+    else
+    {
+        out->inst = inst;
+        out->envelope = (const void *)(bank + inst->envelope);
+    }
+    if (out->inst->type == 3)
+        out->wave = bank + inst->arg;
+    if (out->inst->flags & 1)
+        out->dutyList = bank + out->inst->arg;
+}
 
 INCLUDE_ASM(VoicesInit);
 
@@ -1027,7 +1111,60 @@ INCLUDE_ASM(CgbVoiceVolume);
 
 INCLUDE_ASM(VoiceUpdatePitch);
 
-INCLUDE_ASM(PcmMixFrame);
+// Mix every active PCM voice into gPcmMixBuffer, release the voices whose gate ran out, and
+// clip the mix into the DMA buffers.
+void PcmMixFrame(void)
+{
+    struct SoundVoice *next = gPcmActiveVoices;
+    s32 i;
+
+    CpuFastFill(0, gPcmMixBuffer, sizeof(gPcmMixBuffer));
+    while (next != NULL)
+    {
+        struct SoundVoice *voice = next;
+        u32 volume;
+        u8 pan;
+        u32 step;
+
+        next = voice->next;
+        volume = PcmVoiceVolume(voice);
+        if (voice->state == 1)
+        {
+            struct SoundTrack *track;
+
+            voice->gate--;
+            track = voice->track;
+            pan = voice->fixedPan ? voice->pan : track->pan;
+            step = VoiceUpdatePitch(voice);
+            voice->freq.pcm = step;
+            voice->unk1A = track->unk4C;
+        }
+        else
+        {
+            if (volume == 0)
+            {
+                VoiceStop(voice);
+                continue;
+            }
+            pan = voice->pan;
+            step = voice->freq.pcm;
+        }
+        step >>= 2;
+        step *= voice->sample->rate;
+        step /= PCM_SAMPLE_RATE;
+        step >>= 5;
+        if (PcmMixVoice(voice, volume, step, pan) == TRUE)
+            VoiceStop(voice);
+    }
+        for (i = 0; i < 7; i++)
+    {
+        struct SoundVoice *voice = &gPcmVoices[i];
+
+        if (voice->state == 1 && voice->gate == 0)
+            VoiceNoteOff(voice);
+    }
+    ((PcmClipFunc)gPcmClipFunc)(gPcmMixBuffer, gPcmBufA[gPcmBufIndex], gPcmMixBuffer + ARRAY_COUNT(gPcmMixBuffer));
+}
 
 INCLUDE_ASM(CgbUpdate);
 
@@ -1052,7 +1189,7 @@ INCLUDE_ASM(TrackNoteOn);
 //             }
 //             else
 //             {
-//                             u16 freq = voice->cgbFreq;
+//                             u16 freq = voice->freq.cgb;
 //                 u8 step = voice->release;
 //
 //                             if (type == 3)
@@ -1088,7 +1225,7 @@ INCLUDE_ASM(TrackNoteOn);
 //                     voice->state = 0;
 //                 }
 //             }
-//             if (voice->unk1B == 0)
+//             if (voice->fixedPan == 0)
 //                 voice->pan = voice->track->pan;
 //             TrackRemoveVoice(voice->track, voice);
 //         }

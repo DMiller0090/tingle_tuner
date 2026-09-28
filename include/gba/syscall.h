@@ -34,4 +34,10 @@ void JoyHardReset(void);
     CpuSet((void *)&_tmp, dest, CPU_SET_32BIT | CPU_SET_SRC_FIXED | (((size) / 4) & 0x1FFFFF)); \
 }
 
+#define CpuFastFill(value, dest, size)                                                        \
+{                                                                                             \
+    vu32 _tmp = (vu32)(value);                                                                \
+    CpuFastSet((void *)&_tmp, dest, CPU_SET_SRC_FIXED | (((size) / 4) & 0x1FFFFF));          \
+}
+
 #endif // GUARD_GBA_SYSCALL_H
