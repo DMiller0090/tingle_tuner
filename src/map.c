@@ -1101,121 +1101,121 @@ u32 MarkerDistance(u8 arg)
 // from the player, pulse it faster the closer the player gets, play the near and arrival
 // sounds, and (once Link has the Wind Waker, flags.hasTact) announce its direction when
 // Link is not facing it (flags.unk2 looks like his heading).
-// Nearly matches: the logic and instruction selection are right, but registers differ from
-// the start (the ArcTan2 operands land in r4 instead of r2, so the address temporaries shift
-// and the targetNear stores of levels 2 and 4 are not cross-jumped):
-// Tried: block-local s32 dx/dy for the ArcTan2 operands (fixes that block, but the sin
-// part's x/y then lose their s16 narrowing and the diff grows to 180 lines; sharing x/y is
-// what keeps it), s16/u16 x and y, one-expression sin loads, u32 level and a separate u32
-// distance. Priorities in the original: level > the unk224 zero > gGameState (r4, r5, r6).
-// Diagnosis (2026-09-28): the original's sin block has angle*2 in r3, which local-alloc only
-// picks if the sin x is itself a local (one-death) pseudo that took r2 first; so the sin x/y
-// (and the ArcTan2 dx/dy) are block-local variables. Written that way (s32 dx, dy in the
-// FindMarker block and s32 sx, sy set as `sx = gSinTable[angle]; sx >>= 3;`) the first two
-// blocks match, but combine drops the lsls/asrs #0x10 on both DrawSprite coordinates (it
-// tracks the sign-bit copies of the in-block ldrsh >> 3); the shared x/y here keep them only
-// because combine's record_value_for_reg marks a reg invalid when an earlier value in the block
-// mentions it. With the locals, the globals also flip (zero r4, gGameState r5, level r6; 180
-// lines). Tried for the extensions with no luck: (u16)/(s16) casts, u16/u32/s16 locals, one-
-// or two-statement shifts, `/ 8`, adding 0xB8 in the local; for the globals: level = 0 via
-// targetNear, u32/u8 level, a separate distance.
-//     void UpdateTargetCompass(void)
-//     {
-//         u8 angle;
-//         s32 x, y;
-//         s32 level;
-//
-//         if (gGameState.unk1FA != 0)
-//             return;
-//         if (gGameState.unk224 != 0)
-//             return;
-//         if (gGameState.icons[2].type != 3)
-//             return;
-//         {
-//             u8 i = FindMarker(1);
-//
-//             x = gGameState.icons[2].x - gGameState.markers[i].x;
-//             y = gGameState.icons[2].y - gGameState.markers[i].y;
-//             angle = ((u16)~ArcTan2(x >> 4, y >> 4) + 0x4001) >> 8;
-//         }
-//         x = gSinTable[angle];
-//         x >>= 3;
-//         y = (gSinTable + 64)[angle];
-//         y >>= 3;
-//         DrawSprite(gMapIconSprites[gGameState.icons[2].type], 0, (u16)(x + 0xB8), (u16)(y + 0x58), 0, 0, 0, 0, 0, 0, 0);
-//         level = MarkerDistance(0);
-//         if ((u32)level <= 0x18)
-//         {
-//             if (gGameState.unk224 == 0)
-//             {
-//                 ShowMessage(0x1A5, 1);
-//                 gGameState.icons[2].type = 0;
-//                 gGameState.icons[1].type = 0;
-//                 gGameState.unk105 = 0;
-//             }
-//             level = 0;
-//             gGameState.targetNear = 0;
-//         }
-//         else if ((u32)level <= 0x7F)
-//         {
-//             if (gGameState.unk224 == 0 && gGameState.targetNear == 0)
-//             {
-//                 ShowMessage(0x1A4, 1);
-//                 gGameState.targetNear = 1;
-//             }
-//             level = 1;
-//         }
-//         else if ((u32)level <= 0x1FF)
-//         {
-//             level = 2;
-//             gGameState.targetNear = 0;
-//         }
-//         else if ((u32)level <= 0x3FF)
-//         {
-//             level = 3;
-//             gGameState.targetNear = 0;
-//         }
-//         else
-//         {
-//             level = 4;
-//             gGameState.targetNear = 0;
-//         }
-//         if (gGameState.targetBlinkOn != 0)
-//         {
-//             if (--gGameState.targetBlinkTimer == 0)
-//                 gGameState.targetBlinkOn = 0;
-//         }
-//         else
-//         {
-//             if (++gGameState.targetBlinkTimer >= gTargetBlinkPeriods[level])
-//             {
-//                 gGameState.targetBlinkTimer = gTargetBlinkPeriods[level];
-//                 gGameState.targetBlinkOn = 1;
-//             }
-//         }
-//         gGameState.targetScale = (gGameState.targetBlinkTimer << 7) / gTargetBlinkPeriods[level] + 0x100;
-//         DrawSprite(gSprite_0202C3F8, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
-//         if (gGameState.unk224 == 0 && gGameState.flags.hasTact && level > 1
-//          && (u8)(gGameState.flags.unk2 - angle + 9) > 18)
-//         {
-//             angle = ~angle + 1;
-//             if (((angle + 8) & 0x1F) <= 0x10)
-//             {
-//                 u8 dir = (u8)(angle + 0x88) >> 5;
-//
-//                 if (gGameState.targetDir != dir && gGameState.unk1FA == 0)
-//                 {
-//                     ShowMessage(0x19C + dir, 1);
-//                     gGameState.targetDir = dir;
-//                 }
-//             }
-//             else
-//             {
-//                 gGameState.targetDir = 0xFF;
-//             }
-//         }
-//     }
-INCLUDE_ASM(UpdateTargetCompass);
+// FAKEMATCH: dx/dy and the sin x/y are block locals (local-alloc gives them r2/r1 and r2/r3).
+// Each sin coordinate is narrowed in place before the shift: the `(s16)x` temporaries mention
+// x before its last set, so combine marks x invalid and keeps the s16 extensions of x + 0xB8
+// and y + 0x58 (with a plain `x >>= 3` it proves them redundant and drops them). The extra
+// narrowings and the (s16) ArcTan2 operands (the BIOS call takes s16) compile to nothing, but
+// their insns still count in the live length of the unk224 value (the zero kept in r5):
+// global-alloc must rank level (14 refs) above that zero (15 refs) so level takes r4, the
+// zero r5 and gGameState r6, which needs the zero's live length >= 15/14 of level's. The
+// separate timer decrement/increment statements shorten level's range.
+void UpdateTargetCompass(void)
+{
+    u8 angle;
+    s32 level;
+
+    if (gGameState.unk1FA != 0)
+        return;
+    if (gGameState.unk224 != 0)
+        return;
+    if (gGameState.icons[2].type != 3)
+        return;
+    {
+        u8 i = FindMarker(1);
+        s32 dx, dy;
+
+        dx = gGameState.icons[2].x - gGameState.markers[i].x;
+        dy = gGameState.icons[2].y - gGameState.markers[i].y;
+        angle = ((u16)~ArcTan2((s16)(dx >> 4), (s16)(dy >> 4)) + 0x4001) >> 8;
+    }
+    {
+        s32 x, y;
+
+        x = gSinTable[angle];
+        x = (s16)x;
+        x = (s16)x;
+        x = (s16)x >> 3;
+        y = (gSinTable + 64)[angle];
+        y = (s16)y;
+        y = (s16)y;
+        y = (s16)y >> 3;
+        DrawSprite(gMapIconSprites[gGameState.icons[2].type], 0, (u16)(x + 0xB8), (u16)(y + 0x58), 0, 0, 0, 0, 0, 0, 0);
+    }
+    level = MarkerDistance(0);
+    if ((u32)level <= 0x18)
+    {
+        if (gGameState.unk224 == 0)
+        {
+            ShowMessage(0x1A5, 1);
+            gGameState.icons[2].type = 0;
+            gGameState.icons[1].type = 0;
+            gGameState.unk105 = 0;
+        }
+        level = 0;
+        gGameState.targetNear = 0;
+    }
+    else if ((u32)level <= 0x7F)
+    {
+        if (gGameState.unk224 == 0 && gGameState.targetNear == 0)
+        {
+            ShowMessage(0x1A4, 1);
+            gGameState.targetNear = 1;
+        }
+        level = 1;
+    }
+    else if ((u32)level <= 0x1FF)
+    {
+        level = 2;
+        gGameState.targetNear = 0;
+    }
+    else if ((u32)level <= 0x3FF)
+    {
+        level = 3;
+        gGameState.targetNear = 0;
+    }
+    else
+    {
+        level = 4;
+        gGameState.targetNear = 0;
+    }
+    if (gGameState.targetBlinkOn != 0)
+    {
+        gGameState.targetBlinkTimer--;
+        if (gGameState.targetBlinkTimer == 0)
+            gGameState.targetBlinkOn = 0;
+    }
+    else
+    {
+        gGameState.targetBlinkTimer++;
+        if (gGameState.targetBlinkTimer >= gTargetBlinkPeriods[level])
+        {
+            gGameState.targetBlinkTimer = gTargetBlinkPeriods[level];
+            gGameState.targetBlinkOn = 1;
+        }
+    }
+    gGameState.targetScale = (gGameState.targetBlinkTimer << 7) / gTargetBlinkPeriods[level] + 0x100;
+    DrawSprite(gSprite_0202C3F8, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
+    if (gGameState.unk224 == 0 && gGameState.flags.hasTact && level > 1
+     && (u8)(gGameState.flags.unk2 - angle + 9) > 18)
+    {
+        angle = ~angle + 1;
+        if (((angle + 8) & 0x1F) <= 0x10)
+        {
+            u8 dir = (u8)(angle + 0x88) >> 5;
+
+            if (gGameState.targetDir != dir && gGameState.unk1FA == 0)
+            {
+                ShowMessage(0x19C + dir, 1);
+                gGameState.targetDir = dir;
+            }
+        }
+        else
+        {
+            gGameState.targetDir = 0xFF;
+        }
+    }
+}
 
 // Copy each view quadrant's current sea animation frame into the BG tiles, then the map image
 // tiles (loaded at 0x0600C000) to 0x06004000.
