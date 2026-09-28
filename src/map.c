@@ -227,10 +227,13 @@ end:
 // are drawn as gSpriteTable[7].
 // Matching notes: every local is declared at the top in this order, which gives the original's
 // spill slots (i, dx, scale, mosaic, then the dy << 16 temp). The original compares the type
-// twice (`type == 3 ... type == 3`); cse deletes the second test for any C form that yields the
-// same value, so `type` is a hard-register variable (FAKEMATCH): cse records no equivalences
-// for non-fixed hard registers. It is copied from `t` after the continue checks so that
-// local-alloc ties the 0x3F constant to `t` (`movs r2, #0x3f; ands r2, r0`). The icon at the end
+// with 3 twice in a row: the cursor test is `!(type == 3 && holdState != 0) && marker->type == 3`,
+// whose `type != 3` exit jumps to the second test. cse stops at that label, and thread_jumps
+// only redirects the exit past it after cse2, when both tests use the same register; before
+// cse1 it doesn't, because one side is the user variable `type` and the other a bitfield temp
+// (spelling both the same way lets the pre-cse1 threading run and cse1 then folds the second
+// test). `type` is the masked byte (`0x3F & byte`), the form the bitfield compares take; a
+// plain `marker->type` read extracts with shifts instead. The icon at the end
 // reuses dx/dy, which settles the global-alloc ties (JP: dy before the highlight call's zero
 // constant, so dy gets r2 and dx's copy r6; US: mosaic, not dx, gets sl). US passes 12 for type
 // 1's param == 3 sprite and frame 0 for the icon; its pal is set but never gets a register.
@@ -391,14 +394,12 @@ void DrawMapMarkers(void)
     gGameState.enemyHighlighted = 0;
     for (i = 0; i < gGameState.markerCount; marker++, i++)
     {
-        register u32 type asm("r2");  // FAKEMATCH
-        u32 t = 0x3F & ((u8 *)marker)[5];
+        u32 type = 0x3F & ((u8 *)marker)[5];
 
-        if (t == 0 || marker->type > 21)
+        if (type == 0 || marker->type > 21)
             continue;
-        type = t;
         scale = 0;
-        if (!gGameState.itemsEnabled && type == 3 && gGameState.holdState == 0 && type == 3)
+        if (!gGameState.itemsEnabled && !(type == 3 && gGameState.holdState != 0) && marker->type == 3)
         {
             if (!gGameState.effectActive)
                 continue;
