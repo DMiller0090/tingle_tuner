@@ -187,7 +187,9 @@ void InitOamBuffer(void)
 // the original does (struct field access gives base + offset instead).
 void MainLoop(void)
 {
-    u8 unused[4];  // FAKEMATCH: the original has an unused stack slot
+    // The original reserves 4 bytes of stack it never touches: most likely a leftover local
+    // buffer (agbcc only gives stack to unused aggregates, never to unused scalars).
+    u8 unused[4];
 
     while (TRUE)
     {
