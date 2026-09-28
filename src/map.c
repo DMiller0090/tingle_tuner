@@ -1184,35 +1184,33 @@ INCLUDE_ASM(UpdateTargetCompass);
 
 // Copy each view quadrant's current sea animation frame into the BG tiles, then the map image
 // tiles (loaded at 0x0600C000) to 0x06004000.
-// Nearly matches: only the last two instructions of each tile address differ (the original
-// adds the VRAM base into a new register, `mov r2, sl; adds r0, r1, r2`, where this adds it in
-// place). The separate a and t are needed to keep 0x300 from being folded into the base.
-// Why: local-alloc only ties the sum to a's register when the sum's pseudo dies once, but a
-// user var set in both halves dies twice; sums into a new temp or per-half variables instead
-// let agbcc allocate a to r0 (42-60 diff lines). Also tried a *= 32, pointer/array forms of
-// the source address, u32/u16 types and statement orders.
-//     void Mode1VBlank(void)
-//     {
-//         u8 *dest = (u8 *)0x0600EC00;
-//         s32 i;
-//         s32 a, t;
-//
-//         for (i = 0; i < 4; i++)
-//         {
-//             a = gGameState.seaTileSet[i] * 16;
-//             t = gSeaAnimFrames[gGameState.seaAnimFrame[i]] * 4 + 0x300;
-//             a += t;
-//             CpuCopy32((u8 *)0x06008000 + a * 32, dest, 0x80);
-//             dest += 0x80;
-//             a = gGameState.seaTileSet[i] * 16;
-//             t = ((gSeaAnimFrames[gGameState.seaAnimFrame[i]] + 2) & 3) * 4 + 0x300;
-//             a += t;
-//             CpuCopy32((u8 *)0x06008000 + a * 32, dest, 0x80);
-//             dest += 0x80;
-//         }
-//         CpuCopy32((void *)0x0600C000, (void *)0x06004000, 0x2000);
-//     }
-INCLUDE_ASM(Mode1VBlank);
+// A separate tile index per half and a shared src pointer: the index dies once, so local-alloc
+// ties it to the tile-set term, and src (set twice) is left to global-alloc, so the final add
+// isn't tied into r0 (one shared index, or passing the address straight, adds in place).
+void Mode1VBlank(void)
+{
+    u8 *dest = (u8 *)0x0600EC00;
+    s32 i;
+    s32 a1, a2, t;
+    u8 *src;
+
+    for (i = 0; i < 4; i++)
+    {
+        a1 = gGameState.seaTileSet[i] * 16;
+        t = gSeaAnimFrames[gGameState.seaAnimFrame[i]] * 4 + 0x300;
+        a1 += t;
+        src = (u8 *)0x06008000 + a1 * 32;
+        CpuCopy32(src, dest, 0x80);
+        dest += 0x80;
+        a2 = gGameState.seaTileSet[i] * 16;
+        t = ((gSeaAnimFrames[gGameState.seaAnimFrame[i]] + 2) & 3) * 4 + 0x300;
+        a2 += t;
+        src = (u8 *)0x06008000 + a2 * 32;
+        CpuCopy32(src, dest, 0x80);
+        dest += 0x80;
+    }
+    CpuCopy32((void *)0x0600C000, (void *)0x06004000, 0x2000);
+}
 
 // Icon type 1: follow the player's marker (type 3, else type 1).
 void MapIconFollowMarker(struct MapIcon *icon)
@@ -1534,11 +1532,9 @@ void Func_0201B2C0(void)
 // What the player's marker (type 3) is on: returns the index of a marker within 8 pixels
 // (and sets unk11B to its type), else looks the position up in the slot 14 table of sea
 // chart squares (setting unk135 to the square's id + 1). unk11A: something is selected.
-// Near-miss, written with gSlot14Data as struct SeaChartEntry[49]: same code shape, but
-// the registers differ throughout (the original keeps gGameState in r3 inside the marker loop).
-// Also: the original spills to [sp, #4] where this uses [sp] (one more stack slot), and it
-// tests the type from r6 with a copy to r0 after the first compare (not tried further).
-/*
+// Only the first type test uses `type`; the rest re-read the field, which cse turns into a
+// copy of type's register (the `adds r0, r6, #0` after the first compare). `r` is s16: the
+// comparisons then use a widened copy of it.
 s32 Func_0201B3A4(void)
 {
     u8 player;
@@ -1547,7 +1543,7 @@ s32 Func_0201B3A4(void)
     u8 square;
     u16 ex;
     u16 ey;
-    s32 r;
+    s16 r;
 
     if (gGameState.unk121 != 0)
     {
@@ -1583,7 +1579,8 @@ s32 Func_0201B3A4(void)
     for (i = 0; i < gGameState.markerCount; i++)
     {
         type = gGameState.markers[i].type;
-        if (type == 1 || type == 3 || type == 4 || type == 0x11 || type == 0x12)
+        if (type == 1 || gGameState.markers[i].type == 3 || gGameState.markers[i].type == 4
+         || gGameState.markers[i].type == 0x11 || gGameState.markers[i].type == 0x12)
             continue;
         if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16)
             continue;
@@ -1713,8 +1710,6 @@ none:
     gGameState.unk11A = 0;
     return 0;
 }
-*/
-INCLUDE_ASM(Func_0201B3A4);
 
 // Play the sound for what the cursor is on: unk135 if set, else the selected marker's.
 // Near-miss: the original computes the (s16) ids in the shifted domain, ((v << 16) +
@@ -1727,6 +1722,16 @@ INCLUDE_ASM(Func_0201B3A4);
 // global-alloc puts idx in r0 and the unk135 value in r1 (someone prefers r0); idx types,
 // a `sel` local, a GameState pointer and nested/early-return forms of the unk135 case
 // didn't change that.
+// Diagnosis (2026-09-28, prio.py + global.c): with `u8 idx = gGameState.unk119;` at the top
+// the code shape is right (the gGameState copy that the original keeps in r4 appears) but
+// global-alloc goes unk135 -> r1, base -> r2, idx -> r0 (62 lines; original: unk135 r0,
+// base r1, idx r2, &unk135 r3, copy r4). unk135 skips r0 because idx (lower priority,
+// conflicting) prefers r0 via `idx << 3` (local-alloc'd to r0), and find_reg's first pass
+// avoids regs in regs_someone_prefers. &unk119/&unk135 are global pseudos (REG_EQUIV
+// gGameState+off). Tried at the top: idx u8/s8/u16/s16/u32/s32, split decl, a sel local
+// (u8/s8/u16/s16/u32/s32, for one or both unk135 tests),
+// switch on unk135, `!= 0x21 ||` and nested/early-return forms, a GameState pointer (drops
+// the r4 copy), a marker pointer, `u8 *p = &unk119`: all 56-76 lines.
 /*
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
