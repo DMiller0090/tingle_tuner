@@ -215,11 +215,12 @@ struct SoundVoice
     /*0x20*/ struct VoiceVibrato vibrato;
     /*0x2C*/ struct VoiceSweep sweep;
     /*0x40*/ struct VoiceEnvelope env;
-    /*0x54*/ u8 unk54[4];
+    /*0x54*/ const struct SoundInstrument *inst;
     /*0x58*/ u8 release;  // released: volume * (0xE6 + release) / 512 per frame
     /*0x59*/ u8 unk59[3];
     /*0x5C*/ const struct SoundSample *sample;
-    /*0x60*/ u8 unk60[8];
+    /*0x60*/ u32 pos;
+    /*0x64*/ union { const u8 *ptr; u8 duty; } cgb;  // wave data or duty list, else the duty
     /*0x68*/ struct SoundVoice *prev;  // in gPcmActiveVoices / gPcmFreeVoices
     /*0x6C*/ struct SoundVoice *next;
     /*0x70*/ struct SoundVoice *trackPrev;
@@ -262,6 +263,7 @@ struct SoundInstrument
 };
 
 #define REG_SOUND1CNT_L   (*(vu16 *)0x04000060)
+#define REG_NR10          (*(vu8 *)0x04000060)
 #define REG_SOUND1CNT_H   (*(vu16 *)0x04000062)
 #define REG_NR11          (*(vu8 *)0x04000062)
 #define REG_NR12          (*(vu8 *)0x04000063)
@@ -272,13 +274,19 @@ struct SoundInstrument
 #define REG_SOUND2CNT_H   (*(vu16 *)0x0400006C)
 #define REG_NR24          (*(vu8 *)0x0400006D)
 #define REG_NR30          (*(vu8 *)0x04000070)
+#define REG_NR31          (*(vu8 *)0x04000072)
+#define REG_NR32          (*(vu8 *)0x04000073)
+#define REG_SOUND3CNT_X   (*(vu16 *)0x04000074)
+#define REG_NR41          (*(vu8 *)0x04000078)
 #define REG_NR42          (*(vu8 *)0x04000079)
+#define REG_NR43          (*(vu8 *)0x0400007C)
 #define REG_NR44          (*(vu8 *)0x0400007D)
 #define REG_SOUNDCNT_L    (*(vu16 *)0x04000080)
 #define REG_SOUNDCNT_H_LO (*(vu8 *)0x04000082)
 #define REG_SOUNDCNT_H_HI (*(vu8 *)0x04000083)
 #define REG_SOUNDCNT_X    (*(vu8 *)0x04000084)
 #define REG_SOUNDBIAS     (*(vu16 *)0x04000088)
+#define REG_WAVE_RAM      ((vu32 *)0x04000090)
 #define REG_FIFO_A        (*(vu32 *)0x040000A0)
 #define REG_FIFO_B        (*(vu32 *)0x040000A4)
 #define REG_TM0CNT        (*(vu32 *)0x04000100)
@@ -1379,7 +1387,109 @@ void PcmMixFrame(void)
 
 INCLUDE_ASM(CgbUpdate);
 
-INCLUDE_ASM(TrackNoteOn);
+void TrackAddVoice(struct SoundTrack *track, struct SoundVoice *voice);
+void bzero(void *dest, u32 size);
+
+// Play key on the track for length ticks: resolve the instrument, take a voice (the tied
+// note's, or a new one from VoiceAlloc) and set up its pitch, sweep, envelope and sample.
+void TrackNoteOn(struct SoundTrack *track, u8 key, u8 velocity, u32 length)
+{
+    struct InstLookup lookup;
+    struct SoundPlayer *player = track->player;
+    u8 noteKey = key;
+    const struct SoundInstrument *inst;
+    struct SoundVoice *voice;
+
+    if (track->mute)
+        return;
+    key += track->transpose;
+    TrackLookupInstrument(track, key, &lookup);
+    inst = lookup.inst;
+    if (inst->flags & 0x10)
+        length /= player->tempo;
+    else
+        length /= player->tempoOfs + player->tempo;
+    if (track->tie && track->voices != NULL)
+    {
+        voice = track->voices;
+    }
+    else
+    {
+        voice = VoiceAlloc(gInstTypeToVoicePool[inst->type], track->priority);
+        if (voice == NULL)
+            return;
+        TrackAddVoice(track, voice);
+        voice->key = noteKey;
+        voice->pos = 0;
+        voice->vibrato.params = &track->vibrato;
+        voice->vibrato.phase = 0;
+        voice->vibrato.delay = track->vibrato.delay;
+        voice->env.steps = lookup.envelope;
+        voice->env.level = 0;
+        voice->env.target = 0;
+        voice->env.frames = 0;
+        voice->env.index = -1;
+        voice->release = inst->release;
+        voice->inst = inst;
+    }
+    voice->fixedPan = lookup.fixedPan;
+    if (voice->fixedPan)
+    {
+        key = 0x30;
+        voice->pan = lookup.pan;
+    }
+    else if (lookup.isDrum)
+    {
+        key = 0x30;
+    }
+    voice->velocity = velocity;
+    voice->volume = 0;
+    voice->gate = length;
+    voice->unk1A = track->unk4C;
+    voice->baseFreq = VoiceNoteFreq(voice, key, inst->baseKey);
+    if (track->sweep1C == 0)
+    {
+        bzero(&voice->sweep, sizeof(voice->sweep));
+    }
+    else
+    {
+        u32 freq = VoiceNoteFreq(voice, track->sweep1E, inst->baseKey);
+
+        voice->sweep.delay = track->sweep20;
+        voice->sweep.frames = length * track->sweep22 >> 8;
+        if (track->sweep1D & 2)
+        {
+            voice->sweep.target = freq - voice->baseFreq;
+        }
+        else
+        {
+            voice->sweep.target = voice->baseFreq - freq;
+            voice->baseFreq = freq;
+        }
+        voice->sweep.step = voice->sweep.target;
+        voice->sweep.step = voice->sweep.step / (s32)voice->sweep.frames;
+        if (track->sweep1D & 4)
+            track->sweep1E = key;
+        else
+            track->sweep1C = 0;
+        voice->sweep.offset = 0;
+    }
+    if (voice->type == 0)
+        voice->sample = SOUND_OFFSET(track->sampleSet, inst->arg);
+    else if (voice->type != 3)
+    {
+        if (inst->flags & 1)
+            voice->cgb.ptr = lookup.dutyList;
+        else
+            voice->cgb.duty = inst->arg;
+    }
+    else
+    {
+        voice->cgb.ptr = lookup.wave;
+    }
+    if (length == 0)
+        VoiceNoteOff(voice);
+}
 
 // Release a note: a PCM voice (and the wave channel) decays in software, the other GB
 // channels get their hardware envelope (release / 32 as the step, or off).
@@ -1474,7 +1584,65 @@ void VoiceStop(struct SoundVoice *voice)
     }
 }
 
-INCLUDE_ASM(CgbVoiceStart);
+extern const u8 *gCgbWaveLoaded;  // the wave data in wave RAM
+
+// Start a note on a GB channel voice with the envelope byte nr2 (the wave channel: output
+// level index): duty (from the duty list's first entry with flags bit 0), frequency, trigger.
+void CgbVoiceStart(struct SoundVoice *voice, u8 nr2)
+{
+    switch (voice->type)
+    {
+    case 1:
+        REG_NR10 = ((const u8 *)voice->inst)[8];
+        REG_SOUND1CNT_X = voice->baseFreq | 0x8000;
+        REG_NR12 = nr2;
+        if (voice->inst->flags & 1)
+            REG_NR11 = voice->cgb.ptr[2] << 6;
+        else
+            REG_NR11 = voice->cgb.duty << 6;
+        REG_SOUND1CNT_X = voice->baseFreq | 0x8000;
+        break;
+    case 2:
+        REG_NR22 = nr2;
+        REG_SOUND2CNT_H = voice->baseFreq | 0x8000;
+        REG_NR21 = voice->cgb.duty << 6;
+        break;
+    case 3:
+        if (voice->cgb.ptr != gCgbWaveLoaded)
+        {
+            REG_NR30 = 0;
+            CpuSet(voice->cgb.ptr, REG_WAVE_RAM, 8);
+            gCgbWaveLoaded = voice->cgb.ptr;
+        }
+        REG_NR30 = 0xC0;
+        REG_SOUND3CNT_X = voice->baseFreq | 0x8000;
+        REG_NR32 = gCgbWaveVolumes[nr2];
+        REG_NR31 = 0;
+        break;
+    case 4:
+    {
+        u8 v;
+
+        REG_NR42 = nr2;
+        if (voice->inst->flags & 1)
+        {
+            v = NoiseFreq(voice->baseFreq);
+            if (voice->cgb.ptr[2])
+                v |= 8;
+        }
+        else
+        {
+            v = NoiseFreq(voice->baseFreq);
+            if (voice->cgb.duty)
+                v |= 8;
+        }
+        REG_NR43 = v;
+        REG_NR44 = 0x80;
+        REG_NR41 = 0;
+        break;
+    }
+    }
+}
 
 // A voice for a note of this priority: a free PCM voice, else the first in gPcmActiveVoices
 // (released or lowest priority) unless it plays a higher priority; or GB channel `type`.
