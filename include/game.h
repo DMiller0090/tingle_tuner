@@ -138,6 +138,12 @@ struct ItemSlot
 // 0x134 u8 scrolling  // the view is still catching up with the followed marker
 // 0x135 u8 selectedSquare  // sea chart square under the cursor + 1 (UpdateSelection), 0: none
 // 0x136 u8 awayFromType20  // the cursor has left the type 20 marker (it is only selectable after that)
+// #ifdef VERSION_PAL size=8
+// 0x138 s16 pendingMsg  // PAL (fields from here on are 8 bytes higher): ExamineSelection saves the selection's message, type and param for after reactionTimer, so moving the cursor meanwhile doesn't change what is shown and revealed
+// 0x13A u8 pendingType
+// 0x13B u8 pendingParam
+// 0x13C u8 pendingReveal  // set with them; Mode1State2 reveals pendingType/Param when the message closes
+// #endif
 // 0x138 bits u8 unk138_0:2 appeared:1 shopUnlocked:1 balloonDiscount:1 tingDiscount:1 unk138_6:2  // sent to the GC as GbaFlg.bits: appeared shows "Tingle appeared" (daAgb field_0x67a); the others set the GC's event flags (flags.shopUnlocked etc.)
 // 0x13C u8 msgOpen  // a message is up or opening (the box slides in); 0 closes it
 // 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while msgOpen is set, else 0
@@ -330,6 +336,13 @@ struct GameState
     /*0x135*/ u8 selectedSquare;              // sea chart square under the cursor + 1 (UpdateSelection), 0: none
     /*0x136*/ u8 awayFromType20;              // the cursor has left the type 20 marker (it is only selectable after that)
     /*0x137*/ u8 filler137[0x138 - 0x137];
+#ifdef VERSION_PAL
+    /*0x138*/ s16 pendingMsg;                 // PAL (fields from here on are 8 bytes higher): ExamineSelection saves the selection's message, type and param for after reactionTimer, so moving the cursor meanwhile doesn't change what is shown and revealed
+    /*0x13A*/ u8 pendingType;
+    /*0x13B*/ u8 pendingParam;
+    /*0x13C*/ u8 pendingReveal;               // set with them; Mode1State2 reveals pendingType/Param when the message closes
+    /*0x13D*/ u8 filler13D[0x140 - 0x13D];
+#endif
     /*0x138*/ u8 unk138_0:2;                  // sent to the GC as GbaFlg.bits: appeared shows "Tingle appeared" (daAgb field_0x67a); the others set the GC's event flags (flags.shopUnlocked etc.)
               u8 appeared:1;
               u8 shopUnlocked:1;
