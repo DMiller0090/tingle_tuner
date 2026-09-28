@@ -233,6 +233,12 @@ end:
 // mosaic (0x28) and dy << 16 (0x2c). The kept second `type == 3` test compares the same
 // register (the `& 0x3F` type) as the first, so it is not a reload: writing one of the two as
 // gGameState.markers[i].type keeps the test but reloads the field (422 lines, 0x14 bigger).
+// Round 3: cse1 deletes the second type == 3 test (jump equivalence; the loop body starts a new
+// cse block, so the 1000-insn table flush is not it). A `u8 pal` set after the continue checks
+// stays in the loop (loop.c keeps a user variable's maybe-never set), but it is set once, so it
+// gets a REG_EQUIV 0 and, left without a hard reg (18 refs over ~1400 insns), reload puts the
+// constant back: the original gives pal a register, so the priorities still differ. Worse:
+// u8/u16/s32 pal set at the loop top or with scale, late-folding zeros (`marker->type >> 6`).
 /*
 #define SPRITE_FRAMES(p) ((const struct SpriteFrame *)(p))
 
@@ -592,6 +598,14 @@ INCLUDE_ASM(DrawMapMarkers);
 // for, a u16/s32 mask variable, *map++ &= and map[k] forms, `+` instead of `|` for the block
 // index, s32/u8 temps for the block index, `* 0x800`, and `i < 4`. Earlier: casting the
 // shifts to s32/u32, 1u and s32 temps for x >> 8 / y >> 8.
+// Round 3: forcing map into r3 for both loops (`register u16 *map asm("r3")`, test only) makes
+// the clear loop match, mask r2 and countdown r5 included, once it counts with i (the second
+// loop's counter); so the source likely shares i and one map, and the open question is only
+// why global.c's find_reg skips r2 for map (it conflicts with r0/r1 only and no conflicting
+// allocno prefers r2 here). The hard reg itself costs a spill (110 lines, 0xc bigger). No gain
+// from 192 combinations of block-index variable (i/c/none), clear counter (i/j/k/c), u16/s32
+// x/y, s32/u8 size, entry pointer or index and a shared or separate second-loop pointer, nor
+// from an inline helper for the clear or room/b as the block index.
 /*
 #define CLEAR_PAL(p) (*(p) &= 0x1FFF, (p)++)
 #define CLEAR_PAL_4(p) CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p)
