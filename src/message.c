@@ -433,6 +433,13 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     u32 *glyph = (u32 *)0x0600A000 + ch * 8;
     u32 *dst;
 
+#ifdef VERSION_PAL
+    // Nothing is drawn below the text box's last line.
+    if (y > 0x44)
+        return;
+    if (y == 0x44 && (gGameState.textBig || x > 0x5A))
+        return;
+#endif
     if (gGameState.textBig)
     {
         u32 row;
@@ -489,6 +496,13 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
     s32 x2;
 #endif
 
+#ifdef VERSION_PAL
+    // An accent can't go below the text box's last line.
+    if (gGameState.textY > 0x44)
+        return;
+    if (gGameState.textY == 0x44 && (gGameState.textBig || x > 0x5A))
+        return;
+#endif
     y -= 4;
     row = (y >> 3) * 0x180 + (y & 7) * 4;
     col = (x >> 3) * 32 + 0x0600F100;
@@ -1060,9 +1074,14 @@ void MsgCmd10(void)
     gGameState.glyphWidth = 6;
 }
 
+// PAL: both widths are 6 (message code F3 11 no longer selects 8).
 void MsgCmd11(void)
 {
+#ifdef VERSION_PAL
+    gGameState.glyphWidth = 6;
+#else
     gGameState.glyphWidth = 8;
+#endif
 }
 
 void MsgCmd12(void)
@@ -1677,7 +1696,12 @@ void MsgStart(s16 id)
         gGameState.msgPtr = (u8 *)0x02000000 + ((u16 *)0x02000000)[id];
 #else
         // The US message block starts with the offset of the text after the table.
+#ifdef VERSION_PAL
+        // PAL offsets count halfwords (the European text runs past 64 KiB).
+        gGameState.msgPtr = (u8 *)(*(u16 *)0x02000000 + ((((u16 *)0x02000002)[id] << 1) | 0x02000000));
+#else
         gGameState.msgPtr = (u8 *)(*(u16 *)0x02000000 + (((u16 *)0x02000002)[id] | 0x02000000));
+#endif
 #endif
         gGameState.textColor = 0;
         gGameState.msgStatus = 0;
