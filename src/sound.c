@@ -1805,7 +1805,11 @@ void TrackNoteOn(struct SoundTrack *track, u8 key, u8 velocity, u32 length)
 
 // Release a note: a PCM voice (and the wave channel) decays in software, the other GB
 // channels get their hardware envelope (release / 32 as the step, or off).
-// The switch re-reads voice->type (the volatile read keeps cse from reusing `type`).
+// FAKEMATCH: the switch re-reads voice->type; the volatile read keeps gcse from reusing
+// `type` (-dG: "PRE: redundant insn", also with -fno-gcse via cse). Without the `type`
+// local (every test reads the field) the code is right but freq/type swap r2/r3: type's
+// load (3 refs, live 7) outranks freq (7 refs, live 36). The permuter matched that version
+// only by wrapping the switch in do { } while (0) (loop depth doubles freq's refs).
 void VoiceNoteOff(struct SoundVoice *voice)
 {
     if (voice->state == 1 && !voice->track->tie)
