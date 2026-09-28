@@ -201,7 +201,11 @@ minus tempo (default 150) per frame, so one tick is one frame), `CgbUpdate`, the
 (`VoiceAlloc`: PCM from `gPcmFreeVoices` or by stealing the lowest priority, or the
 instrument's GB channel) and starts it. Per voice per frame: `EnvelopeStep`,
 `VoiceUpdatePitch` (sweep, bend, vibrato from `gVibratoTable`), `PcmVoiceVolume` /
-`CgbVoiceVolume`. `gPcmEchoFunc` (`PcmEchoMix`) is set up but never called.
+`CgbVoiceVolume`. `gPcmEchoFunc` (`PcmEchoMix`: adds an echo buffer into the mix, then scales the echo down by
+2^shift) is set up but never called. Sequence command `E3` sets track +0x4C; `TrackNoteOn`
+and `PcmMixFrame` copy it to voice +0x1A, and nothing reads that (not even through
+`gSoundNoteHook`, which the game never installs), so `E3` has no audible effect. It was
+plausibly an echo send for `PcmEchoMix`.
 
 Work area structs (sizes from the loops; offsets from the code):
 
@@ -212,7 +216,7 @@ Work area structs (sizes from the loops; offsets from the code):
 - track (`gSoundTracks`, 24 × 0x54): +0 pc, +4 sample set, +8 player, +0xC voice list,
   +0x10/+0x14/+0x18 vibrato delay/speed/depth, +0x1C-0x23 pitch sweep, +0x24 call stack,
   +0x30 stack pointer, +0x34 wait, +0x40 bank, +0x42 program, +0x44/+0x46 last length/wait,
-  +0x48 velocity, +0x49 tie, +0x4A mute, +0x4B pan, +0x4C (E3), +0x4D/+0x4E volume, +0x4F
+  +0x48 velocity, +0x49 tie, +0x4A mute, +0x4B pan, +0x4C (E3, see below), +0x4D/+0x4E volume, +0x4F
   bend, +0x50 bend range, +0x51 transpose, +0x52 priority, +0x53 notes wait.
 - voice (`gPcmVoices` 7 × 0x78, `gCgbVoices` 4 × 0x78): +0 type (0 PCM, 1-4 GB channel), +1
   state (0 free, 1 on, 2 released), +4 track, +8 priority, +9 key, +0xA velocity, +0xC

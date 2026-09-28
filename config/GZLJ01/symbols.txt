@@ -317,7 +317,7 @@ PcmVSync = 0x02021520; // thumb
 SoundDmaStop = 0x020215D0; // thumb
 // unused counterpart of SoundDmaStop: sets gPcmEnabled
 SoundDmaStart = 0x0202161C; // thumb
-// (voice, env on, step, pan): mix one voice into gPcmMixBuffer through gPcmMixFunc; TRUE at the end
+// (voice, volume, step, pan): mix one voice into gPcmMixBuffer through gPcmMixFunc; TRUE at the end
 PcmMixVoice = 0x02021628; // thumb
 DrumInstrumentInit = 0x020217B4; // thumb
 // (track, key, out): instrument record, envelope, duty/wave table, fixed pan for the key

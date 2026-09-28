@@ -132,6 +132,6 @@ See [docs/layout.md](docs/layout.md) for the program's sections and modules and
 tail block, `client_ud.bin`, `msg_LZ.bin` and the packer's copy are answered in layout.md,
 and so is the sound bank's format (see "Sound driver" and "Raw tail block" there).
 
-- Sound: what track +0x4C (sequence command `E3`) was for (voices copy it, nothing reads it;
-  an echo send for the unused `PcmEchoMix`?), and which effect each sound ID is.
+- Sound: which effect each sound ID is. (`E3` is dead: its value is copied to voices and
+  never read; layout.md.)
 - What slots 3, 11 and 14 were for; no GC code sends them (see protocol.md).
