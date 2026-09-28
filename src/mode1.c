@@ -338,21 +338,16 @@ void Mode1State5(void)
     UpdateMap();
     Func_0201CFE8();
 }
-// Near-miss: the original loads GBACOM_BUF_SWITCH + 1 into r2 after the first store; this
-// loads it first (assigning p after the store puts it in r1 instead).
-/*
+// Send the switch packet (5 bytes and a checksum of its two words) and show its message.
 void Mode1SendSwitch(u8 soundArg)
 {
-    u8 *p;
-
-    p = GBACOM_BUF_SWITCH + 1;
     GBACOM_BUF_SWITCH[0] = gGameState.switchNo;
-    *p++ = gGameState.switchStageNo;
-    *p++ = gGameState.switchRoomNo;
-    *p++ = gGameState.switchType;
-    *p = gGameState.switchNo2;
+    GBACOM_BUF_SWITCH[1] = gGameState.switchStageNo;
+    GBACOM_BUF_SWITCH[2] = gGameState.switchRoomNo;
+    GBACOM_BUF_SWITCH[3] = gGameState.switchType;
+    GBACOM_BUF_SWITCH[4] = gGameState.switchNo2;
     GbaComSendDataSet(GBACOM_BUF_SWITCH, 6, GBACOM_SLOT_SWITCH,
-                      ((u32 *)GBACOM_BUF_SWITCH)[0] + *(u32 *)p);
+                      ((u32 *)GBACOM_BUF_SWITCH)[0] + ((u32 *)GBACOM_BUF_SWITCH)[1]);
     ShowMessage(gGameState.switchMsg, soundArg);
     gGameState.unk21C = 1;
     gGameState.unk206 = 0x100;
@@ -362,8 +357,6 @@ void Mode1SendSwitch(u8 soundArg)
         gGameState.switchType = 0;
     }
 }
-*/
-INCLUDE_ASM(Mode1SendSwitch);
 // The main state: sounds for the GC's flags, the timed marker/switch action (slot 3 marker
 // type 7 sends a switch), the BG1 slide, then the START/A/B/R keys.
 void Mode1State2(void)
