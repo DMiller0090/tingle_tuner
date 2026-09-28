@@ -45,7 +45,7 @@ const u16 gThreeChoiceMsgIds[21] =
     0xDE, 0xDF, 0xE0
 };
 
-// Sound per message sound code (Func_0201C484); codes 0x20-0x22 are SoundPlayLoop IDs.
+// Sound per message sound code (PlayMsgSound); codes 0x20-0x22 are SoundPlayLoop IDs.
 #define SE(id) ((id) < 7 ? (id) : (id) - SOUND_ID_SHIFT)
 const u16 gSoundIds_0202430E[] =
 {
@@ -237,7 +237,7 @@ const u8 *const *const gTingleAnims[15] =
     gTingleFrames_020243F0
 };
 
-void Func_0201BA2C(s8 row)
+void DrawMsgBoxRow(s8 row)
 {
     u16 *map = (u16 *)0x06006120 + row * 32;
     u16 tile = row * 12 + 0xF370;
@@ -254,7 +254,7 @@ void Func_0201BA2C(s8 row)
     map[0] = map[0x20] = 0xD024;
 }
 
-void Func_0201BA9C(s8 row)
+void RestoreMsgBoxRow(s8 row)
 {
     u16 *src = (u16 *)0x06007800;
     s32 off = row * 32;
@@ -528,7 +528,7 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
     p++;                                     \
     gMain.unk450++;
 
-void Func_0201BEA0(s8 row)
+void DrawMsgBoxFrame(s8 row)
 {
     struct OamData16 *p = (struct OamData16 *)&gOamBuffer[gMain.unk450];
     s32 y;
@@ -551,7 +551,7 @@ void Func_0201BEA0(s8 row)
     }
 }
 
-void Func_0201C0E8(u8 playSound)
+void MsgNewPage(u8 playSound)
 {
     u32 params[2];
     u32 mask;
@@ -676,7 +676,7 @@ u8 ChoiceMenuUpdate_(void)
     return 1;
 }
 
-void Func_0201C484(u8 id)
+void PlayMsgSound(u8 id)
 {
     u32 params[2];
     u32 mask;
@@ -710,7 +710,7 @@ void Func_0201C484(u8 id)
     }
 }
 
-void Func_0201C568(void)
+void StartTingleAnim(void)
 {
     u8 i;
     const u8 *const *const *entry;
@@ -741,7 +741,7 @@ void Func_0201C568(void)
     gGameState.unk202 = (**entry)[4];
 }
 
-bool32 Func_0201C60C(void)
+bool32 TextWrapLine(void)
 {
     u8 step;
 
@@ -776,7 +776,7 @@ void DrawGlyphRun(u8 id)
 #endif
     for (i = 0; i < n; i++)
     {
-        if (!Func_0201C60C())
+        if (!TextWrapLine())
             return;
         TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
         ch++;
@@ -793,7 +793,7 @@ void DrawGlyphRun(u8 id)
 #ifdef VERSION_GZLJ01
 bool32 DrawChar(u8 ch)
 {
-    if (!Func_0201C60C())
+    if (!TextWrapLine())
         return FALSE;
     if (ch == 0xBC)
         gGameState.unk159 = 1;
@@ -895,7 +895,7 @@ bool32 DrawChar(u8 ch)
 #ifndef VERSION_GZLJ01
 bool32 UsDrawChar(u8 ch)
 {
-    if (!Func_0201C60C())
+    if (!TextWrapLine())
         return FALSE;
     if (ch == 0x3F)
     {
@@ -1105,7 +1105,7 @@ s32 MsgStep(void)
                 return 2;
             }
             gMain.newKeys &= ~1;
-            Func_0201C0E8(1);
+            MsgNewPage(1);
             gGameState.unk15A = 0;
             gGameState.unk13E = 0;
             gGameState.unk14B = 0;
@@ -1221,14 +1221,14 @@ s32 MsgStep(void)
             else if (ch == 0xF6)
             {
                 n = *++gGameState.msgPtr;
-                Func_0201C484(n);
+                PlayMsgSound(n);
                 gGameState.msgPtr++;
                 return 1;
             }
             else if (ch == 0xF5)
             {
                 gGameState.unk226 = gMsgTingleAnims[*++gGameState.msgPtr];
-                Func_0201C568();
+                StartTingleAnim();
             }
             else if (ch == 0xF3)  // call a handler
             {
@@ -1266,7 +1266,7 @@ end:
 // agbcc -O2 runs gcse (LCM-based PRE) on the pool load of gGameState's address; calls kill
 // it, so case 11's DrawSprite call feeding the switch join directly (its own `sprite = ...;
 // break;`, not a fall into talk) makes the other cases' last gGameState reads reload it.
-void Func_0201CFE8(void)
+void UpdateMsgAndTingle(void)
 {
     s32 target;
     u32 mosaic;
@@ -1290,12 +1290,12 @@ void Func_0201CFE8(void)
         StepTowardS8(&gGameState.msgBoxPos, target, 2);
         if (gGameState.unk13C)
         {
-            Func_0201BA2C(gGameState.msgBoxPos);
+            DrawMsgBoxRow(gGameState.msgBoxPos);
             gGameState.unk14B = 1;
         }
         else
         {
-            Func_0201BA9C(gGameState.msgBoxPos);
+            RestoreMsgBoxRow(gGameState.msgBoxPos);
             if (gGameState.msgBoxPos == 0)
             {
                 if (gGameState.unk21C)
@@ -1313,7 +1313,7 @@ void Func_0201CFE8(void)
                 gGameState.unk104 = 1;
             }
         }
-        Func_0201BEA0(gGameState.msgBoxPos);
+        DrawMsgBoxFrame(gGameState.msgBoxPos);
     }
     else if (gGameState.unk13C && gGameState.unk142 >= 0)
     {
@@ -1324,7 +1324,7 @@ void Func_0201CFE8(void)
                 break;
         } while ((gMain.newKeys & 1) || gGameState.unk158);
         gGameState.unk14B = r;
-        Func_0201BEA0(gGameState.msgBoxPos);
+        DrawMsgBoxFrame(gGameState.msgBoxPos);
     }
     else if (gGameState.unk1FA)
     {
@@ -1662,7 +1662,7 @@ void MsgStart(s16 id)
 {
     if (gGameState.unk142 != id)
     {
-        Func_0201C0E8(0);
+        MsgNewPage(0);
         gGameState.unk142 = id;
 #ifdef VERSION_GZLJ01
         gGameState.msgPtr = (u8 *)0x02000000 + ((u16 *)0x02000000)[id];
@@ -1713,7 +1713,7 @@ bool32 ShowMessage_(u16 id, u8 arg)
         gGameState.unk1FA = 1;
         gGameState.unk226 = arg;
         gGameState.unk22B = 1;
-        Func_0201C568();
+        StartTingleAnim();
         MsgStart(id);
     }
     return TRUE;

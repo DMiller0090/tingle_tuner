@@ -802,7 +802,7 @@ void UpdateMap(void)
     {
         s32 j;
 
-        Func_0201B2C0();
+        DarkenUnchartedSquares();
         FollowMarkerFixedMap();
         for (j = 0; j < 4; j++)
         {
@@ -906,7 +906,7 @@ void UpdateMap(void)
         ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
 }
 
-void Func_0201A540(void)
+void UpdateMapView(void)
 {
     if (gMain.unk457 == 0)
     {
@@ -1437,7 +1437,7 @@ void DrawQuestMarkers(void)
 
 // B closes and L toggles the sea chart overlay (unk224) while unk1E5_1 allows it; while it
 // is open, A (once) calls InitCursorIcon and the quest markers are drawn.
-void Func_0201B0F4(void)
+void UpdateChartOverlay(void)
 {
     u16 tile;
     u16 *map;
@@ -1496,7 +1496,7 @@ void Func_0201B0F4(void)
             gGameState.unk0FC = 0;
             gGameState.unk0FD = 0;
         }
-        Func_0201E584();
+        RedrawHudItem();
     }
     else if (gGameState.unk224)
     {
@@ -1516,7 +1516,7 @@ void Func_0201B0F4(void)
 
 // Darken the sea chart's 7x7 squares (2x2 tiles each, from map row 17 column 1 of the BG
 // map at 0x06007000) whose bit in gGameState.unk0F4 is clear: palette 6 instead of 0.
-void Func_0201B2C0(void)
+void DarkenUnchartedSquares(void)
 {
     s32 i;
     u32 off;
@@ -1553,7 +1553,7 @@ void Func_0201B2C0(void)
 // Only the first type test uses `type`; the rest re-read the field, which cse turns into a
 // copy of type's register (the `adds r0, r6, #0` after the first compare). `r` is s16: the
 // comparisons then use a widened copy of it.
-s32 Func_0201B3A4(void)
+s32 UpdateSelection(void)
 {
     u8 player;
     s32 i;
@@ -1734,7 +1734,7 @@ none:
 // emits for an explicit shift pair (ID below).
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
-void Func_0201B7D4(void)
+void ShowSelectionMsg(void)
 {
     u8 idx = gGameState.unk119;
     // FAKEMATCH: 0x21 in a variable (found with decomp-permuter) moves the unk135 value from
@@ -1767,8 +1767,8 @@ void Func_0201B7D4(void)
 }
 
 // Act on the current selection (unk119: a marker, or unk135): 0: send the switch record,
-// 1: a random reaction sound, 2: play the selection's sound via Func_0201B7D4.
-void Func_0201B8C8(void)
+// 1: a random reaction sound, 2: play the selection's sound via ShowSelectionMsg.
+void ExamineSelection(void)
 {
     u8 result = 0;
 
@@ -1843,7 +1843,7 @@ void Func_0201B8C8(void)
     }
     else
     {
-        Func_0201B7D4();
+        ShowSelectionMsg();
         SoundPlay(2, 0);
     }
 }

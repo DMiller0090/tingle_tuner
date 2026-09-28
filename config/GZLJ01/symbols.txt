@@ -40,12 +40,12 @@ Mode1State2 = 0x020158E0; // thumb
 Mode1State3 = 0x02015F68; // thumb
 Mode1State4 = 0x0201643C; // thumb
 Mode1State5 = 0x02015744; // thumb
-Mode1Func_020150A4 = 0x020150A4; // thumb
-Mode1Func_0201521C = 0x0201521C; // thumb
-Mode1Func_02015298 = 0x02015298; // thumb
+UpdateRupeeCounter = 0x020150A4; // thumb
+InitMapBgs = 0x0201521C; // thumb
+LoadMode1Graphics = 0x02015298; // thumb
 Mode1SendSwitch = 0x02015840; // thumb
 Mode1RecvMarkers = 0x020160C8; // thumb
-Mode1Func_02016350 = 0x02016350; // thumb
+ResetMapState = 0x02016350; // thumb
 Mode1StartFadeOut = 0x02016684; // thumb
 // VBlankIntr calls it in mode 1 unless gMain.unk457 is set
 Mode1VBlank = 0x0201ABDC; // thumb
@@ -64,7 +64,7 @@ ShowMessage = 0x0201D978; // thumb
 ObjReset = 0x02020570; // thumb
 // table[line] = BG0HOFS + sin(phase + 4 * line) * amplitude / 256 for the 160 lines
 BuildWaveScrollTable = 0x020208BC; // thumb
-Func_0201A540 = 0x0201A540; // thumb
+UpdateMapView = 0x0201A540; // thumb
 // move *pos toward target by speed; TRUE once there
 StepToward = 0x020189E0; // thumb
 // Select wipes a window (WIN0) across the screen and back, showing BG0's other half
@@ -81,32 +81,32 @@ MsgReset = 0x0201D8AC; // thumb
 ObjResetActive = 0x02020644; // thumb
 InitMapView = 0x0201A6D4; // thumb
 UpdateMap = 0x0201A224; // thumb
-Func_0201CFE8 = 0x0201CFE8; // thumb
-Func_0201B7D4 = 0x0201B7D4; // thumb
+UpdateMsgAndTingle = 0x0201CFE8; // thumb
+ShowSelectionMsg = 0x0201B7D4; // thumb
 // closes the message (sound 0x17 if one was open)
 MsgClose = 0x0201DA50; // thumb
 // use item menu entry n (sends slot 6 via SendItemUse, checks rupees)
 UseItem = 0x0201E384; // thumb
-Func_0201B0F4 = 0x0201B0F4; // thumb
-Func_0201B8C8 = 0x0201B8C8; // thumb
+UpdateChartOverlay = 0x0201B0F4; // thumb
+ExamineSelection = 0x0201B8C8; // thumb
 // item menu cursor (d-pad with key repeat, B picks); GZLE01_ud adds a sound test
 ItemMenuUpdate = 0x0201DEAC; // thumb
 DrawStatusIcon = 0x02020C10; // thumb
-Func_0201B3A4 = 0x0201B3A4; // thumb
-Func_0201C484 = 0x0201C484; // thumb
-Func_0201C568 = 0x0201C568; // thumb
+UpdateSelection = 0x0201B3A4; // thumb
+PlayMsgSound = 0x0201C484; // thumb
+StartTingleAnim = 0x0201C568; // thumb
 // puts an item in a menu slot (5 per row) and draws its icon and count
 SetSlotItem = 0x0201DD20; // thumb
 // slide the two HUD panels (unk21F/unk21D, unk220/unk21E) in and out
 UpdateHudPanels = 0x0201E5E0; // thumb
-Func_0201EBAC = 0x0201EBAC; // thumb
-Func_0201EBD4 = 0x0201EBD4; // thumb
-Func_0201EDC4 = 0x0201EDC4; // thumb
-Func_0201F240 = 0x0201F240; // thumb
-Func_0201F274 = 0x0201F274; // thumb
-Func_0201F2C4 = 0x0201F2C4; // thumb
-Func_0201F420 = 0x0201F420; // thumb
-Func_02020150 = 0x02020150; // thumb
+EndItemEffect = 0x0201EBAC; // thumb
+StartBombBlast = 0x0201EBD4; // thumb
+StartBalloonEffect = 0x0201EDC4; // thumb
+StartShieldEffect = 0x0201F240; // thumb
+StartLookEffect = 0x0201F274; // thumb
+StartRandomEffect = 0x0201F2C4; // thumb
+StartShopEffect = 0x0201F420; // thumb
+StartBombCountdown = 0x02020150; // thumb
 UpdateItemEffect = 0x02020298; // thumb
 // placeholders so all versions share INCLUDE_ASM names
 // move *pos by (target - *pos) / div, clamped to [minStep, maxStep] in size; returns what is left
@@ -147,9 +147,9 @@ MapIconCursor = 0x0201AD90; // thumb
 UpdateMapIcons = 0x0201AF48; // thumb
 // sea chart markers for the pearl/Triangle Island/temple quest (flags byte 9)
 DrawQuestMarkers = 0x0201AFCC; // thumb
-Func_0201B2C0 = 0x0201B2C0; // thumb
-Func_0201BA2C = 0x0201BA2C; // thumb
-Func_0201BA9C = 0x0201BA9C; // thumb
+DarkenUnchartedSquares = 0x0201B2C0; // thumb
+DrawMsgBoxRow = 0x0201BA2C; // thumb
+RestoreMsgBoxRow = 0x0201BA9C; // thumb
 // fill the text canvas (VRAM 0x0600F100, 12 tiles a row) with colour 1
 TextClearCanvas = 0x0201BAD8; // thumb
 // OR a glyph's 4bpp rows into the text canvas at a pixel offset
@@ -160,13 +160,13 @@ TextScaleGlyph = 0x0201BC0C; // thumb
 TextDrawGlyph = 0x0201BCC0; // thumb
 // draw an 8x4 glyph (VRAM 0x0600A010) on the text canvas, 2x when unk15A
 TextDrawSmallGlyph = 0x0201BDE4; // thumb
-Func_0201BEA0 = 0x0201BEA0; // thumb
-Func_0201C0E8 = 0x0201C0E8; // thumb
+DrawMsgBoxFrame = 0x0201BEA0; // thumb
+MsgNewPage = 0x0201C0E8; // thumb
 // the choice menu's animated cursor (gSprite_0202C130), at y = unk14F * 12 + unk150 + 52
 DrawChoiceCursor = 0x0201C164; // thumb
 // Up/Down/A in the choice menu; returns 1 while waiting, 0 after a pick, 3 when the pick is 0xFFFF
 ChoiceMenuUpdate = 0x0201C204; // thumb
-Func_0201C60C = 0x0201C60C; // thumb
+TextWrapLine = 0x0201C60C; // thumb
 // draws a run of consecutive glyphs (gGlyphRunStart/Length[id]) at the text cursor
 DrawGlyphRun = 0x0201C660; // thumb
 // draws one glyph at the text cursor (gGameState.textX/Y) and advances it; FALSE when the window is full
@@ -203,25 +203,25 @@ SetSelectedItem = 0x0201DCEC; // thumb
 ChestCounterMain = 0x0201DDA0; // thumb
 // item menu row 2: one icon per flags.dungeonChests bit
 DrawChestRow = 0x0201E2FC; // thumb
-Func_0201E584 = 0x0201E584; // thumb
-Func_0201EC10 = 0x0201EC10; // thumb
-Func_0201ECC4 = 0x0201ECC4; // thumb
-Func_0201ED08 = 0x0201ED08; // thumb
-Func_0201EDF8 = 0x0201EDF8; // thumb
+RedrawHudItem = 0x0201E584; // thumb
+EffectBombBlast = 0x0201EC10; // thumb
+StartEffectIntro = 0x0201ECC4; // thumb
+DrawEffectIntro = 0x0201ED08; // thumb
+DrawBalloonShield = 0x0201EDF8; // thumb
 // two-digit flags.timer next to the effect sprite
 DrawTimerCount = 0x0201EF98; // thumb
-Func_0201F068 = 0x0201F068; // thumb
-Func_0201F2A8 = 0x0201F2A8; // thumb
+EffectBalloonShield = 0x0201F068; // thumb
+EffectWaitTimer = 0x0201F2A8; // thumb
 Effect5 = 0x0201F308; // thumb
 // item effect 7: the shop (purchase request in slot 12, answer in slot 13)
 Effect7 = 0x0201F460; // thumb
-Func_0201F878 = 0x0201F878; // thumb
-Func_0201F8C4 = 0x0201F8C4; // thumb
+StartTingEffect = 0x0201F878; // thumb
+DrawTitleSpriteOnMap = 0x0201F8C4; // thumb
 // item effects 8-10: the title sprite drops onto the type 1 marker, then SendItemUse
 Effect8 = 0x0201FA2C; // thumb
-Func_0201FCA0 = 0x0201FCA0; // thumb
+StartEffect11 = 0x0201FCA0; // thumb
 Effect11 = 0x0201FD04; // thumb
-Func_0201FEEC = 0x0201FEEC; // thumb
+StartEffectDrop = 0x0201FEEC; // thumb
 Effect12 = 0x0201FF14; // thumb
 Effect14 = 0x02020190; // thumb
 Mode2State0 = 0x020202E8; // thumb
@@ -495,7 +495,7 @@ gMapIconSprites = 0x02024254; // data
 gPearlMarkerPos = 0x02024264; // data
 gTriangleIslandPos = 0x0202426A; // data
 gTempleMarkerPos = 0x02024270; // data
-// sound per marker unk6 for type 0x13 markers (Func_0201B7D4)
+// sound per marker unk6 for type 0x13 markers (ShowSelectionMsg)
 gTable_02024274 = 0x02024274; // data
 gMsgIds_02024278 = 0x02024278; // data
 // u32 per text colour, ANDed with the glyph's 4bpp rows
@@ -659,7 +659,7 @@ gMultiSioUnk_03005370 = 0x03005370; // data
 gMultiSioArea = 0x03005390; // data
 gJoyCom = 0x03005510; // data
 gMode0Work = 0x03005640; // data
-// slot 14 payload (49 struct SeaChartEntry {x, y, big, square}), copied by Mode0State3; read by HighlightMapRooms, MapIconCursor, Func_0201B3A4
+// slot 14 payload (49 struct SeaChartEntry {x, y, big, square}), copied by Mode0State3; read by HighlightMapRooms, MapIconCursor, UpdateSelection
 gSlot14Data = 0x03002FB0; // data
 gObjs = 0x03005650; // data
 // sound driver work area (030010F0-03002F64), see docs/layout.md "Sound driver"

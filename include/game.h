@@ -135,7 +135,7 @@ struct ItemSlot
 // 0x13C u8 unk13C  // a sound is playing (ShowMessage)
 // 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while unk13C is set, else 0
 // 0x13E u16 unk13E
-// 0x140 u16 unk140  // id passed to SoundPlayLoop (Func_0201C484)
+// 0x140 u16 unk140  // id passed to SoundPlayLoop (PlayMsgSound)
 // 0x142 s16 unk142  // message id (MsgStart)
 // 0x144 const u8* msgPtr  // message text (in the EWRAM message block at 0x02000000); US Mode2State0 sets it too
 // 0x148 u8 textX  // text cursor, pixels
@@ -333,7 +333,7 @@ struct GameState
     /*0x13C*/ u8 unk13C;                      // a sound is playing (ShowMessage)
     /*0x13D*/ s8 msgBoxPos;                   // message box slide, steps toward 10 while unk13C is set, else 0
     /*0x13E*/ u16 unk13E;
-    /*0x140*/ u16 unk140;                     // id passed to SoundPlayLoop (Func_0201C484)
+    /*0x140*/ u16 unk140;                     // id passed to SoundPlayLoop (PlayMsgSound)
     /*0x142*/ s16 unk142;                     // message id (MsgStart)
     /*0x144*/ const u8* msgPtr;               // message text (in the EWRAM message block at 0x02000000); US Mode2State0 sets it too
     /*0x148*/ u8 textX;                       // text cursor, pixels
@@ -471,7 +471,7 @@ void DrawFloorNumber(void);
 // The definition narrows id to u16, but callers see an s16 parameter (they sign-extend).
 bool32 ShowMessage(s16 id, u8 arg);
 bool32 InitMapView(void);
-void Func_0201A540(void);
+void UpdateMapView(void);
 bool32 StepToward(s16 *pos, s16 target, s16 speed);
 void UpdateSelectWindow(void);
 // sprite points to struct SpriteFrame[]; scale is 8.8 (0: no affine unless angle is set).
@@ -526,7 +526,7 @@ struct SeaChartEntry
 {
     /*0x0*/ u8 x;       // pixels within its square?
     /*0x1*/ u8 y;
-    /*0x2*/ u8 big;     // Func_0201B3A4: within 32 pixels (on an 8-pixel grid) rather than 8
+    /*0x2*/ u8 big;     // UpdateSelection: within 32 pixels (on an 8-pixel grid) rather than 8
     /*0x3*/ u8 square;  // sea chart square (row * 7 + column); its name sound is 0x14E + square
 };
 
@@ -541,28 +541,28 @@ void DrawString(const u8 *str, u8 a1, u8 a2, u8 a3);
 void ObjReset(struct Obj *obj);
 void ObjResetActive(void);  // ObjReset on every active entry
 void UpdateMap(void);
-void Func_0201CFE8(void);
-void Func_0201B7D4(void);
+void UpdateMsgAndTingle(void);
+void ShowSelectionMsg(void);
 void MsgClose(void);
 bool32 UseItem(u8 item);
-void Func_0201B0F4(void);
-void Func_0201B8C8(void);
+void UpdateChartOverlay(void);
+void ExamineSelection(void);
 u8 FindMarker(u8 type);
 void ItemMenuUpdate(void);
 void DrawStatusIcon(void);
-s32 Func_0201B3A4(void);
-void Func_0201C484(u8 id);
-void Func_0201C568(void);
+s32 UpdateSelection(void);
+void PlayMsgSound(u8 id);
+void StartTingleAnim(void);
 void SetSlotItem(u8 a, u8 b);
 void UpdateHudPanels(void);
-void Func_0201EBAC(void);
-void Func_0201EBD4(void);
-void Func_0201EDC4(void);
-void Func_0201F240(void);
-void Func_0201F274(void);
-void Func_0201F2C4(void);
-void Func_0201F420(void);
-void Func_02020150(void);
+void EndItemEffect(void);
+void StartBombBlast(void);
+void StartBalloonEffect(void);
+void StartShieldEffect(void);
+void StartLookEffect(void);
+void StartRandomEffect(void);
+void StartShopEffect(void);
+void StartBombCountdown(void);
 void UpdateItemEffect(void);
 extern const u8 gSprite_0202CA08[];
 extern const u8 gSprite_0202CA40[];
@@ -722,15 +722,15 @@ extern const u8 gSeaSquareTileSets[49];
 extern const u8 gSeaAnimFrames[5];
 extern const u8 gSeaAnimPeriods[3];
 extern const u8 gSeaAnimTiles[0x2000];
-void Func_0201B2C0(void);
+void DarkenUnchartedSquares(void);
 void HighlightMapRooms(void);
 u16 ArcTan2(s32 x, s32 y);
 
 // ---- GZLJ01 0201AFCC-0201C660: end of map.c, start of message.c ----
-void Func_0201BA2C(s8 row);
-void Func_0201BA9C(s8 row);
+void DrawMsgBoxRow(s8 row);
+void RestoreMsgBoxRow(s8 row);
 void TextClearCanvas(void);
-void Func_0201C0E8(u8 playSound);
+void MsgNewPage(u8 playSound);
 void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst);
 void TextScaleGlyph(s32 count, const u8 *src);
 void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch);
@@ -775,12 +775,12 @@ extern const u16 gTwoChoiceMsgIds[];  // [id index * 2 + choice]
 extern const u16 gThreeChoiceIds[];
 extern const u16 gThreeChoiceMsgIds[];  // [id index * 3 + choice]
 void UpdateTargetCompass(void);
-void Func_0201E584(void);
+void RedrawHudItem(void);
 
 // ---- GZLJ01 0201C660-0201DEAC: message.c, start of item_menu.c ----
 // Text: glyphs are drawn at gGameState.textX/textY (pixels) in a window 0x60 wide and 0x50
 // high; glyphWidth is the glyph width in pixels (6 or 8) and unk15A doubles the size.
-bool32 Func_0201C60C(void);  // wraps the cursor to the next line; FALSE when the window is full
+bool32 TextWrapLine(void);  // wraps the cursor to the next line; FALSE when the window is full
 void DrawChestRow(void);
 bool32 SendItemUse(u8 a, u8 b);
 void DrawGlyphRun(u8 id);
@@ -840,7 +840,7 @@ extern const u8 gSprite_0202BDB8[];  // menu slot cursor (DrawSlotCursor)
 extern const u8 gSprite_0202BDF0[];  // "more text" arrow (MsgStep)
 
 void Mode1StartFadeOut(void);
-void Func_0201BEA0(s8 pos);
+void DrawMsgBoxFrame(s8 pos);
 // Tingle's animations (gGameState.unk226), each a list of sprites (gGameState.unk227 picks one).
 extern const u8 *const *const gTingleAnims[15];
 extern const u8 gSprite_0202C400[];
@@ -859,11 +859,11 @@ extern const struct SpriteFrame gSprite_0202C940[];
 extern const struct SpriteFrame gSprite_0202C950[];
 extern const u8 gSprite_0202CC60[];
 
-void Func_0201EC10(void);
-void Func_0201ECC4(void);
-void Func_0201ED08(void);
-void Func_0201EDF8(s16 x, s16 y, u8 kind);
-void Func_0201F2A8(void);
+void EffectBombBlast(void);
+void StartEffectIntro(void);
+void DrawEffectIntro(void);
+void DrawBalloonShield(s16 x, s16 y, u8 kind);
+void EffectWaitTimer(void);
 // The definition takes a u16; callers see s16 (they sign-extend).
 bool32 MsgStartSilent(s16 id);
 void DrawSlotCursor(u8 cursor);
@@ -872,8 +872,8 @@ void ChestCounterMain(void);
 extern const s16 gChestRowIds[5];
 extern const u16 gHudPanelTiles[3];
 u32 MarkerDistance(u8 arg);
-void Func_0201FCA0(void);
-void Func_0201F878(void);
+void StartEffect11(void);
+void StartTingEffect(void);
 // The definition takes u16 x and y; callers see s16 (they sign-extend).
 
 // ---- GZLJ01 0201F308-02020E28: effect.c ----
@@ -909,7 +909,7 @@ extern const u8 gMode2UsString[];
 #endif
 // Per item effect (GameState.effect[0], slot 7), run every frame by UpdateItemEffect.
 extern void (*const gItemEffectFuncs[18])(void);
-void Func_0201F068(void);
+void EffectBalloonShield(void);
 void Effect5(void);
 void Effect7(void);
 void Effect8(void);
@@ -924,8 +924,8 @@ extern const u8 gShopRequests[9];
 extern const s16 gBobOffsets_020244DA[4];
 extern const u8 gSprite_0202C490[];
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
-void Func_0201F8C4(s16 x, s16 y, u8 kind);
-void Func_0201FEEC(void);
+void DrawTitleSpriteOnMap(s16 x, s16 y, u8 kind);
+void StartEffectDrop(void);
 void DrawTimerCount(s16 x, s16 y);
 // The definition narrows x and y to u16; callers see s16 (they sign-extend).
 extern const u8 gSprite_0202CC50[];

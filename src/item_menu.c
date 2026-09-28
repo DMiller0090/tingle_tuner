@@ -518,7 +518,7 @@ bool32 UseItem(u8 item)
         gGameState.items[11].tile = (gGameState.items[11].tile & 0xF000) + 0x8A;
 #endif
         SetSelectedItem(gGameState.unk1DE);
-        Func_0201FCA0();
+        StartEffect11();
     }
     else if (item == 1)
     {
@@ -563,7 +563,7 @@ bool32 UseItem(u8 item)
         else
         {
             gGameState.effect[0] = item;
-            Func_0201F878();
+            StartTingEffect();
         }
     }
     else
@@ -585,7 +585,7 @@ bool32 UseItem(u8 item)
 }
 
 
-void Func_0201E584(void)
+void RedrawHudItem(void)
 {
     if (gGameState.unk21E == 0)
     {

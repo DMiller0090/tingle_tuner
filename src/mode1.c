@@ -18,7 +18,7 @@ void Mode1State4(void);
 void Mode1State5(void);
 void Mode1SendSwitch(u8 soundArg);
 void Mode1RecvMarkers(void);
-void Mode1Func_02016350(void);
+void ResetMapState(void);
 
 // Not referenced by any code. It ends in 0xFF, like a short text in the message font's glyph
 // codes (see MsgStep).
@@ -65,7 +65,7 @@ void UpdateRandom(void)
 
 // Step the rupee counter toward the real count and draw it (up to 4 digits, two tile
 // rows, no leading zeros).
-void Mode1Func_020150A4(void)
+void UpdateRupeeCounter(void)
 {
     u16 *map = (u16 *)0x06006450;
     s32 digits[4];
@@ -136,7 +136,7 @@ void Mode1Func_020150A4(void)
         map[0x20] = 0xB000;
     }
 }
-void Mode1Func_0201521C(void)
+void InitMapBgs(void)
 {
     if (gGameState.flags.dungeonNo == 0)
     {
@@ -152,14 +152,14 @@ void Mode1Func_0201521C(void)
     }
 }
 
-void Mode1Func_02015298(void)
+void LoadMode1Graphics(void)
 {
     LZ77UnCompVram(gMode1ObjTiles, (void *)0x06010000);
     CpuCopy16(gMode1ObjPalette, (void *)0x05000200, sizeof(gMode1ObjPalette));
     LZ77UnCompVram(gMode1BgTiles, (void *)0x06008000);
     CpuCopy16(gMode1BgPalette, (void *)0x05000000, sizeof(gMode1BgPalette));
     LZ77UnCompVram(gMode1BgMap, (void *)0x06006000);
-    Mode1Func_0201521C();
+    InitMapBgs();
 }
 // Set up the screen and the game state, then start the intro wave (state 1).
 // FAKEMATCH? The original computes &gGameState.unk106 right after the unk21E store (into r6)
@@ -224,7 +224,7 @@ void Mode1State0(void)
     gGameState.unk116 = 0;
     gGameState.unk117 = gSpriteTable[19][4];
     gGameState.unk118 = 0;
-    Mode1Func_02015298();
+    LoadMode1Graphics();
     if (gGameState.flags.noMap)
     {
         gMain.unk457 = 1;
@@ -260,7 +260,7 @@ void Mode1State0(void)
     gGameState.unk1FB = 0;
     gGameState.unk224 = 0;
     gGameState.rupeeDelta = 0;
-    Mode1Func_020150A4();
+    UpdateRupeeCounter();
     gMain.bldcnt = 0;
     gMain.bldalpha = 0;
     gGameState.wavePhase = 0;
@@ -305,7 +305,7 @@ void Mode1State1(void)
             gMain.dispcnt = 0x1300;  // BG0, BG1, OBJ
         }
     }
-    Func_0201A540();
+    UpdateMapView();
 }
 // Fade in: step the mosaic and brightness back down every other frame, then go to state 2.
 void Mode1State5(void)
@@ -339,7 +339,7 @@ void Mode1State5(void)
         }
     }
     UpdateMap();
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
 }
 // Send the switch packet (5 bytes and a checksum of its two words) and show its message.
 void Mode1SendSwitch(u8 soundArg)
@@ -429,7 +429,7 @@ void Mode1State2(void)
                         if (gGameState.markers[gGameState.unk119].type == 7)
                             Mode1SendSwitch(3);
                         else
-                            Func_0201B7D4();
+                            ShowSelectionMsg();
                         SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
                         gMain.newKeys &= 0xF0;
                     }
@@ -466,7 +466,7 @@ void Mode1State2(void)
             }
         }
     }
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
     if (gGameState.unk138_0)
     {
         UpdateMap();
@@ -522,7 +522,7 @@ void Mode1State2(void)
                  && gGameState.unk220 == 0 && gGameState.unk121 == 0)
                     UseItem(gGameState.unk1DE);
                 if (!gMain.unk457)
-                    Func_0201B0F4();
+                    UpdateChartOverlay();
                 if (gGameState.unk224 == 0)
                 {
                     if (gMain.newKeys & 1)
@@ -532,7 +532,7 @@ void Mode1State2(void)
                             if (gGameState.unk1FA == 0)
                             {
                                 if (gGameState.unk0FC == 0)
-                                    Func_0201B8C8();
+                                    ExamineSelection();
                                 else if (gGameState.unk0FC == 1)
                                     UseItem(0x10);
                             }
@@ -564,7 +564,7 @@ void Mode1State2(void)
             else
             {
                 ItemMenuUpdate();
-                Func_0201A540();
+                UpdateMapView();
             }
         }
         else
@@ -613,7 +613,7 @@ void Mode1State3(void)
         }
     }
     UpdateMap();
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
     StepToward((s16 *)&gMain.bgOfs[1][0], target, 16);
 }
 // Slot 3: the map markers. Byte 0 is the count, byte 1 goes to unk133 and unk104, then
@@ -738,7 +738,7 @@ void Mode1RecvMarkers(void)
 
 // Reset the per-map state (Mode1State4 after a map change). The object loop counts up: agbcc
 // reverses it into the original's pointer countdown, a countdown in C keeps the counter.
-void Mode1Func_02016350(void)
+void ResetMapState(void)
 {
     s32 i;
 
@@ -819,9 +819,9 @@ void Mode1State4(void)
                             GbaComDataStatusReset(GBACOM_SLOT_CONTROL);
                         gMain.unk457 = gMain.inDungeon;
                         ItemMenuInit();
-                        Mode1Func_0201521C();
+                        InitMapBgs();
                         Mode1RecvMarkers();
-                        Mode1Func_02016350();
+                        ResetMapState();
                         gMain.bgcnt[2] |= 0x40;
                         gMain.bgcnt[3] |= 0x40;
                         gMain.mosaic = 0xFFFF;
@@ -844,8 +844,8 @@ void Mode1State4(void)
                     Mode1RecvMarkers();
                     gMain.unk457 = gMain.inDungeon;
                     ItemMenuInit();
-                    Mode1Func_0201521C();
-                    Mode1Func_02016350();
+                    InitMapBgs();
+                    ResetMapState();
                     gMain.bgcnt[3] |= 0x40;
                     gMain.mosaic = 0xFFFF;
                     gMain.dispcnt = 0x1B00;
@@ -856,7 +856,7 @@ void Mode1State4(void)
         }
     }
     DrawSprite(gSprite_0202C438, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
-    Func_0201CFE8();
+    UpdateMsgAndTingle();
 }
 void Mode1StartFadeOut(void)
 {
@@ -926,7 +926,7 @@ void MainMode1(void)
 
     if (gMain.modeState == 2)
     {
-        // Life: a sound when it drops to 7 or below (once), Func_0201C484(15) on other drops.
+        // Life: a sound when it drops to 7 or below (once), PlayMsgSound(15) on other drops.
         if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0)
         {
             if (gGameState.flags.unkA_3)
@@ -945,7 +945,7 @@ void MainMode1(void)
                 else
                 {
                     gGameState.life = gGameState.flags.life;
-                    Func_0201C484(15);
+                    PlayMsgSound(15);
                 }
             }
             else if (gGameState.life < gGameState.flags.life)
@@ -1057,7 +1057,7 @@ void MainMode1(void)
 
     if (GbaComRecvStatusCheck(GBACOM_SLOT_SE))
     {
-        Func_0201C484(GBACOM_BUF_SE[0] - 1);
+        PlayMsgSound(GBACOM_BUF_SE[0] - 1);
         GbaComDataStatusReset(GBACOM_SLOT_SE);
     }
 
@@ -1066,7 +1066,7 @@ void MainMode1(void)
         if (gMain.modeState == 2)
         {
             if (GBACOM_BUF_MAIL[7])
-                Func_0201C484(GBACOM_BUF_MAIL[7] - 1);
+                PlayMsgSound(GBACOM_BUF_MAIL[7] - 1);
             if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk224 == 0
              && gGameState.unk1FB == 0)
             {
@@ -1145,7 +1145,7 @@ void MainMode1(void)
             else if (result == 3)
                 ShowMessage((gGameState.effect[3] << 8) + gGameState.effect[2], 1);
             gGameState.unk12B = 0;
-            Func_0201EBAC();
+            EndItemEffect();
         }
         else
         {
@@ -1155,12 +1155,12 @@ void MainMode1(void)
             if (gGameState.effect[0] == 2 || gGameState.effect[0] == 15 || gGameState.effect[0] == 21)
             {
                 gGameState.effect[0] = 2;
-                Func_0201EBD4();
+                StartBombBlast();
                 SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
             }
             else if (gGameState.effect[0] == 16)
             {
-                Func_0201F274();
+                StartLookEffect();
                 SoundPlay(0x23 - SOUND_ID_SHIFT, 0);
                 if (gGameState.unk121)
                 {
@@ -1174,24 +1174,24 @@ void MainMode1(void)
             else if (gGameState.effect[0] == 4)
                 ShowMessage(0x26, 1);
             else if (gGameState.effect[0] == 5)
-                Func_0201F2C4();
+                StartRandomEffect();
             else if (gGameState.effect[0] == 7)
-                Func_0201F420();
+                StartShopEffect();
             else if (gGameState.effect[0] == 8 || gGameState.effect[0] == 9 || gGameState.effect[0] == 10)
                 gGameState.unk12B = 7;
             else if (gGameState.effect[0] == 13)
                 ShowMessage(0x26, 1);
             else if (gGameState.effect[0] == 14)
-                Func_02020150();
+                StartBombCountdown();
             else if (gGameState.effect[0] == 17)
             {
                 gGameState.effect[0] = 3;
-                Func_0201EDC4();
+                StartBalloonEffect();
             }
             else if (gGameState.effect[0] == 18)
             {
                 gGameState.effect[0] = 4;
-                Func_0201F240();
+                StartShieldEffect();
             }
             else if (gGameState.effect[0] == 20)
                 gGameState.effect[0] = gGameState.unk1E4;
@@ -1215,7 +1215,7 @@ void MainMode1(void)
 
     if (gMain.modeState == 2)
     {
-        gGameState.unk119 = Func_0201B3A4();
+        gGameState.unk119 = UpdateSelection();
         if (gGameState.unk1FA == 0 && gGameState.unk1CC == 0 && gGameState.unk1E5_1)
         {
             if (gGameState.unk11A && gGameState.unk224 == 0)
@@ -1223,13 +1223,13 @@ void MainMode1(void)
                 if (gGameState.unk226 != 11)
                 {
                     gGameState.unk226 = 11;
-                    Func_0201C568();
+                    StartTingleAnim();
                 }
             }
             else if (gGameState.unk226)
             {
                 gGameState.unk226 = 0;
-                Func_0201C568();
+                StartTingleAnim();
             }
         }
         // Darken the screen and show the wait sprite while a menu or event runs on the GC.
@@ -1253,7 +1253,7 @@ void MainMode1(void)
     {
         u16 *map;
 
-        Mode1Func_020150A4();
+        UpdateRupeeCounter();
         map = (u16 *)0x0600644C;
         map[0] = gRupeeIconTiles[gGameState.flags.walletSize];
         map[0x20] = gRupeeIconTiles[gGameState.flags.walletSize] + 1;
