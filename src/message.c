@@ -520,21 +520,19 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
 // Add the text box frame's sprites to gOamBuffer: the corners (tiles 0x24, 0x26) and 12
 // edge pieces (0x25), each once at y = row * 8 + 48 (a line higher while the screen shakes)
 // and once flipped at y = 40, all in palette 8.
-// Near-miss: identical but for one instruction, the edge loop's x (0x88) is set up after the
-// hoisted constants 0x25 and ~0xC instead of before them. The x giv's init goes in front of the
-// loop after loop pass 1's moved invariants, so the original moved 0x25 and ~0xC only in pass 2:
-// move_movables' test (threshold * savings * lifetime >= insn_count, threshold dropping by 3 per
-// move) says two to four more pass-1 moves before the size field's 0x3F would do it. Tried: x
-// as its own biv, loop forms and directions, types of i/x, a tile variable, a y - shake temp.
-// Numbers from `agbcc -dL`: threshold starts at 28, pass 1 has 77 insns; it moves -17, -512 (each
-// a QI/HI const + SI copy, 2 moves), 0x3F, -1024 (2), 0x25, -13 (2), then fails 15 (threshold
-// -2). With 6-8 moves before 0x3F instead of 4, 0x3F and -1024 still move and 0x25/-13 fail (y -
-// shake and x & 0x1FF are the only other candidates there, both life 1). Also tried: a local
-// struct with u32/u8/s16 bitfield bases or a second struct type for one piece (the constants'
-// modes don't change: 2 lines), x in one piece as (i + 17) * 8 (hoists 0x1FF in pass 1, one
-// extra move, but then 0x1FF is loaded differently: 6 lines), u8/u16/s16/u32 y, shake and t.
-/*
-#define TEXT_BOX_PIECE(p, Y, X, TILE, VFLIP)     p->y = Y;                                    p->mosaic = 0;                               p->x = X;                                    VFLIP                                        p->size = 0;                                 p->tileNum = TILE;                           p->priority = 0;                             p->paletteNum = 8;                           p++;                                         gMain.unk450++;
+// The mosaic local (not a literal 0) makes loop.c hoist the edge loop's x (0x88) before the
+// constants 0x25 and ~0xC (found with decomp-permuter).
+#define TEXT_BOX_PIECE(p, Y, X, TILE, VFLIP) \
+    p->y = Y;                                \
+    p->mosaic = mosaic;                      \
+    p->x = X;                                \
+    VFLIP                                    \
+    p->size = 0;                             \
+    p->tileNum = TILE;                       \
+    p->priority = 0;                         \
+    p->paletteNum = 8;                       \
+    p++;                                     \
+    gMain.unk450++;
 
 void Func_0201BEA0(s8 row)
 {
@@ -543,6 +541,7 @@ void Func_0201BEA0(s8 row)
     s32 shake;
     s32 t;
     s32 i;
+    u8 mosaic = 0;
 
     t = row * 8;
     shake = (gGameState.shake >> 1) & 1;
@@ -557,8 +556,6 @@ void Func_0201BEA0(s8 row)
         TEXT_BOX_PIECE(p, 40, i * 8 + 0x88, 0x25, p->vFlip = 1;)
     }
 }
-*/
-INCLUDE_ASM(Func_0201BEA0);
 
 void Func_0201C0E8(u8 playSound)
 {
