@@ -226,6 +226,31 @@ struct SoundVoice
     /*0x74*/ struct SoundVoice *trackNext;
 };
 
+// VoicesInit and TracksInit write the pointers below a byte at a time: they went through
+// packed (1-byte aligned) views of the structs.
+struct PackedVoice
+{
+    /*0x00*/ u8 type;
+    /*0x01*/ u8 state;
+    /*0x02*/ u8 unk02[2];
+    /*0x04*/ struct SoundTrack *track;
+    /*0x08*/ u8 unk08[0x60];
+    /*0x68*/ struct PackedVoice *prev;
+    /*0x6C*/ struct PackedVoice *next;
+    /*0x70*/ u8 unk70[8];
+} __attribute__((packed));
+
+struct PackedTrack
+{
+    /*0x00*/ u8 unk00[8];
+    /*0x08*/ struct SoundPlayer *player;
+    /*0x0C*/ struct SoundVoice *voices;
+    /*0x10*/ u8 unk10[0x44];
+} __attribute__((packed));
+
+#define PACKED_PCM_VOICES ((struct PackedVoice *)gPcmVoices)
+#define PACKED_CGB_VOICES ((struct PackedVoice *)gCgbVoices)
+
 // A sample in the bank: s8 data at the header's rate.
 struct SoundSample
 {
@@ -297,6 +322,7 @@ extern struct SoundVoice *gPcmActiveVoices;
 extern struct SoundVoice *gPcmFreeVoices;
 extern struct SoundVoice *gPcmDisabledVoices;
 extern u8 gPcmVoiceCount;
+extern const u8 *gCgbWaveLoaded;  // the wave data in wave RAM
 extern s8 *gPcmBufA[2];
 extern s8 *gPcmBufB[2];
 extern u16 gPcmTimerReload;
@@ -943,7 +969,44 @@ void TrackLookupInstrument(struct SoundTrack *track, u8 key, struct InstLookup *
         out->dutyList = bank + out->inst->arg;
 }
 
-INCLUDE_ASM(VoicesInit);
+// GB voices 1-4 on their channels, the PCM voices all free in one list.
+void VoicesInit(void)
+{
+    s32 i;
+    struct PackedVoice *voices;
+
+    gCgbWaveLoaded = NULL;
+    for (i = 0; i < 4; i++)
+    {
+        PACKED_CGB_VOICES[i].state = 0;
+        PACKED_CGB_VOICES[i].track = NULL;
+    }
+    PACKED_CGB_VOICES[0].type = 1;
+    PACKED_CGB_VOICES[1].type = 2;
+    PACKED_CGB_VOICES[2].type = 3;
+    PACKED_CGB_VOICES[3].type = 4;
+    for (i = 0; i < 7; i++)
+    {
+        PACKED_PCM_VOICES[i].state = 0;
+        PACKED_PCM_VOICES[i].type = 0;
+        PACKED_PCM_VOICES[i].track = NULL;
+    }
+    gPcmVoiceCount = 7;
+    gPcmFreeVoices = gPcmVoices;
+    PACKED_PCM_VOICES[0].next = &PACKED_PCM_VOICES[1];
+    PACKED_PCM_VOICES[0].prev = NULL;
+    for (i = 1; i < 6; i++)
+    {
+        PACKED_PCM_VOICES[i].next = &PACKED_PCM_VOICES[i + 1];
+        PACKED_PCM_VOICES[i].prev = &PACKED_PCM_VOICES[i - 1];
+    }
+    voices = PACKED_PCM_VOICES;  // FAKEMATCH: indexing PACKED_PCM_VOICES hoists &[6]
+    voices[6].prev = &voices[5];
+    voices[6].next = NULL;
+    gPcmActiveVoices = NULL;
+    gPcmDisabledVoices = NULL;
+}
+
 
 void VoiceListRemove(struct SoundVoice *voice, struct SoundVoice **list)
 {
@@ -1519,7 +1582,19 @@ struct SoundVoice *VoiceAlloc(u8 type, u8 priority)
     return voice;
 }
 
-INCLUDE_ASM(TracksInit);
+void TracksInit(void)
+{
+    s32 i;
+
+    for (i = 0; i < 24; i++)
+    {
+        struct PackedTrack *track = (struct PackedTrack *)&gSoundTracks[i];
+
+        track->player = NULL;
+        track->voices = NULL;
+    }
+}
+
 
 struct SoundTrack *TrackAlloc(void)
 {
