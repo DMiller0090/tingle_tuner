@@ -1728,7 +1728,8 @@ none:
 // base r1, idx r2, &unk135 r3, copy r4). unk135 skips r0 because idx (lower priority,
 // conflicting) prefers r0 via `idx << 3` (local-alloc'd to r0), and find_reg's first pass
 // avoids regs in regs_someone_prefers. &unk119/&unk135 are global pseudos (REG_EQUIV
-// gGameState+off). Tried at the top: idx u8/u16/u32/s32, split decl, a u8/u32/s32 sel local,
+// gGameState+off). Tried at the top: idx u8/s8/u16/s16/u32/s32, split decl, a sel local
+// (u8/s8/u16/s16/u32/s32, for one or both unk135 tests),
 // switch on unk135, `!= 0x21 ||` and nested/early-return forms, a GameState pointer (drops
 // the r4 copy), a marker pointer, `u8 *p = &unk119`: all 56-76 lines.
 /*
