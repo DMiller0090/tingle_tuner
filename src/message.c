@@ -432,6 +432,20 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 #else
+// Bytes per tile row of the link-lost screen's text canvas: 30 tiles (German 25, French 29,
+// Spanish 28, Italian 26).
+#if PAL_LANGUAGE == 1
+#define MODE2_CANVAS_ROW 0x320
+#elif PAL_LANGUAGE == 2
+#define MODE2_CANVAS_ROW 0x3A0
+#elif PAL_LANGUAGE == 3
+#define MODE2_CANVAS_ROW 0x380
+#elif PAL_LANGUAGE == 4
+#define MODE2_CANVAS_ROW 0x340
+#else
+#define MODE2_CANVAS_ROW 0x3C0
+#endif
+
 // US: the arms keep their own row/col (one shared row makes gGameState's address, kept across
 // the blits, take a register instead of the original's stack slot).
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
@@ -482,7 +496,7 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         }
         else
         {
-            row = (y >> 3) * 0x3C0 + (y & 7) * 4;
+            row = (y >> 3) * MODE2_CANVAS_ROW + (y & 7) * 4;
             col = (x >> 3) * 32 + 0x0600F100;
         }
         dst = (u32 *)(row + col);
