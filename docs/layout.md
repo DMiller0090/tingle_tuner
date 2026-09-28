@@ -165,11 +165,82 @@ u16 at `params+4` to the SE index, 28 don't restart the same ID, 25/26 low/high 
 sound only replaces one of equal or lower priority). It posts `SoundCmdStartSe(player, 0,
 index)` plus pan/volume commands and records the ID in `gSoundPlayerSoundId[player]`.
 `SoundPlayLoop(owner, id, params)` (was `Func_02021284`) plays `gSoundLoopTable[id]` (same
-format, 11 words up to `gInstTypeToVoicePool`; the game uses IDs 5, 6, 7, 9) on player 16
+format, 11 words up to `gInstTypeToVoicePool`; the game uses IDs 0-9) on player 16
 or 17 (`gSoundLoopSlots`); the caller repeats it every frame, and `SoundApiUpdate` (from
 `SoundMain`) stops a slot the first frame it isn't refreshed. Loop 9 is special: `params+4` (s16) sets a tempo offset (`-30 * p`), and it
 plays SE index `entry + 1` when restarted within 150 frames of stopping. `SoundPauseAll`,
 `SoundStopAll`, `SoundStopMost`, `SoundIsPlaying` are unused.
+
+**Sound IDs** (every `SoundPlay`/`SoundPlayLoop` call in the three builds, found by scanning
+the disassembly for `bl`; the US calls are the JP ones with `SOUND_ID_SHIFT` applied). "SE"
+is the sequence index in the SE set, "msg" the `F6 xx` message codes (`Func_0201C484`, via
+`gSoundIds_0202430E`) that play the ID in JP. Voice clips (player 4) are Tingle's sampled
+voice. Several game-code names say "sound" for what are message IDs: `ShowMessage`'s
+argument, `gDungeonSounds`, `gChestSounds`, `gSounds_02024278`, `gTwoChoiceSounds`,
+`gThreeChoiceSounds` and `switchSound` all hold message numbers.
+
+| JP | US | SE | pl. | what plays it |
+|----|----|----|-----|---------------|
+| `00` | `00` | 2 | 4 | voice: the map screen comes in (`Mode1State1`, with the dungeon's message); msg `0A`, `0B` (entry 0) |
+| `01` | `01` | 3 | 4 | voice: Link's marker reaches something selectable (`Func_0201B3A4`); msg `17` |
+| `02` | `02` | 4 | 4 | voice: A on a selection shows its message (`Func_0201B8C8` result 2) |
+| `03`-`05` | same | 5, 8, 6 | 4 | voice: messages only (msg `15`, `18`, `1A`; `16` is skipped) |
+| `06` | - | 7 | 4 | voice, JP only: msg `1B` |
+| `07` | `06` | 20 | 0 | `flags.isFree` goes off (`Mode1State2`); L released after panning the map (`UpdateMap`) |
+| `08` | `07` | 23 | 0 | msg `13` |
+| `09` | `08` | 24 | 0 | rupee counter reaches the count (`SE_RUPEE_COUNT_END`); msg `14` |
+| `0A` | `09` | 26 | 0 | A on the map's target cursor places the target (`MapIconCursor`) |
+| `0B` | `0A` | 25 | 0 | the target icon is put on Link's marker (`Mode1State2` after choice message `1A7`, `UseItem`) |
+| `0C` | `0B` | 27 | 0 | tick: `flags.timer` changes (`DrawTimerCount`), effect 14's countdown |
+| `0D`-`0F` | `0C`-`0E` | 28-30 | 0 | unused |
+| `10` | `0F` | 31 | 0 | msg `12` |
+| `11` | `10` | 21 | 0 | high priority; msg `11` |
+| `12` | `11` | 22 | 0 | high priority: the chest counter starts blinking (`ChestCounterMain`); msg `10` |
+| `13` | `12` | 34-36 | 0 | a message opens (`ShowMessage`, `Func_0201C0E8`): low priority, SE + random 0-2; msg `0C`-`0F` |
+| `14` | `13` | 42 | 0 | item menu: an item is picked and flies to the slot |
+| `15` | `14` | 43 | 0 | item menu: cursor auto-repeat, and the picked icon arriving |
+| `16` | `15` | 32 | 0 | title screen appears (`Mode0State0`); `flags.isFree` goes on; L pressed to pan the map |
+| `17` | `16` | 33 | 0 | message closed (`MsgClose`) |
+| `18`, `19` | `17`, `18` | 10, 13 | 0 | unused |
+| `1A` | `19` | 52 | 0 | choice menu pick; L/B open or close the sea chart overlay, A in it; with message `0F` in `UseItem` and for the GC's item answer 1; msg `01` |
+| `1B` | `1A` | 53 | 0 | msg `02` |
+| `1C` | `1B` | 54 | 0 | `SE_KEY_BLOCKED`: a key while the screen waits (`Mode1State4`), A while busy, the GC refusing an item (answer 0), picking the item already selected; msg `06` |
+| `1D`, `1E` | `1C`, `1D` | 55, 56 | 0 | `SE_RUPEE_COUNT_UP` / `_DOWN`, every other rupee; msg `08`, `07` |
+| `1F` | `1E` | 48 | 0 | `SE_LINKED`: all boot data received (`Mode0State3`); msg `00` |
+| `20` | `1F` | 41 | 1 | msg `1E` |
+| `21` | `20` | 40 | 1 | a switch record is sent to the GC (`Mode1SendSwitch` from `Mode1State2`, `Func_0201B8C8`); msg `1C` |
+| `22` | `21` | 39 | 1 | msg `1D` |
+| `23` | `22` | 47 | 1 | the GC's item effect 2/15/21 (the `ObjBurst` pieces) or 16 (`MainMode1`); msg `09` |
+| `24` | `23` | 17 | 1 | msg `19` |
+| `25` | `24` | 14 | 1 | chest counter blink, every 32 frames |
+| `26` | `25` | 9 | 2 | msg `1F` |
+| `27` | `26` | 46 | 2 | Select window opens or closes (`UpdateSelectWindow`) |
+| `28` | `27` | 11 | 2 | low priority: text blip per character (`DrawChar` when no message loop runs, the player name in `MsgStep`) |
+| `29` | `28` | 51 | 2 | cursor move: choice menu Up/Down, item menu first press; msg `05` |
+| `2A` | `29` | 50 | 3 | item menu closed (START), chest counter done; msg `04` |
+| `2B` | `2A` | 49 | 3 | item menu opened (START); msg `03` |
+
+Loop IDs (`SoundPlayLoop`, same in all builds; SE index US = JP - 1):
+
+| ID | SE | what keeps it playing |
+|----|----|-----------------------|
+| 0 | 12 | `MsgStep` while `unk159` is set and no message loop runs |
+| 1 | 15 | item effects 8-10 while the title sprite waits over the marker; msg `21` |
+| 2 | 16 | the link-lost screen (`Mode2State1`); msg `20` |
+| 3 | 18 | status icon 2 (`DrawStatusIcon`, `unk1F5`) |
+| 4 | 19 | status icon while `flags.followTarget` |
+| 5 | 37 | title screen while the boot data comes in (`Mode0State1-3`); msg `22` |
+| 6 | 38 | `Mode1State2` while `unk156` runs (the random reaction of `Func_0201B8C8` result 1) |
+| 7 | 44 | `Mode1State2`: `flags.unk5_2` set and `flags.isFree` |
+| 8 | 45 | `UpdateMap` while the D-pad pans the map (L held) |
+| 9 | 0 | `Mode1State2`: `flags.unk5_2` set, not free, not following; tempo from `(unk5_2 - 1) ^ 3` |
+| 10 | 0 | unused |
+
+The message codes `F6 20`-`F6 22` pick loop IDs (`gSoundIds_0202430E[0x20-0x22]`). The US table
+lost entry 27 (voice clip 6), but `Func_0201C484`'s ranges (`0C-0F` random, `20-22` loop, `16`
+skipped) are unchanged, so in the US every code from `1B` reads the next entry, and `F6 22`
+reads past the table into `gMsgTingleAnims[0]` (2). Unless the US message data renumbered its
+codes, that is a US bug (the message data isn't extracted, so this isn't checked).
 
 **Command queue.** API calls never touch the players: each wrapper writes a 12-byte
 `{u16 cmd; u32 a; u32 b}` into `gSoundCmdQueue` (46 entries, `SoundCmdPush`),
@@ -305,3 +376,16 @@ big-endian when bit 7 is set):
 - **`msg_LZ.bin` round-trip**: it's one plain stream, packed **VRAM-safe** (no distance-1
   matches) and zero-padded to 4 bytes. `lz77.compress(raw, min_dist=2)` plus padding
   reproduces both the JP and US files byte for byte.
+- **`gMode1Unused_02023E38`** (`7D 7A 01 00 B2 B3 00 2B 00 00 00 FF`; still unexplained): it
+  sits right after `main.c`'s last table (`gMainModeFuncs`, which ends at `02023E38`) and before
+  `gDungeonSounds`, and is byte-identical in all three builds (US `0202AA94`/`0202ACC8`),
+  even though the US replaced the Japanese font. No word anywhere in the program points into
+  it or near it. What it is not:
+  - Text in the message font (`gMode1BgTiles` + 0x2000): "7 4 い あ x y あ わ あ あ あ"; in the US
+    font "(empty) (empty) A (space) ec ck (space) q", with `B2 B3` falling in the
+    pre-drawn phrase tiles ("Check cursor position"). The same index into the start of the BG tiles or into the OBJ tiles
+    (`gMode1ObjTiles`, which also has `0-9A-F` digit sprites) gives fragments of other graphics.
+  - Sound IDs, loop IDs or message codes (`0x7D`, `0xB2` are past every table), a
+    `struct SpritePart`/OAM entry (attribute bits make no sense), BGR555 colours, sea chart
+    squares (0-48), a `struct GbaComFlags` (rupees would be 31357, wallet size 3), or one byte
+    per item slot (nothing matches `gShopItemsInit`).
