@@ -424,30 +424,21 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 #else
-// US near-miss (102 masked diff lines): the right halves go where x + glyphWidth falls (as in
-// TextDrawSmallGlyph), and the link-lost screen (mode 2) has a 30-tile-wide canvas. Same code
-// shape, but the original spills gGameState's address to the stack and allocates the other
-// registers differently. Writing row/col in both mode arms gives the original's duplicated
-// arms. A separate dst2 for the right halves gets the high registers right (x r9, color r10,
-// &glyphWidth r8, gGameState spilled to sp+8) but not the low ones (original: row r4, x << 24 r5,
-// y r6, dst r7), 104 lines: dst2's short life makes dst the top-priority pseudo (5263), and it
-// takes r4. With the single dst below, dst r7 and y r6 are right, but row/x << 24 come out r5/r4
-// and local-alloc puts y2 in r4 (the original shares r5 with x << 24). Also tried: a separate
-// left-half dstL (102), dstL plus a `struct GameState *g` local (96, but g loads too early),
-// y2 as u16/u32/s32, x2 as u32, a `u8 *w = &glyphWidth` local, x2 reused for the 4th blit.
-/*
+// US: the arms keep their own row/col (one shared row makes gGameState's address, kept across
+// the blits, take a register instead of the original's stack slot).
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
 {
     u32 *glyph = (u32 *)0x0600A000 + ch * 8;
     u32 *dst;
-    u32 row;
-    u32 col;
-    u8 y2;
-    u32 col2;
-    s32 x2;
 
     if (gGameState.unk15A)
     {
+        u32 row;
+        u32 col;
+        u8 y2;
+        u32 col2;
+        s32 x2;
+
         TextScaleGlyph(32, (u8 *)glyph);
         y += 4;
         row = (y >> 3) * 0x180 + (y & 7) * 4;
@@ -456,6 +447,7 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
         y2 = y + 8;
         TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
+        // The right halves go where x + glyphWidth falls, not simply the next tile.
         x2 = x + gGameState.glyphWidth;
         col2 = (x2 >> 3) * 32 + 0x0600F100;
         dst = (u32 *)(row + col2);
@@ -464,6 +456,10 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
     else
     {
+        u32 row;
+        u32 col;
+
+        // The link-lost screen (mode 2) has a 30-tile-wide canvas.
         if (gMain.mode != 2)
         {
             row = (y >> 3) * 0x180 + (y & 7) * 4;
@@ -478,8 +474,6 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         TextBlitGlyph(x, y, color, 8, glyph, dst);
     }
 }
-*/
-INCLUDE_ASM(TextDrawGlyph);
 #endif
 
 void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
@@ -1272,33 +1266,20 @@ end:
 // while A is held), then run Tingle's animation (switch on gGameState.unk226; unk227 picks the
 // sprite list, unk228 the frame, unk202 counts the frame's duration, unk206 the scale) and
 // draw him, and the sprite at (0xC8, 0x58) while flags.unkB_1 is set.
-// Not matched yet (296 masked diff lines). The draft below has the right structure and case
-// order (the jump table order is 14,1,2,3+6,4,5,7,8,9,10,11,12,13,16,18+17,20+19,0; 15 returns).
-// What's left is mostly where gGameState's address comes from: the cases use one register for it
-// (a pseudo gcse makes: agbcc -O2 runs gcse, its loads are inserted with insn code -1), but the
-// original reloads it from the pool for each case's frame = unk228 read and in cases 9, 12 and 13,
-// so its per-case tails don't cross-jump the way this draft's do. The volatile read is a hack that
-// gets close; reading frame through a second extern at the same address (asm(".set")) gets 268
-// lines, so the original's gcse didn't reach those blocks. Also register allocation (base r6 /
-// frame r7 / gMain r8). Case 4 writes the unk202 store in both arms (cross-jumped in the original).
-// In the original each case ends `ldr r0, =gGameState; movs r2, #0x8A; lsls r2, r2, #2;
-// adds r0, r0, r2; b` to one shared `ldrb r7, [r0]`, and the DrawSprite args after the switch reload gGameState
-// too. gcse did run there: the fresh loads at 0201D174 and 0201D812 are followed by
-// `adds r6, r0, #0`, PRE's copy into its reaching register (r6), so only the unk228 reads' address
-// wasn't treated as redundant. Frame-read forms tried (masked lines): plain field 534, a
-// `u8 *pf = &unk228` local 743 (vu8 739), `*(u8 *)((u8 *)&gGameState + 0x228)` 300, the same
-// through vu8 296, an integer address 296 (the vu8 field read below is 296).
-/*
+// agbcc -O2 runs gcse (LCM-based PRE) on the pool load of gGameState's address; calls kill
+// it, so case 11's DrawSprite call feeding the switch join directly (its own `sprite = ...;
+// break;`, not a fall into talk) makes the other cases' last gGameState reads reload it.
 void Func_0201CFE8(void)
 {
     s32 target;
     u32 mosaic;
     u8 frame;
     s32 x;
-    s32 a10;
+    u8 a10;
     const u8 *sprite;
     u8 r;
     u8 anim;
+    s32 ofsY;
 
     if (gGameState.unk13C)
         target = 10;
@@ -1378,7 +1359,7 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 2:
             if (gGameState.unk227 && gGameState.unk14B)
@@ -1423,7 +1404,7 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 3:
             if (gGameState.unk204 == 0)
@@ -1462,7 +1443,7 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 4:
             gGameState.unk206 = 0;
@@ -1492,7 +1473,7 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 5:
             gGameState.unk206 = 0;
@@ -1522,7 +1503,7 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 7:
             gGameState.unk206 = 0;
@@ -1535,7 +1516,7 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 8:
             gGameState.unk206 = 0;
@@ -1548,11 +1529,11 @@ void Func_0201CFE8(void)
             {
                 gGameState.unk202--;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 9:
             gGameState.unk206 = 0;
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 10:
             if (gGameState.unk202 == 0)
@@ -1602,6 +1583,8 @@ void Func_0201CFE8(void)
             }
             DrawSprite(sprite, 0, 0xCC, 0xE, 0, mosaic, gGameState.unk208, 0, 0, 0, 0);
             frame = 1;
+            sprite = gSprite_0202C740;
+            break;
         talk:
             sprite = gSprite_0202C740;
             break;
@@ -1639,12 +1622,13 @@ void Func_0201CFE8(void)
                 if (gGameState.unk206 == 0x100)
                     gGameState.unk206 = 0;
             }
-            frame = *(vu8 *)&gGameState.unk228;
+            frame = gGameState.unk228;
             break;
         case 15:
             return;
         }
-        DrawSprite(sprite, frame, x, 0x18, gGameState.unk229, 0, gGameState.unk206, 0, 0x10, 0, a10);
+        ofsY = 0x10;
+        DrawSprite(sprite, frame, x, 0x18, gGameState.unk229, 0, gGameState.unk206, 0, ofsY, 0, a10);
     }
     else
     {
@@ -1654,8 +1638,11 @@ void Func_0201CFE8(void)
     {
         if (gGameState.unk0FF == 0)
         {
+            const u8 *s;
+
             gGameState.unk100 = (gGameState.unk100 + 1) & 3;
-            gGameState.unk0FF = gSprite_0202C400[gGameState.unk100 * 8 + 4];
+            s = gSprite_0202C400;
+            gGameState.unk0FF = s[gGameState.unk100 * 8 + 4];
         }
         else
         {
@@ -1665,8 +1652,6 @@ void Func_0201CFE8(void)
                    0x100, 0, 0, 0, 0);
     }
 }
-*/
-INCLUDE_ASM(Func_0201CFE8);
 
 bool32 MsgReset(void)
 {
