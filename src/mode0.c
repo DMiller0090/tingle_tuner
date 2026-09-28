@@ -217,6 +217,10 @@ void Mode0State2(void)
 // Wait for the markers (slot 3), take the name and slot 14, and start mode 1.
 void Mode0State3(void)
 {
+#if PAL_LANGUAGE == 1
+    s32 i;
+
+#endif
     if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
     {
         gGameState.mapLoaded = 0;
@@ -226,6 +230,26 @@ void Mode0State3(void)
     {
         Mode1RecvMarkers();
         GbaComRecvDataGet(gGameState.playerName, GBACOM_SLOT_NAME, sizeof(gGameState.playerName));
+#if PAL_LANGUAGE == 1
+        // German: does the name end in S, X, Z, s, x or z (the genitive is then "Links'")?
+        for (i = 0; i < 8; i++)
+        {
+            u8 c = gGameState.playerName[i];
+
+            // (with `if (c == 0xFF) break;` first, agbcc copies that test in front of the loop)
+            if (c != 0xFF)
+            {
+                if (c == 0x13 || c == 0x18 || c == 0x1A || c == 0x2D || c == 0x32 || c == 0x34)
+                    gGameState.nameSibilant = 1;
+                else
+                    gGameState.nameSibilant = 0;
+            }
+            else
+            {
+                break;
+            }
+        }
+#endif
         GbaComRecvDataGet(gChartPoints, GBACOM_SLOT_CHART_POINTS, sizeof(gChartPoints));
         gMain.mode = 1;
         gMain.modeState = 0;

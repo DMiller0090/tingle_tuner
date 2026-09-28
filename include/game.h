@@ -237,6 +237,7 @@ struct ItemSlot
 // 0x239 u8 hasMagicChanged  // flags.hasMagic changed: show message 0x10 and the magic items
 // 0x23B u8 flagsReceived
 // 0x23C u8 afterLinkLost  // set by the link-lost screen: the next intro leaves BG3 off in a dungeon
+// 0x23D u8 nameSibilant  // German only: the player's name ends in s, x or z (set by Mode0State3), for the genitive in message code FB
 // end genstruct
 struct GameState
 {
@@ -461,7 +462,8 @@ struct GameState
     /*0x23A*/ u8 filler23A[0x23B - 0x23A];
     /*0x23B*/ u8 flagsReceived;
     /*0x23C*/ u8 afterLinkLost;               // set by the link-lost screen: the next intro leaves BG3 off in a dungeon
-    /*0x23D*/ u8 filler23D[0x240 - 0x23D];
+    /*0x23D*/ u8 nameSibilant;                // German only: the player's name ends in s, x or z (set by Mode0State3), for the genitive in message code FB
+    /*0x23E*/ u8 filler23E[0x240 - 0x23E];
 };
 
 extern struct GameState gGameState;

@@ -1212,6 +1212,16 @@ s32 MsgStep(void)
                 next = i + 1;
                 if (gGameState.playerName[next] == 0xFF || i == 7)
                 {
+#if PAL_LANGUAGE == 1
+                    // German genitive: in messages 0x13E and 0x17F the name is followed by an
+                    // "s", which becomes an apostrophe after a name ending in s, x or z.
+                    if ((gGameState.msgId == 0x13E || gGameState.msgId == 0x17F) && gGameState.nameSibilant)
+                    {
+                        DRAW_CHAR(ch);
+                        gGameState.msgPtr++;
+                        ch = 0x63;  // '
+                    }
+#endif
                     gGameState.playerNameIndex = 0;
                 }
                 else
