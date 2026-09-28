@@ -178,8 +178,10 @@ half is `Mode1State0` trusting `noMap` = 0 to mean a map is already loaded.
 
 **Slow potions in the glitched state.** Effect8 (items 8-10) drops the potion sprite from
 0x30 px above the map view (`bgOfs[3][1]`) to 0x18 px above the player marker at 1 px per
-2 frames (state 4), then flies it back up at 1 px per frame (state 7). With no map loaded,
-the view scroll is stale while the marker is in the new room's coordinates, so the distance
-(and the delay) depends on where Link stands. Measured: 7.8 s + 4.0 s glitched vs 3.1 s +
-1.6 s normal (view y 107, marker y 175: 92 px, 3.07 s predicted). A marker near or above
-the stale view's top edge makes it fast.
+2 frames (state 4), then flies it back up at 1 px per frame (state 7). In the glitched state
+the map buffer is zeroed, so the view clamp (`0 .. height - 120` with height 0) puts
+`mapY` at -120 and the view at -128. The player marker is frozen too: markers (slot 3)
+only arrive with the map send, which never runs in these rooms, so the Tuner keeps the one
+from the last room that sent them. The effect then takes 3 * (marker.y + 152) frames
+(2x down, 1x up). Measured in `GanonA` (marker y 82): 7.8 s + 4.0 s, the same wherever Link
+walked. Normal: 3.1 s + 1.6 s (view y 107, marker y 175: 92 px, 3.07 s predicted).
