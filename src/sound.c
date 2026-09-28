@@ -878,7 +878,7 @@ void SoundVSyncProc(void)
 // Four 176-byte buffers: gPcmBufA/B[0] and [1], left and right, mixed and played in turn.
 void PcmInit(s8 *buffers)
 {
-    u8 unused[4];  // FAKEMATCH: the original has an unused 4-byte stack slot
+    u8 unused[4];  // unused; agbcc still gives it the original's 4-byte stack slot (likely authentic)
 
     gPcmEnabled = TRUE;
     gPcmBufA[0] = buffers;
