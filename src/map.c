@@ -1754,6 +1754,42 @@ none:
 // `!= 0` test's load), and that address register living into the switch gives idx r2.
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
+#ifdef VERSION_PAL
+// PAL returns the message instead of showing it, so ExamineSelection can keep it for after
+// the thinking pause. The gbaName ranges start at round message numbers.
+s32 ShowSelectionMsg(void)
+{
+    u8 idx = gGameState.selectedMarker;
+
+    if (gGameState.selectedSquare != 0)
+    {
+        switch (gGameState.selectedSquare)
+        {
+        case 0x21:
+            if (gGameState.flags.hasCabanaDeed)
+                return 0x13E;
+            // fall through
+        default:
+            return gGameState.selectedSquare + 0x14D;
+        }
+    }
+    if (gGameState.markers[idx].type == 0x13)
+        return (u16)gFriendMsgIds[gGameState.markers[idx].param - 1];
+    if (gGameState.markers[idx].type == 0x14)
+        return 0x5D;
+    if (gGameState.markers[idx].gbaName <= 0x23)
+        return (u16)(gGameState.markers[idx].gbaName - 1) + 100;
+    if (gGameState.markers[idx].gbaName <= 0x27)
+        return (u16)(gGameState.markers[idx].gbaName - 0x24) + 160;
+    if (gGameState.markers[idx].gbaName <= 0x2C)
+        return (u16)(gGameState.markers[idx].gbaName - 0x28) + 170;
+    if (gGameState.markers[idx].gbaName <= 0x38)
+        return (u16)(gGameState.markers[idx].gbaName - 0x2D) + 180;
+    if (gGameState.markers[idx].gbaName <= 0x40)
+        return (u16)(gGameState.markers[idx].gbaName - 0x39) + 200;
+    return (u16)(gGameState.markers[idx].gbaName - 0x41) + 176;
+}
+#else
 void ShowSelectionMsg(void)
 {
     u8 idx = gGameState.selectedMarker;
@@ -1791,6 +1827,7 @@ void ShowSelectionMsg(void)
     else
         ShowMessage(ID(gGameState.markers[idx].gbaName, 0x6F), 1);
 }
+#endif
 
 // A on the selection (selectedMarker: a marker, or selectedSquare): 0 (nothing selected): send
 // the pending switch record; 1 (not examined yet): a random thinking message (0x15-0x17), and
@@ -1863,6 +1900,12 @@ void ExamineSelection(void)
                 ShowMessage(0x16, 1);
             else
                 ShowMessage(0x15, 1);
+#ifdef VERSION_PAL
+            gGameState.pendingMsg = ShowSelectionMsg();
+            gGameState.pendingType = gGameState.selectedType;
+            gGameState.pendingParam = gGameState.markers[gGameState.selectedMarker].param;
+            gGameState.pendingReveal = 1;
+#endif
             gGameState.reactionTimer = gMain.random % 60 + 30;
             if (gGameState.markers[gGameState.selectedMarker].type != 7)
                 gGameState.selection = 2;
@@ -1870,8 +1913,12 @@ void ExamineSelection(void)
     }
     else
     {
+#ifdef VERSION_PAL
+        ShowMessage(ShowSelectionMsg(), 1);
+#else
         ShowSelectionMsg();
         SoundPlay(2, 0);
+#endif
     }
 }
 

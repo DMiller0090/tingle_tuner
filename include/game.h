@@ -564,7 +564,11 @@ void ObjReset(struct Obj *obj);
 void ObjResetActive(void);  // ObjReset on every active entry
 void UpdateMap(void);
 void UpdateMsgAndTingle(void);
+#ifdef VERSION_PAL
+s32 ShowSelectionMsg(void);
+#else
 void ShowSelectionMsg(void);
+#endif
 void MsgClose(void);
 bool32 UseItem(u8 item);
 void UpdateChartOverlay(void);
