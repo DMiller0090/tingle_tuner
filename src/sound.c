@@ -263,6 +263,7 @@ struct SoundInstrument
 };
 
 #define REG_SOUND1CNT_L   (*(vu16 *)0x04000060)
+#define REG_NR10          (*(vu8 *)0x04000060)
 #define REG_SOUND1CNT_H   (*(vu16 *)0x04000062)
 #define REG_NR11          (*(vu8 *)0x04000062)
 #define REG_NR12          (*(vu8 *)0x04000063)
@@ -273,13 +274,19 @@ struct SoundInstrument
 #define REG_SOUND2CNT_H   (*(vu16 *)0x0400006C)
 #define REG_NR24          (*(vu8 *)0x0400006D)
 #define REG_NR30          (*(vu8 *)0x04000070)
+#define REG_NR31          (*(vu8 *)0x04000072)
+#define REG_NR32          (*(vu8 *)0x04000073)
+#define REG_SOUND3CNT_X   (*(vu16 *)0x04000074)
+#define REG_NR41          (*(vu8 *)0x04000078)
 #define REG_NR42          (*(vu8 *)0x04000079)
+#define REG_NR43          (*(vu8 *)0x0400007C)
 #define REG_NR44          (*(vu8 *)0x0400007D)
 #define REG_SOUNDCNT_L    (*(vu16 *)0x04000080)
 #define REG_SOUNDCNT_H_LO (*(vu8 *)0x04000082)
 #define REG_SOUNDCNT_H_HI (*(vu8 *)0x04000083)
 #define REG_SOUNDCNT_X    (*(vu8 *)0x04000084)
 #define REG_SOUNDBIAS     (*(vu16 *)0x04000088)
+#define REG_WAVE_RAM      ((vu32 *)0x04000090)
 #define REG_FIFO_A        (*(vu32 *)0x040000A0)
 #define REG_FIFO_B        (*(vu32 *)0x040000A4)
 #define REG_TM0CNT        (*(vu32 *)0x04000100)
@@ -1577,7 +1584,65 @@ void VoiceStop(struct SoundVoice *voice)
     }
 }
 
-INCLUDE_ASM(CgbVoiceStart);
+extern const u8 *gCgbWaveLoaded;  // the wave data in wave RAM
+
+// Start a note on a GB channel voice with the envelope byte nr2 (the wave channel: output
+// level index): duty (from the duty list's first entry with flags bit 0), frequency, trigger.
+void CgbVoiceStart(struct SoundVoice *voice, u8 nr2)
+{
+    switch (voice->type)
+    {
+    case 1:
+        REG_NR10 = ((const u8 *)voice->inst)[8];
+        REG_SOUND1CNT_X = voice->baseFreq | 0x8000;
+        REG_NR12 = nr2;
+        if (voice->inst->flags & 1)
+            REG_NR11 = voice->cgb.ptr[2] << 6;
+        else
+            REG_NR11 = voice->cgb.duty << 6;
+        REG_SOUND1CNT_X = voice->baseFreq | 0x8000;
+        break;
+    case 2:
+        REG_NR22 = nr2;
+        REG_SOUND2CNT_H = voice->baseFreq | 0x8000;
+        REG_NR21 = voice->cgb.duty << 6;
+        break;
+    case 3:
+        if (voice->cgb.ptr != gCgbWaveLoaded)
+        {
+            REG_NR30 = 0;
+            CpuSet(voice->cgb.ptr, REG_WAVE_RAM, 8);
+            gCgbWaveLoaded = voice->cgb.ptr;
+        }
+        REG_NR30 = 0xC0;
+        REG_SOUND3CNT_X = voice->baseFreq | 0x8000;
+        REG_NR32 = gCgbWaveVolumes[nr2];
+        REG_NR31 = 0;
+        break;
+    case 4:
+    {
+        u8 v;
+
+        REG_NR42 = nr2;
+        if (voice->inst->flags & 1)
+        {
+            v = NoiseFreq(voice->baseFreq);
+            if (voice->cgb.ptr[2])
+                v |= 8;
+        }
+        else
+        {
+            v = NoiseFreq(voice->baseFreq);
+            if (voice->cgb.duty)
+                v |= 8;
+        }
+        REG_NR43 = v;
+        REG_NR44 = 0x80;
+        REG_NR41 = 0;
+        break;
+    }
+    }
+}
 
 // A voice for a note of this priority: a free PCM voice, else the first in gPcmActiveVoices
 // (released or lowest priority) unless it plays a higher priority; or GB channel `type`.
