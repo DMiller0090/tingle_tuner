@@ -102,39 +102,45 @@ const u8 gDayNameChars[7 * 2] =
 };
 
 #else
-const u16 gUsMsgIds_0202AFF4[2] =
+// Accented letters (DrawChar): per character code, the base glyph and how far down the
+// accent (a small glyph, one per table) goes.
+const u8 gAccentGlyphs_0202AFF4[2][2] =
 {
-    0x13, 0x22D
+    {0x13, 0}, {0x2D, 2}
 };
 
-const u16 gUsMsgIds_0202AFF8[2] =
+const u8 gAccentGlyphs_0202AFF8[2][2] =
 {
-    0x1, 0x21B
+    {0x01, 0}, {0x1B, 2}
 };
 
-const u16 gUsMsgIds_0202AFFC[12] =
+const u8 gAccentGlyphs_0202AFFC[12][2] =
 {
-    0x1, 0x5, 0x126, 0xF, 0x15, 0x19, 0x21B, 0x21F, 0x28C, 0x229, 0x22F, 0x233
+    {0x01, 0}, {0x05, 0}, {0x26, 1}, {0x0F, 0}, {0x15, 0}, {0x19, 0},
+    {0x1B, 2}, {0x1F, 2}, {0x8C, 2}, {0x29, 2}, {0x2F, 2}, {0x33, 2}
 };
 
-const u16 gUsMsgIds_0202B014[6] =
+const u8 gAccentGlyphs_0202B014[6][2] =
 {
-    0x1, 0xE, 0xF, 0x21B, 0x228, 0x229
+    {0x01, 0}, {0x0E, 0}, {0x0F, 0}, {0x1B, 2}, {0x28, 2}, {0x29, 2}
 };
 
-const u16 gUsMsgIds_0202B020[10] =
+const u8 gAccentGlyphs_0202B020[10][2] =
 {
-    0x1, 0x5, 0x126, 0xF, 0x15, 0x21B, 0x21F, 0x28C, 0x229, 0x22F
+    {0x01, 0}, {0x05, 0}, {0x26, 1}, {0x0F, 0}, {0x15, 0},
+    {0x1B, 2}, {0x1F, 2}, {0x8C, 2}, {0x29, 2}, {0x2F, 2}
 };
 
-const u16 gUsMsgIds_0202B034[12] =
+const u8 gAccentGlyphs_0202B034[12][2] =
 {
-    0x1, 0x5, 0x126, 0xF, 0x15, 0x19, 0x21B, 0x21F, 0x28C, 0x229, 0x22F, 0x233
+    {0x01, 0}, {0x05, 0}, {0x26, 1}, {0x0F, 0}, {0x15, 0}, {0x19, 0},
+    {0x1B, 2}, {0x1F, 2}, {0x8C, 2}, {0x29, 2}, {0x2F, 2}, {0x33, 2}
 };
 
-const u16 gUsMsgIds_0202B04C[10] =
+const u8 gAccentGlyphs_0202B04C[10][2] =
 {
-    0x1, 0x5, 0x126, 0xF, 0x15, 0x21B, 0x21F, 0x28C, 0x229, 0x22F
+    {0x01, 0}, {0x05, 0}, {0x26, 1}, {0x0F, 0}, {0x15, 0},
+    {0x1B, 2}, {0x1F, 2}, {0x8C, 2}, {0x29, 2}, {0x2F, 2}
 };
 
 #endif
@@ -805,6 +811,60 @@ bool32 DrawChar(u8 ch)
     return TRUE;
 }
 #else
+// The US font has accented letters: the base glyph, then a small accent glyph over it (the
+// accent only outside the link-lost screen; 0x9E/0x9F draw the small glyph first).
+// Near-miss: identical but for the accent's table address in the 7 accent branches, which the
+// original forms as (index * 2 + 1) + table and this as index * 2 + (table + 1).
+/*
+#define DRAW_ACCENTED(table, first, accent)                                                   \
+    {                                                                                         \
+        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A,                  \
+                      table[ch - first][0]);                                                  \
+        if (gMain.mode != 2)                                                                  \
+            TextDrawSmallGlyph(gGameState.textX, gGameState.textY + table[ch - first][1],     \
+                               gGameState.unk14A, accent);                                    \
+    }
+
+bool32 DrawChar(u8 ch)
+{
+    if (ch == 0x9F)
+    {
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0x8A);
+        if (gMain.mode != 2)
+            TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0);
+    }
+    else if (ch == 0x9E)
+    {
+        TextDrawSmallGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0x89);
+        if (gMain.mode != 2)
+            TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, 0);
+    }
+    else if (ch > 0x9B)
+        DRAW_ACCENTED(gAccentGlyphs_0202AFF4, 0x9C, 0x84)
+    else if (ch > 0x99)
+        DRAW_ACCENTED(gAccentGlyphs_0202AFF8, 0x9A, 0x8B)
+    else if (ch > 0x8D)
+        DRAW_ACCENTED(gAccentGlyphs_0202AFFC, 0x8E, 0x88)
+    else if (ch > 0x87)
+        DRAW_ACCENTED(gAccentGlyphs_0202B014, 0x88, 0x83)
+    else if (ch > 0x7D)
+        DRAW_ACCENTED(gAccentGlyphs_0202B020, 0x7E, 0x85)
+    else if (ch > 0x71)
+        DRAW_ACCENTED(gAccentGlyphs_0202B034, 0x72, 0x86)
+    else if (ch > 0x67)
+        DRAW_ACCENTED(gAccentGlyphs_0202B04C, 0x68, 0x87)
+    else
+        TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A, ch);
+    if (gGameState.unk15A)
+        gGameState.textX += gGameState.unk157 * 2;
+    else
+        gGameState.textX += gGameState.unk157;
+    if ((u16)gGameState.unk140 == 0xFFFF)
+        SoundPlay(0x28 - SOUND_ID_SHIFT, 0);
+    return TRUE;
+}
+#undef DRAW_ACCENTED
+*/
 INCLUDE_ASM(DrawChar);
 #endif
 
