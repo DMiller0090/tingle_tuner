@@ -27,11 +27,14 @@ def versions():
 
 
 def version_defines(ver):
-    """cpp flags for a version: VERSION_<ver>, plus VERSION_<base> for each `base` it builds on."""
-    defs = []
+    """cpp flags for a version: VERSION_<ver>, VERSION_<base> for each `base` it builds on,
+    the `defines` listed for it (and its bases), and PROG_BASE."""
+    cfg = versions()
+    defs = [f'-DPROG_BASE={cfg[ver]["prog_base"]:#010x}']
     while ver:
         defs.append(f'-DVERSION_{ver}')
-        ver = versions()[ver].get('base')
+        defs += [f'-D{d}' for d in cfg[ver].get('defines', [])]
+        ver = cfg[ver].get('base')
     return ' '.join(defs)
 
 

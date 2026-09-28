@@ -38,3 +38,89 @@ GZLJ01_demo:
   prog_base: 0x02014800
   tail_dest: 0x0202F000
   base: GZLJ01
+
+# PAL (Europe) disc: one client per language, loaded as client_<n>.bin by
+# dComIfGs_getPalLanguage() (0 English, 1 German, 2 French, 3 Spanish, 4 Italian). As on the
+# USA disc, a second build of each (client_<n>d.bin) is on the disc but never loaded.
+# client_<n> builds on the GZLE01 code and client_<n>d on GZLE01_ud; all of them also get
+# VERSION_PAL and PAL_LANGUAGE.
+
+GZLP01_0:  # English
+  disc_path: /res/Gba/client_0.bin
+  sha1: ccf9f433a9d0340896f8bf46c4b6ee96a8d29da6
+  prog_base: 0x0201B000
+  tail_dest: 0x02034F00
+  base: GZLE01
+  defines: [VERSION_PAL, PAL_LANGUAGE=0]
+
+GZLP01_0d:  # English, unused second build
+  disc_path: /res/Gba/client_0d.bin
+  sha1: 2cf6ce5b68eaa8bdc5d40dc4e3b333be47bcb485
+  prog_base: 0x0201B000
+  tail_dest: 0x02034F00
+  base: GZLE01_ud
+  defines: [VERSION_PAL, PAL_LANGUAGE=0]
+
+GZLP01_1:  # German
+  disc_path: /res/Gba/client_1.bin
+  sha1: 970665ca96a748efd79a3ffe530a216fcdddd231
+  prog_base: 0x0201CB00
+  tail_dest: 0x02036E00
+  base: GZLE01
+  defines: [VERSION_PAL, PAL_LANGUAGE=1]
+
+GZLP01_1d:  # German, unused second build
+  disc_path: /res/Gba/client_1d.bin
+  sha1: f44fc18729c7f4c013cf0617455cb8ee017aef30
+  prog_base: 0x0201CB00
+  tail_dest: 0x02036E00
+  base: GZLE01_ud
+  defines: [VERSION_PAL, PAL_LANGUAGE=1]
+
+GZLP01_2:  # French
+  disc_path: /res/Gba/client_2.bin
+  sha1: 49772938fe2046adfc7f715a3ad80ee117789eab
+  prog_base: 0x0201BE00
+  tail_dest: 0x02035F00
+  base: GZLE01
+  defines: [VERSION_PAL, PAL_LANGUAGE=2]
+
+GZLP01_2d:  # French, unused second build
+  disc_path: /res/Gba/client_2d.bin
+  sha1: ee2e7669c0659fefa2d12c06854a5408e81ee354
+  prog_base: 0x0201BE00
+  tail_dest: 0x02035F00
+  base: GZLE01_ud
+  defines: [VERSION_PAL, PAL_LANGUAGE=2]
+
+GZLP01_3:  # Spanish
+  disc_path: /res/Gba/client_3.bin
+  sha1: e2a16ccc6332a3533b043e704f6fe2fdb7f561f0
+  prog_base: 0x0201B000
+  tail_dest: 0x02034F00
+  base: GZLE01
+  defines: [VERSION_PAL, PAL_LANGUAGE=3]
+
+GZLP01_3d:  # Spanish, unused second build
+  disc_path: /res/Gba/client_3d.bin
+  sha1: c6bd9bd2aa104aa8b2a3a5b8444f4cecff55ef22
+  prog_base: 0x0201B000
+  tail_dest: 0x02034F00
+  base: GZLE01_ud
+  defines: [VERSION_PAL, PAL_LANGUAGE=3]
+
+GZLP01_4:  # Italian
+  disc_path: /res/Gba/client_4.bin
+  sha1: d2f95d512e79e55bd478a8f6f941d7334310747f
+  prog_base: 0x0201B000
+  tail_dest: 0x02034F00
+  base: GZLE01
+  defines: [VERSION_PAL, PAL_LANGUAGE=4]
+
+GZLP01_4d:  # Italian, unused second build
+  disc_path: /res/Gba/client_4d.bin
+  sha1: 15ae731aa54c5aff2fbc4dc47c0fb02b06c75534
+  prog_base: 0x0201B000
+  tail_dest: 0x02034F00
+  base: GZLE01_ud
+  defines: [VERSION_PAL, PAL_LANGUAGE=4]

@@ -1,0 +1,26 @@
+# C source ranges: file start end (end = next function start)
+src/main.c 0x0201CD0C 0x0201D358
+src/gba_com.c 0x0201F4C4 0x0201F6EC
+src/libc/rand.c 0x0202C88C 0x0202C8C0
+src/main.c .rodata 0x0202C8C0 0x0202C90C
+src/joy_com.c 0x0201FB58 0x0202048C
+src/heap.c 0x020209BC 0x02020BE8
+src/multi_sio.c 0x0201F6EC 0x0201FB58
+src/multi_sio.c .rodata 0x0202C9A4 0x0202C9B8
+src/gba_com.c .rodata 0x0202C964 0x0202C9A4
+src/mode0.c 0x0202048C 0x020209BC
+src/mode0.c .rodata 0x0202C9B8 0x0202C9E8
+src/mode1.c 0x0201D358 0x0201F4C4
+src/mode1.c .rodata 0x0202C90C 0x0202C964
+src/sprite.c 0x02020BE8 0x02021570
+src/sprite.c .rodata 0x0202C9E8 0x0202CCC0
+src/map.c 0x02021570 0x02023E08
+src/map.c .rodata 0x0202CCC0 0x0202CD88
+src/message.c 0x02023E08 0x020262C8
+src/message.c .rodata 0x0202CD88 0x0202CFA0
+src/item_menu.c 0x020262C8 0x02027634
+src/item_menu.c .rodata 0x0202CFA0 0x0202D010
+src/effect.c 0x02027634 0x020298FC
+src/effect.c .rodata 0x0202D010 0x0202D0A8
+src/sound.c 0x020298FC 0x0202C2A0
+src/sound.c .rodata 0x020353C4 0x02035924
