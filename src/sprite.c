@@ -315,26 +315,12 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
 }
 
 // DrawSpriteAt for a bare part list, keeping the parts' palettes.
-// Near-miss: x and the ~0x10 mosaic/hFlip mask swap registers (sb/r8); everything else matches.
-// prio.py: x's narrowed copy (refs 2, live 43, priority 465) goes before the mask (refs 5,
-// live 226, 442) and the ~0xC mask (423); the original needs x between them (live 46-47).
-// Tried: u16/s32 x (asm label), for loops, part as the parameter, every order of the three
-// initialisations, shake as u8/u32/s16, operand orders of the x and y sums.
-// x (pseudo 23) lives from its narrowing (insn 10) to the hoisted `(s16)x` sign extension,
-// the last loop invariant before the loop. Also tried (2026-09-28), all still live 43 or
-// worse diffs: separate declarations/assignments, oam via a u8 index or `+ unk450`, shake in
-// two statements, ten spellings of the `end != 0xFFFF` test, `priority & 3`, `mosaic & 1`,
-// `paletteNum & 0xF`, (s16)/(u16)/(s32) casts in the x sum, `& 0x1FF`, an s16/s32 copy of x.
-// decomp-permuter (2026-09-28, three runs, about 4 CPU-hours): nothing better than the base
-// (score 35). The tricks that fixed other near-misses don't help here: a self-assignment
-// of a global (VBlankIntr) or a constant held in a local (end, mosaic, priority, zero) either
-// emits code or leaves the 14 lines (28-146 lines, or still 14).
-/*
 void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
 {
     struct OamData *oam = (struct OamData *)&gOamBuffer[gMain.unk450];
     const struct SpritePart *part = parts;
-    s32 shake = (gGameState.shake >> 1) & 1;
+    // FAKEMATCH: the no-op % 2 lengthens x's live range so global-alloc ranks it after ~0x10
+    s32 shake = ((gGameState.shake >> 1) % 2) & 1;
 
     while (part->end != 0xFFFF)
     {
@@ -354,5 +340,3 @@ void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
         part++;
     }
 }
-*/
-INCLUDE_ASM(DrawSpriteParts);
