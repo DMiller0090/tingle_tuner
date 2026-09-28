@@ -93,13 +93,23 @@ from the extracted binary on every build.
    differ, `python tools/prio.py <ver> <function> file.c` (or `--comment`) prints agbcc's
    global-alloc ranking (refs, live length, priority, hard register per pseudo; `--rtl N`
    shows where pseudo N is used), to see which two values' priorities need to swap.
+6. For a near-miss, [decomp-permuter](https://github.com/simonlindholm/decomp-permuter) tries
+   random rewrites. It runs in WSL: `git clone https://github.com/simonlindholm/decomp-permuter
+   ~/decomp-permuter` (or set `PERMUTER` to a clone), `pip3 install --user
+   --break-system-packages toml pycparser`, and ARM binutils on PATH or unpacked without root
+   (`apt-get download binutils-arm-none-eabi && dpkg -x binutils-arm-none-eabi_*.deb
+   ~/arm-binutils`). `python tools/permuter/perm.py <ver> <function> --comment` (or a C file)
+   writes `build/<ver>/permuter/<function>/` (base.c cut down to that function, target.o from
+   the original asm, `tools/permuter/compile.sh`); add `--run -j 4 -- --better-only
+   --stop-on-zero` to start it. Improvements land in `output-<score>-<n>/` there (`diff.txt`
+   against base.c); check them with scratch.py.
 
 Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `build/<ver>/asm/funcs/`, written for every function in a C range). A second line
 `src/file.c .rodata 0xSTART 0xEND` in `splits.txt` places the file's `.rodata` in the shared
 `.rodata` block (see `main.c`).
 
-In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but `VBlankIntr`),
+In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c`,
 `src/mode1.c`, `src/gba_com.c`, `src/joy_com.c`, `src/mode0.c`, `src/multi_sio.c`,
 `src/heap.c` (all but `HeapAlloc`), `src/libc/rand.c`, and
 most of the game code from `02018884` to the sound driver (in GZLJ01, 133 of its 141 functions;

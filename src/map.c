@@ -1747,41 +1747,25 @@ none:
 }
 
 // Play the sound for what the cursor is on: unk135 if set, else the selected marker's.
-// Near-miss: the original computes the (s16) ids in the shifted domain, ((v << 16) +
-// (c << 16)) >> 16, which agbcc only emits for an explicit shift pair (the ID macro below);
-// written that way the code shape matches but the registers of the entry block differ
-// (the original keeps gGameState in r4 and loads it first).
-// Best so far (30 diff lines, was 62 with `u8 idx = gGameState.unk119;` at the top): idx
-// assigned in the first marker test. What remains is the entry block: the original loads
-// unk119 into r2 before the unk135 test and copies gGameState to r4. With idx loaded first,
-// global-alloc puts idx in r0 and the unk135 value in r1 (someone prefers r0); idx types,
-// a `sel` local, a GameState pointer and nested/early-return forms of the unk135 case
-// didn't change that.
-// Diagnosis (2026-09-28, prio.py + global.c): with `u8 idx = gGameState.unk119;` at the top
-// the code shape is right (the gGameState copy that the original keeps in r4 appears) but
-// global-alloc goes unk135 -> r1, base -> r2, idx -> r0 (62 lines; original: unk135 r0,
-// base r1, idx r2, &unk135 r3, copy r4). unk135 skips r0 because idx (lower priority,
-// conflicting) prefers r0 via `idx << 3` (local-alloc'd to r0), and find_reg's first pass
-// avoids regs in regs_someone_prefers. &unk119/&unk135 are global pseudos (REG_EQUIV
-// gGameState+off). Tried at the top: idx u8/s8/u16/s16/u32/s32, split decl, a sel local
-// (u8/s8/u16/s16/u32/s32, for one or both unk135 tests),
-// switch on unk135, `!= 0x21 ||` and nested/early-return forms, a GameState pointer (drops
-// the r4 copy), a marker pointer, `u8 *p = &unk119`: all 56-76 lines.
-/*
+// The ids are computed in the shifted domain, ((v << 16) + (c << 16)) >> 16, which agbcc only
+// emits for an explicit shift pair (ID below).
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
 void Func_0201B7D4(void)
 {
-    u8 idx;
+    u8 idx = gGameState.unk119;
+    // FAKEMATCH: 0x21 in a variable (found with decomp-permuter) moves the unk135 value from
+    // r1 to r0 and idx to r2, as in the original; a literal gives idx the r0 preference.
+    s32 c = 0x21;
 
     if (gGameState.unk135 != 0)
     {
-        if (gGameState.unk135 == 0x21 && gGameState.flags.unk5_6)
+        if (gGameState.unk135 == c && gGameState.flags.unk5_6)
             ShowMessage(0x13E, 1);
         else
             ShowMessage(gGameState.unk135 + 0x14D, 1);
     }
-    else if (idx = gGameState.unk119, gGameState.markers[idx].type == 0x13)
+    else if (gGameState.markers[idx].type == 0x13)
         ShowMessage(gMsgIds_02024278[gGameState.markers[idx].unk6 - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
         ShowMessage(0x5D, 1);
@@ -1798,8 +1782,6 @@ void Func_0201B7D4(void)
     else
         ShowMessage(ID(gGameState.markers[idx].unk7, 0x6F), 1);
 }
-*/
-INCLUDE_ASM(Func_0201B7D4);
 
 // Act on the current selection (unk119: a marker, or unk135): 0: send the switch record,
 // 1: a random reaction sound, 2: play the selection's sound via Func_0201B7D4.

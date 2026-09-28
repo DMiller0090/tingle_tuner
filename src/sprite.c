@@ -325,6 +325,10 @@ void DrawSpriteAt(const void *sprite, u8 frame, s16 x, s16 y, u8 mosaic, u8 pale
 // worse diffs: separate declarations/assignments, oam via a u8 index or `+ unk450`, shake in
 // two statements, ten spellings of the `end != 0xFFFF` test, `priority & 3`, `mosaic & 1`,
 // `paletteNum & 0xF`, (s16)/(u16)/(s32) casts in the x sum, `& 0x1FF`, an s16/s32 copy of x.
+// decomp-permuter (2026-09-28, three runs, about 4 CPU-hours): nothing better than the base
+// (score 35). The tricks that fixed other near-misses don't help here: a self-assignment
+// of a global (VBlankIntr) or a constant held in a local (end, mosaic, priority, zero) either
+// emits code or leaves the 14 lines (28-146 lines, or still 14).
 /*
 void DrawSpriteParts(const void *parts, s16 x, s16 y, u8 mosaic, u8 priority)
 {
