@@ -71,7 +71,7 @@ more game code, sound driver, ARM mixer, libagbsyscall, libgcc, newlib. Object b
 | `0201DA78` | `02024684` | `item_menu.c` | item menu, `UseItem`, HUD panels; `.rodata` `02024460–020244D0` |
 | `0201EBAC` | `020257B8` | `effect.c` | item effects, `MainMode2`, objects, wave scroll, Select window, status icon; `.rodata` `020244D0–02024568` |
 | `02020E28` | `02027A84` | sound | custom driver, not m4a: API (`SoundInit` ... `SoundPlayLoop`), core from `SoundDriverInit` (`020213C0`), command wrappers `0202328C–02023510`; `.rodata` `gSoundBankHeader` ... `gVibratoTable` (`0202CD20–0202D28C`, in C in `src/sound.c`). See [Sound driver](#sound-driver) |
-| `020237CC` | `0202A428` | ARM mixer | `PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix` (run from IWRAM) |
+| `020237CC` | `0202A428` | ARM mixer | `PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix` (hand-written; run from IWRAM) |
 | `02023A84` | `0202A6E0` | libagbsyscall | `ArcTan2 CpuFastSet CpuSet Div LZ77UnCompVram LZ77UnCompWram Sqrt`, then `JoyHardReset` |
 | `02023AC0` | `0202A71C` | libgcc | `_call_via_*`, `__divsi3 __div0 __modsi3 __udivsi3 __umodsi3` |
 | `02023D9C` | `0202A9F8` | newlib | `bzero`, `srand`, `rand`; the last 4 bytes of `.rodata` (`0202D28C`, `"C"`) are `impure.o`'s locale string, which `impure_data` + 0x34 (`_current_locale`) points at |
@@ -276,6 +276,15 @@ instrument's GB channel) and starts it. Per voice per frame: `EnvelopeStep`,
 and `PcmMixFrame` copy it to voice +0x1A, and nothing reads that (not even through
 `gSoundNoteHook`, which the game never installs), so `E3` has no audible effect. It was
 plausibly an echo send for `PcmEchoMix`.
+
+The ARM mixer (`PcmClipS16ToS8`, `PcmMixChannel`, `PcmEchoMix`, JP `020237CC-02023A84`) is
+hand-written assembly, copied to IWRAM as one block (`CpuFastSet(PcmClipS16ToS8, gPcmCode,
+0xD8)`). pret's `agbcc_arm` (the same GCC 2.9) can't produce it: signed-division rounding is
+`cmp rX, #0; addmi` (GCC emits `addlt`); `PcmMixChannel` loads its four stack arguments with
+`mov ip, sp; push {r4-r8}; ldm ip, {r4-r7}`; constants live in r4/r5 and lr is never used
+(GCC hands out ip and lr first); the clip test is `ands; cmpne; addne` with no boolean; every
+unrolled step is the same `ldrsh [rN]` / `strh [rN], #2`; and `PcmMixChannel` has two loops
+(4x unrolled, and the remainder) that each return on their own.
 
 Work area structs (sizes from the loops; offsets from the code):
 
