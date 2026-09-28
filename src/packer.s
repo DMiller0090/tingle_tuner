@@ -1,7 +1,7 @@
 @ Tingle Tuner client: outer multiboot image ("packer").
 @
 @ The GameCube JOY-boots this image to 0x02000000. The stub copies the raw tail up to
-@ TAIL_DEST, LZ77-decompresses the program to PROG_BASE and jumps to it. Identical code
+@ TAIL_DEST (CpuFastSet), LZ77-decompresses the program to PROG_BASE and jumps to it. Identical code
 @ in every version; only the literal pool (layout) differs.
 @
 @ Assembled with -I build/<ver> --defsym PROG_BASE=... --defsym TAIL_DEST=...
@@ -63,8 +63,8 @@ unpack:
 	ldr	r2, pool_tail_end
 	sub	r2, r2, r0
 	lsr	r2, r2, #2
-	orr	r2, r2, #0		@ CpuSet mode 0 (16-bit units, count = words)
-	svc	#0x0C << 16		@ CpuSet
+	orr	r2, r2, #0		@ CpuFastSet mode: copy, count in words (rounded up to 8)
+	svc	#0x0C << 16		@ CpuFastSet (ARM SWI number is in bits 16-23)
 	mov	r1, #0
 	lsl	r1, r1, #8
 	strh	r1, [r3, #RCNT]

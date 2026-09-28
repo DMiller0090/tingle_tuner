@@ -72,19 +72,24 @@ def compile_c(ver, src):
               f'| {AGBCC_DIR}/agbcc {CFLAGS} -o {unix_path(s_file)}')
     cmd = ['bash', '-c', script] if os.name != 'nt' else ['wsl', '-d', WSL_DISTRO, '--', 'bash', '-c', script]
     run(cmd)
-    run([AS] + ASFLAGS + ['-o', str(o_file), str(s_file)])
+    run([AS] + ASFLAGS + ['-I', str(BUILD / ver / 'asm'), '-o', str(o_file), str(s_file)])
     return o_file
 
 
+ALL_SECTIONS = '.text .rodata .rodata.*'
+
+
 def link_bin(objs, base, out_stem):
+    """objs: object paths, or (path, input sections) to place parts of one object apart."""
+    objs = [o if isinstance(o, tuple) else (o, ALL_SECTIONS) for o in objs]
     ld_script = out_stem.with_suffix('.ld')
     ld_script.write_text(
         f'SECTIONS {{\n  . = {base:#x};\n  .text : {{\n'
-        + ''.join(f'    "{Path(o).as_posix()}"(.text .rodata .rodata.*)\n' for o in objs)
+        + ''.join(f'    "{Path(o).as_posix()}"({secs})\n' for o, secs in objs)
         + '  }\n  /DISCARD/ : { *(.ARM.attributes) *(.comment) }\n}\n')
     elf = out_stem.with_suffix('.elf')
-    run([LD, '-T', str(ld_script), '-o', str(elf), '-Map', str(out_stem.with_suffix('.map'))]
-        + [str(o) for o in objs])
+    files = list(dict.fromkeys(str(o) for o, _ in objs))
+    run([LD, '-T', str(ld_script), '-o', str(elf), '-Map', str(out_stem.with_suffix('.map'))] + files)
     binf = Path(str(out_stem) + '_built.bin')
     run([OBJCOPY, '-O', 'binary', str(elf), str(binf)])
     data = binf.read_bytes()
@@ -101,11 +106,20 @@ def build_prog(ver):
     cfg = versions()[ver]
     out = BUILD / ver
     run([sys.executable, str(ROOT / 'tools' / 'disasm.py'), ver])
+    order = [line.split(maxsplit=1) for line in (out / 'link_order.txt').read_text().splitlines()]
+    split_rodata = {path for kind, path in order if kind == 'c_rodata'}
+    c_objs = {}
     objs = []
-    for line in (out / 'link_order.txt').read_text().splitlines():
-        kind, path = line.split(maxsplit=1)
-        if kind == 'c':
-            objs.append(compile_c(ver, path))
+    for kind, path in order:
+        if kind in ('c', 'c_rodata'):
+            if path not in c_objs:
+                c_objs[path] = compile_c(ver, path)
+            if kind == 'c_rodata':
+                objs.append((c_objs[path], '.rodata .rodata.*'))
+            elif path in split_rodata:
+                objs.append((c_objs[path], '.text'))
+            else:
+                objs.append(c_objs[path])
         else:
             src = out / path
             obj = src.with_suffix('.o')
