@@ -585,28 +585,6 @@ INCLUDE_ASM(DrawMapMarkers);
 // clear the palette bits of the block showing marker 1's room, then set palette bit 1 (|= 0x2000)
 // on a 2x2 or 4x4 tile square around every gSlot14Data entry in each block's room. Room 0x19's
 // entries only show once flags.unkA_4 is set.
-// Near-miss: the original keeps (y >> 8) * 7 narrowed to u16 before adding it to room; the u16
-// row temp b below gives that. The first loop's counter is its own variable n (the original
-// keeps it in r1 and the second loop's i in r5, so they are separate pseudos): with that the
-// entry block and the first loop match (412 diff lines; the old shared-i version was 428 once
-// gSlot14Data became struct SeaChartEntry[], and the old `u8 *e = &gSlot14Data[j * 4]` form
-// now indexes 16-byte steps). What remains starts at the palette clear: the original has map
-// in r3, 0x1FFF in r2 and the countdown in r5; here map (the top global-alloc priority, 393
-// refs) takes r2 first, so 0x1FFF gets r3 and the counter r4; everything after is shifted
-// (the second loop's i r2 instead of r5, x/y r2/r0 instead of r5/r1). Tried with no gain: a
-// separate counter or pointer for the clear loop, reusing i or k for it, a counting-down
-// for, a u16/s32 mask variable, *map++ &= and map[k] forms, `+` instead of `|` for the block
-// index, s32/u8 temps for the block index, `* 0x800`, and `i < 4`. Earlier: casting the
-// shifts to s32/u32, 1u and s32 temps for x >> 8 / y >> 8.
-// Round 3: forcing map into r3 for both loops (`register u16 *map asm("r3")`, test only) makes
-// the clear loop match, mask r2 and countdown r5 included, once it counts with i (the second
-// loop's counter); so the source likely shares i and one map, and the open question is only
-// why global.c's find_reg skips r2 for map (it conflicts with r0/r1 only and no conflicting
-// allocno prefers r2 here). The hard reg itself costs a spill (110 lines, 0xc bigger). No gain
-// from 192 combinations of block-index variable (i/c/none), clear counter (i/j/k/c), u16/s32
-// x/y, s32/u8 size, entry pointer or index and a shared or separate second-loop pointer, nor
-// from an inline helper for the clear or room/b as the block index.
-/*
 #define CLEAR_PAL(p) (*(p) &= 0x1FFF, (p)++)
 #define CLEAR_PAL_4(p) CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p)
 #define CLEAR_PAL_32(p) CLEAR_PAL_4(p); CLEAR_PAL_4(p); CLEAR_PAL_4(p); CLEAR_PAL_4(p); \
@@ -615,19 +593,24 @@ INCLUDE_ASM(DrawMapMarkers);
 void HighlightMapRooms(void)
 {
     u8 m = FindMarker(1);
-    u16 room, b;
+    u16 x, y;
     s32 n, i, j, k;
     u16 *map;
 
-    room = gGameState.markers[m].x >> 8;
-    b = (gGameState.markers[m].y >> 8) * 7;
-    room += b;
+    // x/y are reused: the room (x + y * 7), the block index and a tile position; n is also the
+    // row offset.
+    x = gGameState.markers[m].x >> 8;
+    y = (gGameState.markers[m].y >> 8) * 7;
+    x += y;
     for (n = 0; n <= 3; n++)
     {
-        if (gGameState.seaSquare[n] == room)
+        if (gGameState.seaSquare[n] == x)
         {
-            map = (u16 *)(0x0600C000 + ((((gGameState.markers[m].x >> 8) & 1) | (((gGameState.markers[m].y >> 8) & 1) << 1)) << 11));
-            for (j = 0; j < 32; j++)
+            x = (gGameState.markers[m].x >> 8) & 1;
+            y = ((gGameState.markers[m].y >> 8) & 1) << 1;
+            x |= y;
+            map = (u16 *)(0x0600C000 + (x << 11));
+            for (i = 0; i < 32; i++)
             {
                 CLEAR_PAL_32(map);
             }
@@ -644,9 +627,7 @@ void HighlightMapRooms(void)
 
             if (gGameState.seaSquare[i] == e->square)
             {
-                u16 x, y;
                 s32 size;
-                s32 row;
 
                 if (e->big)
                 {
@@ -661,17 +642,15 @@ void HighlightMapRooms(void)
                     size = 2;
                 }
                 map = (u16 *)(0x0600C000 + (i << 11)) + (y * 32 + x);
-                for (row = 0; row < size * 32; row += 32)
+                for (n = 0; n < size * 32; n += 32)
                 {
                     for (k = 0; k < size; k++)
-                        map[row + k] |= 0x2000;
+                        map[n + k] |= 0x2000;
                 }
             }
         }
     }
 }
-*/
-INCLUDE_ASM(HighlightMapRooms);
 
 void FollowMarkerFixedMap(void)
 {
