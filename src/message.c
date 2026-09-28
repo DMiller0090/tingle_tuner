@@ -424,30 +424,21 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 #else
-// US near-miss (102 masked diff lines): the right halves go where x + glyphWidth falls (as in
-// TextDrawSmallGlyph), and the link-lost screen (mode 2) has a 30-tile-wide canvas. Same code
-// shape, but the original spills gGameState's address to the stack and allocates the other
-// registers differently. Writing row/col in both mode arms gives the original's duplicated
-// arms. A separate dst2 for the right halves gets the high registers right (x r9, color r10,
-// &glyphWidth r8, gGameState spilled to sp+8) but not the low ones (original: row r4, x << 24 r5,
-// y r6, dst r7), 104 lines: dst2's short life makes dst the top-priority pseudo (5263), and it
-// takes r4. With the single dst below, dst r7 and y r6 are right, but row/x << 24 come out r5/r4
-// and local-alloc puts y2 in r4 (the original shares r5 with x << 24). Also tried: a separate
-// left-half dstL (102), dstL plus a `struct GameState *g` local (96, but g loads too early),
-// y2 as u16/u32/s32, x2 as u32, a `u8 *w = &glyphWidth` local, x2 reused for the 4th blit.
-/*
+// US: the arms keep their own row/col (one shared row makes gGameState's address, kept across
+// the blits, take a register instead of the original's stack slot).
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
 {
     u32 *glyph = (u32 *)0x0600A000 + ch * 8;
     u32 *dst;
-    u32 row;
-    u32 col;
-    u8 y2;
-    u32 col2;
-    s32 x2;
 
     if (gGameState.unk15A)
     {
+        u32 row;
+        u32 col;
+        u8 y2;
+        u32 col2;
+        s32 x2;
+
         TextScaleGlyph(32, (u8 *)glyph);
         y += 4;
         row = (y >> 3) * 0x180 + (y & 7) * 4;
@@ -456,6 +447,7 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         TextBlitGlyph(x, y, color, 8, (u32 *)TEXT_GLYPH_BUF, dst);
         y2 = y + 8;
         TextBlitGlyph(x, y2, color, 8, (u32 *)TEXT_GLYPH_BUF + 16, dst + 0x60);
+        // The right halves go where x + glyphWidth falls, not simply the next tile.
         x2 = x + gGameState.glyphWidth;
         col2 = (x2 >> 3) * 32 + 0x0600F100;
         dst = (u32 *)(row + col2);
@@ -464,6 +456,10 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
     else
     {
+        u32 row;
+        u32 col;
+
+        // The link-lost screen (mode 2) has a 30-tile-wide canvas.
         if (gMain.mode != 2)
         {
             row = (y >> 3) * 0x180 + (y & 7) * 4;
@@ -478,8 +474,6 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         TextBlitGlyph(x, y, color, 8, glyph, dst);
     }
 }
-*/
-INCLUDE_ASM(TextDrawGlyph);
 #endif
 
 void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
