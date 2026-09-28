@@ -429,14 +429,27 @@ const struct SoundBankHeader gSoundBankHeader =
 };
 
 // The US bank drops SE sequence 7 (voice clip 6), so the SE indices from 8 on are one lower.
+// The PAL banks also reorder the sequences of the voice clips and of JP SE 9: JP SE 5, 6, 8
+// and 9 are 4, 5, 7 and 6; English, Spanish and Italian move JP SE 4 (clip 2) to 8, German and
+// French drop it and JP SE 0x18 (sound ID 9) as well.
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+#define SOUND_SE(se) ((se) == 5 ? 4 : (se) == 6 ? 5 : (se) == 8 ? 7 : (se) == 9 ? 6 \
+                      : (se) < 8 ? (se) : (se) < 0x18 ? (se) - 2 : (se) - 3)
+#elif defined(VERSION_PAL)
+#define SOUND_SE(se) ((se) == 4 ? 8 : (se) == 5 ? 4 : (se) == 6 ? 5 : (se) == 8 ? 7 : (se) == 9 ? 6 \
+                      : (se) < 8 ? (se) : (se) - SOUND_ID_SHIFT)
+#else
 #define SOUND_SE(se) ((se) < 8 ? (se) : (se) - SOUND_ID_SHIFT)
+#endif
 #define SOUND(se, player, flags) (SOUND_SE(se) | ((player) << 16) | (flags))
 
 const u32 gSoundTable[] =
 {
     SOUND(0x02, 4, 0),
     SOUND(0x03, 4, 0),
-    SOUND(0x04, 4, 0),
+#if PAL_LANGUAGE != 1 && PAL_LANGUAGE != 2
+    SOUND(0x04, 4, 0),  // voice clip 2, not in the German and French banks
+#endif
     SOUND(0x05, 4, 0),
     SOUND(0x08, 4, 0),
     SOUND(0x06, 4, 0),
@@ -445,7 +458,9 @@ const u32 gSoundTable[] =
 #endif
     SOUND(0x14, 0, 0),
     SOUND(0x17, 0, 0),
-    SOUND(0x18, 0, 0),
+#if PAL_LANGUAGE != 1 && PAL_LANGUAGE != 2
+    SOUND(0x18, 0, 0),  // the rupee counter's end sound, not in the German and French banks
+#endif
     SOUND(0x1A, 0, 0),
     SOUND(0x19, 0, 0),
     SOUND(0x1B, 0, 0),

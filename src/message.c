@@ -46,13 +46,19 @@ const u16 gThreeChoiceMsgIds[21] =
 };
 
 // Sound per message sound code (PlayMsgSound); codes 0x20-0x22 are SoundPlayLoop IDs.
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+// (German and French: without voice clip 2 and the rupee end sound, JP 9, which msg 14 then
+// plays as JP 8)
+#define SE(id) ((id) < 3 ? (id) : (id) < 7 ? (id) - 1 : (id) < 9 ? (id) - 2 : (id) - SOUND_ID_SHIFT)
+#else
 #define SE(id) ((id) < 7 ? (id) : (id) - SOUND_ID_SHIFT)
+#endif
 const u16 gMsgSoundIds[] =
 {
     SE(0x1F), SE(0x1A), SE(0x1B), SE(0x2B), SE(0x2A), SE(0x29), SE(0x1C), SE(0x1E),
     SE(0x1D), SE(0x23), 0, 0, SE(0x13), SE(0x13), SE(0x13), SE(0x13),
-    SE(0x12), SE(0x11), SE(0x10), SE(0x08), SE(0x09), 3, 3, 1,
-    4, SE(0x24), 5,
+    SE(0x12), SE(0x11), SE(0x10), SE(0x08), SE(0x09), SE(3), SE(3), SE(1),
+    SE(4), SE(0x24), SE(5),
 #ifdef VERSION_GZLJ01
     6,  // voice clip 6, not in the US sound bank
 #endif
@@ -426,6 +432,20 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 #else
+// Bytes per tile row of the link-lost screen's text canvas: 30 tiles (German 25, French 29,
+// Spanish 28, Italian 26).
+#if PAL_LANGUAGE == 1
+#define MODE2_CANVAS_ROW 0x320
+#elif PAL_LANGUAGE == 2
+#define MODE2_CANVAS_ROW 0x3A0
+#elif PAL_LANGUAGE == 3
+#define MODE2_CANVAS_ROW 0x380
+#elif PAL_LANGUAGE == 4
+#define MODE2_CANVAS_ROW 0x340
+#else
+#define MODE2_CANVAS_ROW 0x3C0
+#endif
+
 // US: the arms keep their own row/col (one shared row makes gGameState's address, kept across
 // the blits, take a register instead of the original's stack slot).
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
@@ -433,6 +453,13 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     u32 *glyph = (u32 *)0x0600A000 + ch * 8;
     u32 *dst;
 
+#ifdef VERSION_PAL
+    // Nothing is drawn below the text box's last line.
+    if (y > 0x44)
+        return;
+    if (y == 0x44 && (gGameState.textBig || x > 0x5A))
+        return;
+#endif
     if (gGameState.textBig)
     {
         u32 row;
@@ -469,7 +496,7 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
         }
         else
         {
-            row = (y >> 3) * 0x3C0 + (y & 7) * 4;
+            row = (y >> 3) * MODE2_CANVAS_ROW + (y & 7) * 4;
             col = (x >> 3) * 32 + 0x0600F100;
         }
         dst = (u32 *)(row + col);
@@ -489,6 +516,13 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
     s32 x2;
 #endif
 
+#ifdef VERSION_PAL
+    // An accent can't go below the text box's last line.
+    if (gGameState.textY > 0x44)
+        return;
+    if (gGameState.textY == 0x44 && (gGameState.textBig || x > 0x5A))
+        return;
+#endif
     y -= 4;
     row = (y >> 3) * 0x180 + (y & 7) * 4;
     col = (x >> 3) * 32 + 0x0600F100;
@@ -1060,9 +1094,14 @@ void MsgCmd10(void)
     gGameState.glyphWidth = 6;
 }
 
+// PAL: both widths are 6 (message code F3 11 no longer selects 8).
 void MsgCmd11(void)
 {
+#ifdef VERSION_PAL
+    gGameState.glyphWidth = 6;
+#else
     gGameState.glyphWidth = 8;
+#endif
 }
 
 void MsgCmd12(void)
@@ -1173,6 +1212,16 @@ s32 MsgStep(void)
                 next = i + 1;
                 if (gGameState.playerName[next] == 0xFF || i == 7)
                 {
+#if PAL_LANGUAGE == 1
+                    // German genitive: in messages 0x13E and 0x17F the name is followed by an
+                    // "s", which becomes an apostrophe after a name ending in s, x or z.
+                    if ((gGameState.msgId == 0x13E || gGameState.msgId == 0x17F) && gGameState.nameSibilant)
+                    {
+                        DRAW_CHAR(ch);
+                        gGameState.msgPtr++;
+                        ch = 0x63;  // '
+                    }
+#endif
                     gGameState.playerNameIndex = 0;
                 }
                 else
@@ -1677,7 +1726,12 @@ void MsgStart(s16 id)
         gGameState.msgPtr = (u8 *)0x02000000 + ((u16 *)0x02000000)[id];
 #else
         // The US message block starts with the offset of the text after the table.
+#ifdef VERSION_PAL
+        // PAL offsets count halfwords (the European text runs past 64 KiB).
+        gGameState.msgPtr = (u8 *)(*(u16 *)0x02000000 + ((((u16 *)0x02000002)[id] << 1) | 0x02000000));
+#else
         gGameState.msgPtr = (u8 *)(*(u16 *)0x02000000 + (((u16 *)0x02000002)[id] | 0x02000000));
+#endif
 #endif
         gGameState.textColor = 0;
         gGameState.msgStatus = 0;

@@ -84,7 +84,11 @@ void UpdateRupeeCounter(void)
         if (gMain.modeState == 2)
         {
             if (gGameState.rupeeDelta == 0)
+            {
+#ifdef SE_RUPEE_COUNT_END
                 SoundPlay(SE_RUPEE_COUNT_END, 0);
+#endif
+            }
             else if (gGameState.rupeeDelta & 1)
             {
                 if (step < 0)
@@ -151,6 +155,9 @@ void InitMapBgs(void)
     }
     else
     {
+#ifdef VERSION_PAL
+        CpuCopy16((void *)0x06007AC0, (void *)0x06006840, 0x80);
+#endif
         gMain.bgcnt[3] = 0x0B41;
     }
 }
@@ -401,7 +408,7 @@ void Mode1State2(void)
         if (gGameState.flags.isFree)
             SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
         else
-            SoundPlay(7 - SOUND_ID_SHIFT, 0);
+            SoundPlay(SE_FREE_OFF, 0);
     }
     UpdateSelectWindow();
     if (gGameState.selectWinStep != 0)
@@ -436,7 +443,11 @@ void Mode1State2(void)
                         if (gGameState.markers[gGameState.selectedMarker].type == 7)
                             Mode1SendSwitch(3);
                         else
+#ifdef VERSION_PAL
+                            ShowMessage(gGameState.pendingMsg, 1);
+#else
                             ShowSelectionMsg();
+#endif
                         SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
                         gMain.newKeys &= 0xF0;
                     }
@@ -453,6 +464,23 @@ void Mode1State2(void)
                     }
                     else
                     {
+#ifdef VERSION_PAL
+                        if (gGameState.selection == 2 || gGameState.pendingReveal)
+                        {
+                            u8 t = gGameState.pendingType;
+
+                            if (t == 5)
+                                gGameState.revealedType5 |= 1 << gGameState.pendingParam;
+                            else if (t == 13)
+                                gGameState.revealedType13 |= 1;
+                            else if (t == 12)
+                                gGameState.revealedType12 |= 1;
+                            else if (t == 16)
+                                gGameState.revealedType16 |= 1 << gGameState.pendingParam;
+                            gGameState.pendingReveal = 0;
+                            gGameState.selection = 1;
+                        }
+#else
                         if (gGameState.selection == 2)
                         {
                             u8 t = gGameState.selectedType;
@@ -467,6 +495,7 @@ void Mode1State2(void)
                                 gGameState.revealedType16 |= 1 << gGameState.markers[gGameState.selectedMarker].param;
                             gGameState.selection = 1;
                         }
+#endif
                         MsgClose();
                     }
                 }

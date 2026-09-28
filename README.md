@@ -10,7 +10,9 @@ link lives in the main TWW decomp (`d_a_agb.cpp`, `m_Do_gba_com.cpp`, `JUTGba.cp
 | `GZLJ01`    | `client.bin`     | `0x02014800` | matching (asm + C) |
 | `GZLE01`    | `client_u.bin`   | `0x0201B000` | matching (asm + C) |
 | `GZLE01_ud` | `client_ud.bin`  | `0x0201B000` | matching (asm + C); second USA build, unused by the game code |
-| `GZLJ01_demo` | `client.bin` of the JP store demo | `0x02014800` | matching (C); earlier JP build, see docs/layout.md |
+| `GZLJ01_demo` | `client.bin` of the JP store demo | `0x02014800` | matching (asm + C); earlier JP build, see docs/layout.md |
+| `GZLP01_<n>` | `client_<n>.bin` | `0x0201B000`, German `0x0201CB00`, French `0x0201BE00` | matching (asm + C); PAL, n = 0 English, 1 German, 2 French, 3 Spanish, 4 Italian |
+| `GZLP01_<n>d` | `client_<n>d.bin` | as `GZLP01_<n>` | matching (asm + C); second PAL builds, unused like `client_ud.bin` |
 
 ## What the binary is
 
@@ -48,6 +50,7 @@ Extract the clients from **unmodified** retail discs (SHA-1 checked against `con
 ```sh
 python tools/extract.py GZLJ01 path/to/TWW-JP.iso
 python tools/extract.py GZLE01 path/to/TWW-USA.iso     # extracts GZLE01 and GZLE01_ud
+python tools/extract.py GZLP01_0 path/to/TWW-EUR.iso   # extracts all ten PAL clients
 ```
 
 ## Build

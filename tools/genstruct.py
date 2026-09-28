@@ -17,6 +17,14 @@ A header opts in with a block like:
 and the struct that follows the block is rewritten with filler arrays between fields.
 Sizes: u8/s8 1, u16/s16 2, u32/s32/pointers 4, `name[N]` arrays, `struct X` needs `size=N`
 after the name (e.g. `0x000 struct GbaComFlags flags size=12`).
+
+A version's extra fields go in a block that inserts `size` bytes at its first field's offset;
+the block's fields use that version's offsets, everything outside it the base layout's (so
+fields after the block sit `size` bytes higher in that version):
+
+    // #ifdef VERSION_PAL size=8
+    // 0x138 s16 pendingMsg
+    // #endif
 """
 import re
 import sys
@@ -26,7 +34,22 @@ SIZES = {'u8': 1, 's8': 1, 'bool8': 1, 'u16': 2, 's16': 2, 'u32': 4, 's32': 4, '
 
 def parse(lines):
     fields = []
+    block = None
     for line in lines:
+        if line.startswith('#if'):
+            cond, _, size = line.rpartition(' size=')
+            block = (cond, int(size, 0), [])
+            continue
+        if line.startswith('#endif'):
+            cond, size, spec = block
+            inner = parse(spec)
+            start = min(f[0] for f in inner)
+            fields.append((start, 0, ('block', cond, size, inner), ''))
+            block = None
+            continue
+        if block is not None:
+            block[2].append(line)
+            continue
         body, _, comment = line.partition('//')
         comment = comment.strip()
         parts = body.split()
@@ -53,14 +76,22 @@ def parse(lines):
     return fields
 
 
-def render(fields, total):
+def render(fields, total, start=0):
     out = []
-    pos = 0
-    for off, size, decls, comment in sorted(fields, key=lambda f: f[0]):
+    pos = start
+    # a block sorts before the base field at its offset
+    for off, size, decls, comment in sorted(fields, key=lambda f: (f[0], f[1] != 0)):
         if off < pos:
             sys.exit(f'field at {off:#x} overlaps the previous one (ends {pos:#x})')
         if off > pos:
             out.append(f'    /*0x{pos:03X}*/ u8 filler{pos:03X}[0x{off:03X} - 0x{pos:03X}];')
+            pos = off
+        if isinstance(decls, tuple):
+            _, cond, bsize, inner = decls
+            out.append(cond)
+            out += render(inner, off + bsize, off)
+            out.append('#endif')
+            continue
         for i, d in enumerate(decls):
             prefix = f'/*0x{off:03X}*/ ' if i == 0 else ' ' * 10
             line = f'    {prefix}{d}'

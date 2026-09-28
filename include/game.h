@@ -138,6 +138,12 @@ struct ItemSlot
 // 0x134 u8 scrolling  // the view is still catching up with the followed marker
 // 0x135 u8 selectedSquare  // sea chart square under the cursor + 1 (UpdateSelection), 0: none
 // 0x136 u8 awayFromType20  // the cursor has left the type 20 marker (it is only selectable after that)
+// #ifdef VERSION_PAL size=8
+// 0x138 s16 pendingMsg  // PAL (fields from here on are 8 bytes higher): ExamineSelection saves the selection's message, type and param for after reactionTimer, so moving the cursor meanwhile doesn't change what is shown and revealed
+// 0x13A u8 pendingType
+// 0x13B u8 pendingParam
+// 0x13C u8 pendingReveal  // set with them; Mode1State2 reveals pendingType/Param when the message closes
+// #endif
 // 0x138 bits u8 unk138_0:2 appeared:1 shopUnlocked:1 balloonDiscount:1 tingDiscount:1 unk138_6:2  // sent to the GC as GbaFlg.bits: appeared shows "Tingle appeared" (daAgb field_0x67a); the others set the GC's event flags (flags.shopUnlocked etc.)
 // 0x13C u8 msgOpen  // a message is up or opening (the box slides in); 0 closes it
 // 0x13D s8 msgBoxPos  // message box slide, steps toward 10 while msgOpen is set, else 0
@@ -231,6 +237,7 @@ struct ItemSlot
 // 0x239 u8 hasMagicChanged  // flags.hasMagic changed: show message 0x10 and the magic items
 // 0x23B u8 flagsReceived
 // 0x23C u8 afterLinkLost  // set by the link-lost screen: the next intro leaves BG3 off in a dungeon
+// 0x23D u8 nameSibilant  // German only: the player's name ends in s, x or z (set by Mode0State3), for the genitive in message code FB
 // end genstruct
 struct GameState
 {
@@ -330,6 +337,13 @@ struct GameState
     /*0x135*/ u8 selectedSquare;              // sea chart square under the cursor + 1 (UpdateSelection), 0: none
     /*0x136*/ u8 awayFromType20;              // the cursor has left the type 20 marker (it is only selectable after that)
     /*0x137*/ u8 filler137[0x138 - 0x137];
+#ifdef VERSION_PAL
+    /*0x138*/ s16 pendingMsg;                 // PAL (fields from here on are 8 bytes higher): ExamineSelection saves the selection's message, type and param for after reactionTimer, so moving the cursor meanwhile doesn't change what is shown and revealed
+    /*0x13A*/ u8 pendingType;
+    /*0x13B*/ u8 pendingParam;
+    /*0x13C*/ u8 pendingReveal;               // set with them; Mode1State2 reveals pendingType/Param when the message closes
+    /*0x13D*/ u8 filler13D[0x140 - 0x13D];
+#endif
     /*0x138*/ u8 unk138_0:2;                  // sent to the GC as GbaFlg.bits: appeared shows "Tingle appeared" (daAgb field_0x67a); the others set the GC's event flags (flags.shopUnlocked etc.)
               u8 appeared:1;
               u8 shopUnlocked:1;
@@ -448,7 +462,8 @@ struct GameState
     /*0x23A*/ u8 filler23A[0x23B - 0x23A];
     /*0x23B*/ u8 flagsReceived;
     /*0x23C*/ u8 afterLinkLost;               // set by the link-lost screen: the next intro leaves BG3 off in a dungeon
-    /*0x23D*/ u8 filler23D[0x240 - 0x23D];
+    /*0x23D*/ u8 nameSibilant;                // German only: the player's name ends in s, x or z (set by Mode0State3), for the genitive in message code FB
+    /*0x23E*/ u8 filler23E[0x240 - 0x23E];
 };
 
 extern struct GameState gGameState;
@@ -457,8 +472,8 @@ extern struct GameState gGameState;
 // (gGameState.scrollTable picks one).
 extern u16 gBgScrollTables[][160];
 // The same tables by constant address, as the game code addresses them (see GBACOM_BUF_MARKERS).
-#define BG_SCROLL_TABLE_0 ((u16 *)(PROG_BASE - 0x4C0))
-#define BG_SCROLL_TABLE_1 ((u16 *)(PROG_BASE - 0x380))
+#define BG_SCROLL_TABLE_0 ((u16 *)(WORK_TOP - 0x4C0))
+#define BG_SCROLL_TABLE_1 ((u16 *)(WORK_TOP - 0x380))
 
 // Graphics in .rodata (LZ77-compressed except the palettes).
 extern const u8 gMode1BgTiles[];
@@ -551,7 +566,11 @@ void ObjReset(struct Obj *obj);
 void ObjResetActive(void);  // ObjReset on every active entry
 void UpdateMap(void);
 void UpdateMsgAndTingle(void);
+#ifdef VERSION_PAL
+s32 ShowSelectionMsg(void);
+#else
 void ShowSelectionMsg(void);
+#endif
 void MsgClose(void);
 bool32 UseItem(u8 item);
 void UpdateChartOverlay(void);
@@ -711,7 +730,7 @@ struct MapImage
     /*0x34*/ u16 *map;
 };
 
-#define GBACOM_BUF_MESSAGE ((u8 *)(PROG_BASE - 0xA800))
+#define GBACOM_BUF_MESSAGE ((u8 *)(WORK_TOP - 0xA800))
 
 u16 Sqrt(u32 x);
 void MapIconFollowMarker(struct MapIcon *icon);
@@ -746,7 +765,7 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch);
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch);
 void DrawChoiceCursor(void);
 // EWRAM below the program, after the link buffers: a 16x8 glyph scaled up by TextScaleGlyph.
-#define TEXT_GLYPH_BUF ((u16 *)(PROG_BASE - 0x540))
+#define TEXT_GLYPH_BUF ((u16 *)(WORK_TOP - 0x540))
 // A 4bpp pixel pair doubled horizontally: 0xAB -> 0xAABB.
 #define EXPAND_NIBBLES(b) (((((b) & 0xF0) + (((b) & 0xF0) >> 4)) << 8) + (((b) & 0x0F) + (((b) & 0x0F) << 4)))
 extern const u32 gTextColorMasks[];
@@ -860,7 +879,7 @@ extern const u8 gTingleSprite[];
 
 extern const struct ItemSlot gShopItemsInit[12];
 
-#define GBACOM_BUF_ITEM ((u8 *)(PROG_BASE - 0x6C0))
+#define GBACOM_BUF_ITEM ((u8 *)(WORK_TOP - 0x6C0))
 
 // Animations (they overlap: each starts somewhere in one frame table).
 extern const struct SpriteFrame gBalloonSprite[];
@@ -926,8 +945,8 @@ void Effect11(void);
 void Effect12(void);
 void Effect14(void);
 void SelectWindowWipe(u8 open);
-#define GBACOM_BUF_SHOP     ((u8 *)(PROG_BASE - 0x570))
-#define GBACOM_BUF_ITEM_BUY ((u8 *)(PROG_BASE - 0x560))
+#define GBACOM_BUF_SHOP     ((u8 *)(WORK_TOP - 0x570))
+#define GBACOM_BUF_ITEM_BUY ((u8 *)(WORK_TOP - 0x560))
 // Shop purchase requests (slot 12), 3 bytes each.
 extern const u8 gShopRequests[9];
 extern const s16 gEffectBobOffsets[4];

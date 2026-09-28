@@ -853,7 +853,7 @@ void UpdateMap(void)
         {
             if (gGameState.mapScrolling == 1)
             {
-                SoundPlay(7 - SOUND_ID_SHIFT, 0);
+                SoundPlay(SE_FREE_OFF, 0);
                 gGameState.mapScrolling = 0;
             }
             if (gGameState.viewLocked == 0)
@@ -940,6 +940,29 @@ void UpdateMapView(void)
 #define FLOOR_EDGE_TILE 0x01
 #endif
 
+// The floor box: a letter (two tiles, top and bottom) and a digit. US and English put the
+// letter 0xE05C before a basement's digit and 0xE05E after an upper floor's. The other PAL
+// languages give floor 1, the ground floor, tiles of its own and count the floors above it
+// from 1 (presumably "EG", "RC", "PB", "PT"); German puts 0xE05E before a basement's digit and
+// 0xE05C before an upper floor's, French the letter after a basement's digit.
+#if PAL_LANGUAGE == 1
+#define FLOOR_BASEMENT_TILE 0xE05E
+#else
+#define FLOOR_BASEMENT_TILE 0xE05C
+#endif
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 2
+#define FLOOR_GROUND_TILES ((const u16 []){0xE06F, 0xE07F, 0xE089, 0xE099})
+#elif PAL_LANGUAGE == 3
+#define FLOOR_GROUND_TILES ((const u16 []){0xE05E, 0xE05F, 0xE06F, 0xE07F})
+#elif PAL_LANGUAGE == 4
+#define FLOOR_GROUND_TILES ((const u16 []){0xE05E, 0xE05F, 0xE073, 0xE074})
+#endif
+#if PAL_LANGUAGE >= 1 && PAL_LANGUAGE <= 4
+#define FLOOR_FIRST 1  // the ground floor is 1, and floor 2 shows as "1"
+#else
+#define FLOOR_FIRST 0
+#endif
+
 // Draw the dungeon floor number next to the map (blank outside dungeons or with no floor).
 void DrawFloorNumber(void)
 {
@@ -971,17 +994,40 @@ void DrawFloorNumber(void)
         {
             u8 n = ~floor * 2 + 2;  // -floor * 2
 
-            map[0x21] = 0xE05C;
-            map[0x41] = 0xE05D;
+#if PAL_LANGUAGE == 2
+            map[0x21] = n + 0xE030;
+            map[0x41] = n + 0xE031;
+            map[0x22] = 0xE05C;
+            map[0x42] = 0xE05D;
+#else
+            map[0x21] = FLOOR_BASEMENT_TILE;
+            map[0x41] = FLOOR_BASEMENT_TILE + 1;
             map[0x22] = n + 0xE030;
             map[0x42] = n + 0xE031;
+#endif
         }
+#if PAL_LANGUAGE >= 1 && PAL_LANGUAGE <= 4
+        else if (gGameState.mapImage->floor == 1)
+        {
+            map[0x21] = FLOOR_GROUND_TILES[0];
+            map[0x41] = FLOOR_GROUND_TILES[1];
+            map[0x22] = FLOOR_GROUND_TILES[2];
+            map[0x42] = FLOOR_GROUND_TILES[3];
+        }
+#endif
         else
         {
-            map[0x21] = gGameState.mapImage->floor * 2 + (s16)0xE030;
-            map[0x41] = gGameState.mapImage->floor * 2 + (s16)0xE031;
+#if PAL_LANGUAGE == 1
+            map[0x21] = 0xE05C;
+            map[0x41] = 0xE05D;
+            map[0x22] = (gGameState.mapImage->floor - 1) * 2 + (s16)0xE030;
+            map[0x42] = (gGameState.mapImage->floor - 1) * 2 + (s16)0xE031;
+#else
+            map[0x21] = (gGameState.mapImage->floor - FLOOR_FIRST) * 2 + (s16)0xE030;
+            map[0x41] = (gGameState.mapImage->floor - FLOOR_FIRST) * 2 + (s16)0xE031;
             map[0x22] = 0xE05E;
             map[0x42] = 0xE05F;
+#endif
         }
     }
 }
@@ -1775,6 +1821,42 @@ none:
 // `!= 0` test's load), and that address register living into the switch gives idx r2.
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
+#ifdef VERSION_PAL
+// PAL returns the message instead of showing it, so ExamineSelection can keep it for after
+// the thinking pause. The gbaName ranges start at round message numbers.
+s32 ShowSelectionMsg(void)
+{
+    u8 idx = gGameState.selectedMarker;
+
+    if (gGameState.selectedSquare != 0)
+    {
+        switch (gGameState.selectedSquare)
+        {
+        case 0x21:
+            if (gGameState.flags.hasCabanaDeed)
+                return 0x13E;
+            // fall through
+        default:
+            return gGameState.selectedSquare + 0x14D;
+        }
+    }
+    if (gGameState.markers[idx].type == 0x13)
+        return (u16)gFriendMsgIds[gGameState.markers[idx].param - 1];
+    if (gGameState.markers[idx].type == 0x14)
+        return 0x5D;
+    if (gGameState.markers[idx].gbaName <= 0x23)
+        return (u16)(gGameState.markers[idx].gbaName - 1) + 100;
+    if (gGameState.markers[idx].gbaName <= 0x27)
+        return (u16)(gGameState.markers[idx].gbaName - 0x24) + 160;
+    if (gGameState.markers[idx].gbaName <= 0x2C)
+        return (u16)(gGameState.markers[idx].gbaName - 0x28) + 170;
+    if (gGameState.markers[idx].gbaName <= 0x38)
+        return (u16)(gGameState.markers[idx].gbaName - 0x2D) + 180;
+    if (gGameState.markers[idx].gbaName <= 0x40)
+        return (u16)(gGameState.markers[idx].gbaName - 0x39) + 200;
+    return (u16)(gGameState.markers[idx].gbaName - 0x41) + 176;
+}
+#else
 void ShowSelectionMsg(void)
 {
     u8 idx = gGameState.selectedMarker;
@@ -1816,6 +1898,7 @@ void ShowSelectionMsg(void)
     else
         ShowMessage(ID(gGameState.markers[idx].gbaName, 0x6F), 1);
 }
+#endif
 
 // A on the selection (selectedMarker: a marker, or selectedSquare): 0 (nothing selected): send
 // the pending switch record; 1 (not examined yet): a random thinking message (0x15-0x17), and
@@ -1888,6 +1971,12 @@ void ExamineSelection(void)
                 ShowMessage(0x16, 1);
             else
                 ShowMessage(0x15, 1);
+#ifdef VERSION_PAL
+            gGameState.pendingMsg = ShowSelectionMsg();
+            gGameState.pendingType = gGameState.selectedType;
+            gGameState.pendingParam = gGameState.markers[gGameState.selectedMarker].param;
+            gGameState.pendingReveal = 1;
+#endif
             gGameState.reactionTimer = gMain.random % 60 + 30;
             if (gGameState.markers[gGameState.selectedMarker].type != 7)
                 gGameState.selection = 2;
@@ -1895,8 +1984,12 @@ void ExamineSelection(void)
     }
     else
     {
+#ifdef VERSION_PAL
+        ShowMessage(ShowSelectionMsg(), 1);
+#else
         ShowSelectionMsg();
         SoundPlay(2, 0);
+#endif
     }
 }
 

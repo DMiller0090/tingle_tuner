@@ -17,7 +17,40 @@ void Mode1RecvMarkers(void);
 
 #ifndef VERSION_GZLJ01
 // 0xFF-terminated byte string used by Mode0State0; not in the Japanese build.
+#if PAL_LANGUAGE == 1
+// "Verbindungsaufbau..."
+const u8 gMode0UsString[] = {0x16, 0x1F, 0x2C, 0x1C, 0x23, 0x28, 0x1E, 0x2F, 0x28, 0x21, 0x2D, 0x1B,
+                             0x2F, 0x20, 0x1C, 0x1B, 0x2F, 0x5F, 0x5F, 0x5F, 0xFF};
+#elif PAL_LANGUAGE == 2
+// "Appel en cours" and 0x65, an ellipsis
+const u8 gMode0UsString[] = {0x01, 0x2A, 0x2A, 0x1F, 0x26, 0xFD, 0x1F, 0x28, 0xFD, 0x1D, 0x29, 0x2F,
+                             0x2C, 0x2D, 0x65, 0xFF};
+#elif PAL_LANGUAGE == 3
+// "LLAMANDO"
+const u8 gMode0UsString[] = {0x0C, 0x0C, 0x01, 0x0D, 0x01, 0x0E, 0x04, 0x0F, 0xFF};
+#elif PAL_LANGUAGE == 4
+// "Chiamata in corso..."
+const u8 gMode0UsString[] = {0x03, 0x22, 0x23, 0x1B, 0x27, 0x1B, 0x2E, 0x1B, 0xFD, 0x23, 0x28, 0xFD,
+                             0x1D, 0x29, 0x2C, 0x2D, 0x29, 0x5F, 0x5F, 0x5F, 0xFF};
+#else
+// "Calling..."
 const u8 gMode0UsString[] = {0x03, 0x1B, 0x26, 0x26, 0x23, 0x28, 0x21, 0x5F, 0x5F, 0x5F, 0xFF};
+#endif
+#endif
+
+// The title's pre-drawn tiles from 0x1388, centred on BG map row 10.
+#if PAL_LANGUAGE == 1 || PAL_LANGUAGE == 4  // German, Italian
+#define TITLE_TILES 16
+#define TITLE_MAP 0x0600628E
+#elif PAL_LANGUAGE == 2  // French
+#define TITLE_TILES 13
+#define TITLE_MAP 0x06006290
+#elif PAL_LANGUAGE == 3  // Spanish
+#define TITLE_TILES 7
+#define TITLE_MAP 0x06006296
+#else
+#define TITLE_TILES 9
+#define TITLE_MAP 0x06006294
 #endif
 
 // Title sprite bob, indexed by (frameCount >> 4) & 3.
@@ -59,8 +92,8 @@ void Mode0State0(void)
     *map++ = 0x1193;
     *map = 0x118E;
 #else
-    map = (u16 *)0x06006294;
-    for (i = 9; i != 0; i--)
+    map = (u16 *)TITLE_MAP;
+    for (i = TITLE_TILES; i != 0; i--)
         *map++ = tile++;
     gGameState.textColor = 6;
     gGameState.glyphWidth = 6;
@@ -184,6 +217,10 @@ void Mode0State2(void)
 // Wait for the markers (slot 3), take the name and slot 14, and start mode 1.
 void Mode0State3(void)
 {
+#if PAL_LANGUAGE == 1
+    s32 i;
+
+#endif
     if (GbaComRecvStatusCheck(GBACOM_SLOT_CONTROL))
     {
         gGameState.mapLoaded = 0;
@@ -193,6 +230,26 @@ void Mode0State3(void)
     {
         Mode1RecvMarkers();
         GbaComRecvDataGet(gGameState.playerName, GBACOM_SLOT_NAME, sizeof(gGameState.playerName));
+#if PAL_LANGUAGE == 1
+        // German: does the name end in S, X, Z, s, x or z (the genitive is then "Links'")?
+        for (i = 0; i < 8; i++)
+        {
+            u8 c = gGameState.playerName[i];
+
+            // (with `if (c == 0xFF) break;` first, agbcc copies that test in front of the loop)
+            if (c != 0xFF)
+            {
+                if (c == 0x13 || c == 0x18 || c == 0x1A || c == 0x2D || c == 0x32 || c == 0x34)
+                    gGameState.nameSibilant = 1;
+                else
+                    gGameState.nameSibilant = 0;
+            }
+            else
+            {
+                break;
+            }
+        }
+#endif
         GbaComRecvDataGet(gChartPoints, GBACOM_SLOT_CHART_POINTS, sizeof(gChartPoints));
         gMain.mode = 1;
         gMain.modeState = 0;

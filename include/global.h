@@ -28,6 +28,17 @@ typedef u32 bool32;
 // PROG_BASE, where the packer unpacks the program, comes from config/versions.yml
 // (prog_base); tools/build.py passes it with the VERSION_* macros.
 
+// The link buffers and work areas in EWRAM below the program (GBACOM_BUF_*, the scroll tables)
+// are addressed from WORK_TOP, which is PROG_BASE except in German and French: their programs
+// load higher (0x0201CB00, 0x0201BE00) and the buffers sit 0x800 and 0x600 bytes lower still.
+#if PAL_LANGUAGE == 1
+#define WORK_TOP (PROG_BASE - 0x800)
+#elif PAL_LANGUAGE == 2
+#define WORK_TOP (PROG_BASE - 0x600)
+#else
+#define WORK_TOP PROG_BASE
+#endif
+
 #define REG_DISPCNT  (*(vu16 *)0x04000000)
 #define REG_DISPSTAT (*(vu16 *)0x04000004)
 #define REG_BG0CNT   (*(vu16 *)0x04000008)

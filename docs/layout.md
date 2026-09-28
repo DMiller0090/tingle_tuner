@@ -433,6 +433,57 @@ JP C with `VERSION_GZLJ01_demo` marking what it lacks or does differently (19 fu
 - **Data**: one message-font glyph (`gMode1BgTiles` tile `0x13E`) differs by a pixel, and 26
   tiles of `gSeaAnimTiles` differ; the rest of `.rodata` is the same apart from pointers.
 
+## PAL (GZLP01_*)
+
+The European disc has one client per language, `client_<n>.bin` (0 English, 1 German, 2
+French, 3 Spanish, 4 Italian), which `d_a_agb.cpp` picks by `dComIfGs_getPalLanguage()`
+together with `msg_LZ<n>.bin`. Each has a `client_<n>d.bin` twin that is never loaded and
+differs from it exactly as `client_ud.bin` does from `client_u.bin` (the message test in
+`ItemMenuUpdate`). All ten build from the US code (`VERSION_GZLE01`, or `VERSION_GZLE01_ud`
+for the d builds) plus `VERSION_PAL` and `PAL_LANGUAGE`. The programs load at `0x0201B000`
+(English, Spanish, Italian), `0x0201CB00` (German) and `0x0201BE00` (French).
+
+Changes in every language:
+
+- **GameState** grows by 8 bytes at `0x138` (the `#ifdef VERSION_PAL` block in the genstruct
+  list): every field from `0x138` on is 8 bytes higher, `gGameState` is `0x248` bytes, and the
+  IWRAM variables after it (`gGbaComDataStatus` ... `gObjs`) are `0x10` higher.
+- **The examined selection is remembered.** In JP/US, A on a not yet examined marker makes
+  Tingle think (`reactionTimer`), and only when that message is dismissed does `Mode1State2`
+  call `ShowSelectionMsg` and reveal the marker, both for whatever is selected *then*: moving
+  the cursor during the pause shows another marker's message and reveals the wrong hidden
+  marker (or none). In PAL `ShowSelectionMsg` returns the message instead of showing it,
+  `ExamineSelection` saves it with the selection's type and param (`pendingMsg`,
+  `pendingType`, `pendingParam`, `pendingReveal`) when Tingle starts thinking, and
+  `Mode1State2` shows and reveals the saved selection. An already examined selection also no
+  longer plays voice clip 2 (sound ID 2) with its message.
+- **Text**: message offsets count halfwords (`MsgStart`; the message data can pass 64 KiB);
+  `TextDrawGlyph` and `TextDrawSmallGlyph` (accents) draw nothing below the box's last line
+  (y > 0x44, or y = 0x44 with big text or x > 0x5A); message code `F3 11` sets the glyph
+  width to 6 like `F3 10` instead of 8.
+- `InitMapBgs` also copies BG map `0x06007AC0` over `0x06006840` in dungeons (the other label
+  of the box that holds the floor number; the sea already copied `0x06007B40`).
+- **Sound bank**: the voice clip sequences are reordered (`SOUND_SE` in sound.c).
+
+Per language (`#if PAL_LANGUAGE == n`):
+
+| | English | German | French | Spanish | Italian |
+|--|--|--|--|--|--|
+| title (`Mode0State0`) | 9 tiles, "Calling..." | 16, "Verbindungsaufbau..." | 13, "Appel en cours…" | 7, "LLAMANDO" | 16, "Chiamata in corso..." |
+| floor box (`DrawFloorNumber`) | letter before a basement's digit, after an upper floor's | ground floor label; letter before both | ground floor label; basement letter after the digit | ground floor label | ground floor label |
+| link-lost text canvas | 30 tiles | 25 | 29 | 28 | 26 |
+
+- With a ground floor of their own (floor 1, presumably "EG", "RC", "PB", "PT"), the other
+  languages show floor 2 as "1" and so on.
+- **German and French** sound banks also drop voice clip 2 and the rupee counter's end sound
+  (JP sound ID 9): the rupee counter stops silently, and sound IDs from 3 on are one to three
+  lower (`SOUND_ID_SHIFT` 3, `SE_FREE_OFF`). Their EWRAM buffers below the program
+  (`GBACOM_BUF_*`, the scroll tables) are `0x800`/`0x600` lower than the other languages'
+  offset from the program base (`WORK_TOP`).
+- **German** only: `Mode0State3` records whether the player's name ends in S, X or Z
+  (`nameSibilant`), and in messages `0x13E` and `0x17F` the "s" after the name (message code
+  `FB`) becomes an apostrophe: the genitive "Links" but "Max'".
+
 ## Answers to earlier open questions
 
 - **Raw tail block**: it's the sound bank. `gSoundBankHeader` (`.rodata`, GZLJ01

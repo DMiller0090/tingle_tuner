@@ -189,6 +189,12 @@ void InitOamBuffer(void)
 // The buffer fields are written through byte offsets from the constant buffer addresses:
 // that makes agbcc fold each address into one pool constant and derive the next from it, as
 // the original does (struct field access gives base + offset instead).
+#ifdef VERSION_PAL
+#define GAMESTATE_BITS_OFS 0x140  // the byte of gGameState.unk138_0 ... (GbaFlg.bits)
+#else
+#define GAMESTATE_BITS_OFS 0x138
+#endif
+
 void MainLoop(void)
 {
     // The original reserves 4 bytes of stack it never touches: most likely a leftover local
@@ -200,7 +206,7 @@ void MainLoop(void)
         gMain.linked = GbaComMain();
         if (gMain.linked)
         {
-            *(u8 *)(GBACOM_BUF_GBA_FLG + 2) = *((u8 *)&gGameState + 0x138);
+            *(u8 *)(GBACOM_BUF_GBA_FLG + 2) = *((u8 *)&gGameState + GAMESTATE_BITS_OFS);
             *(u16 *)(GBACOM_BUF_GBA_FLG + 4) = gMain.bgOfs[3][0] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 6) = gMain.bgOfs[3][1] + 8;
             *(u16 *)(GBACOM_BUF_GBA_FLG + 0) = gMain.heldKeys;
