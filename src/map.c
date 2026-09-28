@@ -1184,35 +1184,33 @@ INCLUDE_ASM(UpdateTargetCompass);
 
 // Copy each view quadrant's current sea animation frame into the BG tiles, then the map image
 // tiles (loaded at 0x0600C000) to 0x06004000.
-// Nearly matches: only the last two instructions of each tile address differ (the original
-// adds the VRAM base into a new register, `mov r2, sl; adds r0, r1, r2`, where this adds it in
-// place). The separate a and t are needed to keep 0x300 from being folded into the base.
-// Why: local-alloc only ties the sum to a's register when the sum's pseudo dies once, but a
-// user var set in both halves dies twice; sums into a new temp or per-half variables instead
-// let agbcc allocate a to r0 (42-60 diff lines). Also tried a *= 32, pointer/array forms of
-// the source address, u32/u16 types and statement orders.
-//     void Mode1VBlank(void)
-//     {
-//         u8 *dest = (u8 *)0x0600EC00;
-//         s32 i;
-//         s32 a, t;
-//
-//         for (i = 0; i < 4; i++)
-//         {
-//             a = gGameState.seaTileSet[i] * 16;
-//             t = gSeaAnimFrames[gGameState.seaAnimFrame[i]] * 4 + 0x300;
-//             a += t;
-//             CpuCopy32((u8 *)0x06008000 + a * 32, dest, 0x80);
-//             dest += 0x80;
-//             a = gGameState.seaTileSet[i] * 16;
-//             t = ((gSeaAnimFrames[gGameState.seaAnimFrame[i]] + 2) & 3) * 4 + 0x300;
-//             a += t;
-//             CpuCopy32((u8 *)0x06008000 + a * 32, dest, 0x80);
-//             dest += 0x80;
-//         }
-//         CpuCopy32((void *)0x0600C000, (void *)0x06004000, 0x2000);
-//     }
-INCLUDE_ASM(Mode1VBlank);
+// A separate tile index per half and a shared src pointer: the index dies once, so local-alloc
+// ties it to the tile-set term, and src (set twice) is left to global-alloc, so the final add
+// isn't tied into r0 (one shared index, or passing the address straight, adds in place).
+void Mode1VBlank(void)
+{
+    u8 *dest = (u8 *)0x0600EC00;
+    s32 i;
+    s32 a1, a2, t;
+    u8 *src;
+
+    for (i = 0; i < 4; i++)
+    {
+        a1 = gGameState.seaTileSet[i] * 16;
+        t = gSeaAnimFrames[gGameState.seaAnimFrame[i]] * 4 + 0x300;
+        a1 += t;
+        src = (u8 *)0x06008000 + a1 * 32;
+        CpuCopy32(src, dest, 0x80);
+        dest += 0x80;
+        a2 = gGameState.seaTileSet[i] * 16;
+        t = ((gSeaAnimFrames[gGameState.seaAnimFrame[i]] + 2) & 3) * 4 + 0x300;
+        a2 += t;
+        src = (u8 *)0x06008000 + a2 * 32;
+        CpuCopy32(src, dest, 0x80);
+        dest += 0x80;
+    }
+    CpuCopy32((void *)0x0600C000, (void *)0x06004000, 0x2000);
+}
 
 // Icon type 1: follow the player's marker (type 3, else type 1).
 void MapIconFollowMarker(struct MapIcon *icon)
