@@ -20,15 +20,19 @@ void HeapInit(struct Heap *heap, u32 size)
 
 // First fit, merging free neighbours on the way. A multiple-of-4 request gets a 4-aligned
 // payload: a block whose payload isn't aligned is split into an empty block and the rest.
-// Near-miss: same code shape, but block/total/avail get r4/r2/r3 where the original has
-// r5/r3/r4 (and the 0xFFFE constant is loaded later); declaration order and scopes don't move it.
+// Near-miss: same code, but block/total/avail/rest get r4/r2/r3/r1 where the original has
+// r5/r3/r4/r2. The header `size | 1` is written at the store so loop.c hoists it after the
+// 0xFFFE mask, as in the original. The rest of the diff looks like it comes from the rest store:
+// the original keeps `total - need` in r1 apart from its `- 2` (r0), so rest (allocated first)
+// can't take r1 and total then can't take r2; agbcc ties the two temporaries into r0.
+// Temporaries/user vars for `total - need`, other operand orders and the align-split forms
+// don't change it.
 //     void *HeapAlloc(struct Heap *heap, u32 size)
 //     {
 //         bool32 align4 = FALSE;
 //         u32 need;
 //         u16 *block;
 //         u16 *firstFree;
-//         u32 header;
 //
 //         if ((size & 3) == 0)
 //             align4 = TRUE;
@@ -42,7 +46,6 @@ void HeapInit(struct Heap *heap, u32 size)
 //             block = firstFree;
 //         if (*block == HEAP_END)
 //             return NULL;
-//         header = size | HEAP_BLOCK_USED;
 //         do
 //         {
 //             u32 len = *block & ~HEAP_BLOCK_USED;
@@ -98,7 +101,7 @@ void HeapInit(struct Heap *heap, u32 size)
 //                         if (firstFree > rest)
 //                             heap->firstFree = rest;
 //                     }
-//                     *block = header;
+//                     *block = size | HEAP_BLOCK_USED;
 //                     return block + 1;
 //                 }
 //             }
@@ -109,25 +112,26 @@ void HeapInit(struct Heap *heap, u32 size)
 //     }
 INCLUDE_ASM(HeapAlloc);
 
-// Nearly matches (the re-read and the -2 mask come out right), but r0/r1 are swapped
-// around the AND in the `&=`; operand order, casts, 0xFFFE and a u16 temporary don't
-// change it (an s16 temporary gets the registers right but adds a sign extension):
-//     void HeapFree(struct Heap *heap, void *ptr)
-//     {
-//         volatile s16 *block;
-//
-//         if (ptr != NULL)
-//         {
-//             block = (volatile s16 *)ptr - 1;
-//             if (*block & HEAP_BLOCK_USED)
-//             {
-//                 *block &= ~HEAP_BLOCK_USED;
-//                 if (heap != NULL && (heap->firstFree > (u16 *)block || heap->firstFree == NULL))
-//                     heap->firstFree = (u16 *)block;
-//             }
-//         }
-//     }
-INCLUDE_ASM(HeapFree);
+// The header is cleared through a u32 temporary: its zero-extending load keeps the loaded
+// value as the AND's destination (a u16 `&=` ties the -2 constant's register instead).
+void HeapFree(struct Heap *heap, void *ptr)
+{
+    u16 *block;
+
+    if (ptr != NULL)
+    {
+        block = (u16 *)ptr - 1;
+        if (*block & HEAP_BLOCK_USED)
+        {
+            u32 header = *block;
+
+            header &= ~HEAP_BLOCK_USED;
+            *block = header;
+            if (heap != NULL && (heap->firstFree > block || heap->firstFree == NULL))
+                heap->firstFree = block;
+        }
+    }
+}
 
 // Merge each run of adjacent free blocks into one and recompute firstFree.
 void HeapCompact(struct Heap *heap)
