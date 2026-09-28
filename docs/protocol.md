@@ -154,13 +154,24 @@ Two sides gate a Tingle Tuner item:
   `GbaItemUse` answers items 3-5, 0x11 and 0x12 with a deny message in `CheckAgbHover` rooms
   while `mBombDeny` is set.
 
-**The disconnect glitch** (observed live in GZLJ01 `GanonA`, 2026-09-27): the stage is a
-dungeon-type stage, but `field_0x670` stays 0 there, because `MapNoSet` is only called from
+**The disconnect glitch** (watched live in GZLJ01 `GanonA`, 2026-09-27). `GanonA` is a
+dungeon-type stage, but `field_0x670` stays 0 there: `MapNoSet` is normally only called from
 `dMap_c::mapAGBSendMapMain` when a map image is sent (send status case 2), and rooms whose map
-can't be displayed never get there. So the GBA sits on its wait screen. On a reconnect
-(`mDoGaC_getReConnect()`), `mapAGBSendMapMain` calls `agbMapNoSetCall` directly (d_map.cpp
-~1511) without the map-display check: `MapNoSet(8, 1, 0)` ran, `field_0x670` became 1,
-`noMap` dropped to 0 on the next `FlagsSend`, the GBA reached state 2, sent "active", and a
-Tingle Bomb went through. `mReConnect` is only set by `mDoGaC_ContextCheck` when
-`field_0x128[0].field_0x0` is already 1 (the first matching context only sets it), which
-plausibly is why it takes two disconnects. That part was not watched live.
+can't be displayed never get there. So the GC sends `noMap` = 1 and the GBA waits in
+`Mode1State4`. It takes two reconnects:
+
+1. **First reconnect**: `mDoGaC_ContextCheck` sees the known context and sets `mReConnect`
+   (`field_0x128[0].field_0x0` was already 1). `mapAGBSendMapMain` then calls
+   `agbMapNoSetCall` directly (d_map.cpp ~1511), skipping the map-display check:
+   `MapNoSet(8, 1, 0)`, `field_0x670` = 1, and `noMap` = 0 from the next `FlagsSend` (~0.1 s
+   after the relink). But the GBA re-entered mode 1 while `noMap` was still 1, so
+   `Mode1State0` set `unk10E = 0` ("no map loaded"). In a dungeon (`dungeonNo` 17 here),
+   `Mode1State4` only moves on once `unk10E` is set by a received map image (slot 2), which
+   this room never sends. The GBA stays stuck on the wait screen.
+2. **Second reconnect**: the GBA goes through mode 2 into `Mode1State0` again. Now `noMap` = 0,
+   so it sets `unk10E = 1` (it keeps the old map) and `unk457 = inDungeon`. It runs the intro
+   (`Mode1State1`) into state 2, sends "active" (~7 s after the relink), and items go through
+   (`GbaItemUse`, e.g. a Tingle Bomb).
+
+So the GC half of the bug is the reconnect path calling `MapNoSet` unconditionally. The GBA
+half is `Mode1State0` trusting `noMap` = 0 to mean a map is already loaded.
