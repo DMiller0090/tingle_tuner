@@ -303,7 +303,9 @@ void DrawMapMarkers(void)
         }
         if (gGameState.holdState != 0)
         {
+#ifndef VERSION_GZLJ01_demo
             if (gGameState.flags.cursorHeld)
+#endif
             {
                 if (gGameState.holdTimer == 0)
                 {
@@ -331,10 +333,12 @@ void DrawMapMarkers(void)
                     gGameState.holdTimer--;
                 }
             }
+#ifndef VERSION_GZLJ01_demo
             else if (gGameState.holdState == 1)
             {
                 gGameState.holdState = 0;
             }
+#endif
         }
         else if (gGameState.itemsEnabled && gGameState.flags.busy == 0)
         {
@@ -580,7 +584,11 @@ void DrawMapMarkers(void)
         dx = gGameState.icons[2].x - gMain.bgOfs[3][0];
         dy = gGameState.icons[2].y - gMain.bgOfs[3][1];
 
+#ifdef VERSION_GZLJ01_demo
+        if ((u16)(dx + 0x40) <= 0x17F && (u16)(dy + 0x40) <= 0x17F)
+#else
         if ((u16)(dx + 0x40) <= 0xFF && (u16)(dy + 0x40) <= 0xFF)
+#endif
 #ifdef VERSION_GZLJ01
             DrawSpriteAt(gTargetSprite, gGameState.icons[2].frame, dx, dy, mosaic, 0, 1);
 #else
@@ -1385,9 +1393,11 @@ void MapIconCursor(struct MapIcon *icon)
                 }
                 else
                 {
+#ifndef VERSION_GZLJ01_demo
                     if (square == 32 && gGameState.flags.hasCabanaDeed)
                         ShowMessage(0x13E, 1);
                     else
+#endif
                         ShowMessage(0x14E + gChartPoints[i].square, 1);
 #ifndef VERSION_GZLJ01
                     gGameState.msgWaitTimer = 0;
@@ -1450,14 +1460,19 @@ void DrawQuestMarkers(void)
     }
 }
 
-// B closes and L toggles the sea chart overlay (chartOpen) while itemsEnabled allows it; while it
-// is open, A (once) calls InitCursorIcon and the quest markers are drawn.
+// B closes and L toggles the sea chart overlay (chartOpen) while itemsEnabled allows it (the
+// demo doesn't check it); while it is open, A (once) calls InitCursorIcon and the quest
+// markers are drawn.
 void UpdateChartOverlay(void)
 {
     u16 tile;
     u16 *map;
 
+#ifdef VERSION_GZLJ01_demo
+    if (gMain.newKeys & 0x202)
+#else
     if (gGameState.itemsEnabled && (gMain.newKeys & 0x202))
+#endif
     {
         gGameState.placingTarget = 0;
         gGameState.icons[1].type = 0;
@@ -1623,7 +1638,11 @@ s32 UpdateSelection(void)
         gGameState.selectedType = type;
         if (gGameState.markers[i].gbaName != 0)
         {
-            if (gGameState.markers[i].type == 2 || gGameState.markers[i].type == 6 || gGameState.markers[i].type == 14 || gGameState.markers[i].type == 15)
+            if (gGameState.markers[i].type == 2 || gGameState.markers[i].type == 6 || gGameState.markers[i].type == 14 || gGameState.markers[i].type == 15
+#ifdef VERSION_GZLJ01_demo
+             || gGameState.markers[i].type == 12
+#endif
+            )
             {
                 gGameState.selection = 1;
                 return i;
@@ -1641,6 +1660,7 @@ s32 UpdateSelection(void)
                 }
                 return i;
             }
+#ifndef VERSION_GZLJ01_demo
             if (gGameState.markers[i].type == 12)
             {
                 if (gGameState.revealedType12)
@@ -1652,6 +1672,7 @@ s32 UpdateSelection(void)
                 }
                 return i;
             }
+#endif
             if (gGameState.selection == 0)
             {
                 if (gGameState.flags.isFree)
