@@ -278,11 +278,10 @@ void TextClearCanvas(void)
 // Blit a glyph's 4bpp rows (src, one word per 8-pixel row) into the text canvas at dst,
 // x pixels into the tile: n rows into this tile row, the rest (rows - n) into the next one
 // (0x180 bytes on, 12 tiles per row). Pixels that spill past the tile go to the next tile.
-// Near-miss: same code shape, but the original keeps src in its stack slot and mask2 in r9
-// (and dst's incremented copy in r0 across the inner loop); agbcc gives src a register here.
-/*
-void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst) asm("TextBlitGlyph");
-void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
+// The u8 x and y (the header's types) matter: their zero-extensions, folded into `& 7` by
+// combine, still count in src's live length, which leaves src in its stack slot.
+#ifdef VERSION_GZLJ01
+void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
 {
     s32 shift, n, m, i;
     u32 mask, mask2, w, *prev;
@@ -298,42 +297,43 @@ void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
         mask2 = -1;
     else
         mask2 = 0x11FFFFFF;
-    for (; n > 0; n--)
+    for (; n > 0; dst++, n--)
     {
         prev = dst;
         w = *src++ & mask & mask2;
         if (shift)
         {
-            *dst++ |= w << ((8 - shift) * 4);
+            *dst |= w << ((8 - shift) * 4);
             for (i = shift; i > 0; i--)
                 w = (w >> 4) | 0x10000000;
             prev[8] = w;
         }
         else
         {
-            *dst++ = w;
+            *dst = w;
         }
     }
     dst += 0x58;
-    for (; m > 0; m--)
+    for (; m > 0; dst++, m--)
     {
         prev = dst;
         w = *src++ & mask;
         if (shift)
         {
-            *dst++ |= w << ((8 - shift) * 4);
+            *dst |= w << ((8 - shift) * 4);
             for (i = shift; i > 0; i--)
                 w = (w >> 4) | 0x10000000;
             prev[8] = w;
         }
         else
         {
-            *dst++ = w;
+            *dst = w;
         }
     }
 }
-*/
+#else
 INCLUDE_ASM(TextBlitGlyph);
+#endif
 
 // Scale a glyph (4 bytes = 8 pixels a row, count bytes) up 2x into TEXT_GLYPH_BUF: the left
 // half of each row goes to the first 8x8 4bpp tile, the right half to the second. The US
