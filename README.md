@@ -89,7 +89,10 @@ from the extracted binary on every build.
    `--comment` takes the near-miss comment above `INCLUDE_ASM(<function>)` and writes it
    uncommented into a copy of its source file under `build/<ver>/scratch/`.
    `python tools/vary.py <ver> <function> file.c variants.py` scores a list of rewrites (each a
-   list of `(old, new)` text replacements) in one go; see its docstring.
+   list of `(old, new)` text replacements) in one go; see its docstring. When only registers
+   differ, `python tools/prio.py <ver> <function> file.c` (or `--comment`) prints agbcc's
+   global-alloc ranking (refs, live length, priority, hard register per pseudo; `--rtl N`
+   shows where pseudo N is used), to see which two values' priorities need to swap.
 
 Functions not decompiled yet stay in their C file as `INCLUDE_ASM(Name);` (from
 `build/<ver>/asm/funcs/`, written for every function in a C range). A second line
@@ -124,6 +127,7 @@ tools/lz77.py              byte-matching GBA LZ77 codec
 tools/port_symbols.py      copy GZLJ01's names to another version by matching functions
 tools/progress.py          share of .text built from C, per version
 tools/scratch.py, vary.py  compile one function against the last build; score variants
+tools/prio.py              agbcc's register-allocation priorities for one function
 docs/                      layout.md (sections, modules), protocol.md (GC<->GBA link)
 ```
 
