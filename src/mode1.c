@@ -711,7 +711,8 @@ void Mode1RecvMarkers(void)
         gGameState.active = 0;
     else if (gGameState.gcActive == 0)
     {
-        if (*(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0 && gGameState.menuOpen == 0)
+        if (gGameState.inMessage == 0 && gGameState.selectWinOpen == 0 && gGameState.chartOpen == 0
+         && gGameState.menuOpen == 0)
             gGameState.active = 1;
         else
             gGameState.active = GBACOM_BUF_MARKERS[1];
@@ -1075,7 +1076,8 @@ void MainMode1(void)
                 if (gGameState.switchType == 5 || gGameState.switchType == 6
                  || gGameState.switchType == 9 || gGameState.switchType == 7
                  || gGameState.switchType == 11 || gGameState.switchType == 12
-                 || (gGameState.switchType == 13 && !(((u16 *)&gGameState.flags)[5] & 0x180)))
+                 || (gGameState.switchType == 13 && !gGameState.flags.isFree
+                     && !gGameState.flags.followTarget))
                 {
                     if (gGameState.switchType == 12)
                     {
@@ -1266,7 +1268,8 @@ void MainMode1(void)
     {
         if (gGameState.squareMsgTimer != 0)
             gGameState.squareMsgTimer--;
-        else if (gGameState.menuOpen == 0 && *(u16 *)&gGameState.inMessage == 0 && gGameState.chartOpen == 0)
+        else if (gGameState.menuOpen == 0 && gGameState.inMessage == 0 && gGameState.selectWinOpen == 0
+              && gGameState.chartOpen == 0)
         {
             gGameState.squareMsgPending = 0;
             i = 0;
