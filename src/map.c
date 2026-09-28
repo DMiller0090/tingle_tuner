@@ -227,10 +227,13 @@ end:
 // are drawn as gSpriteTable[7].
 // Matching notes: every local is declared at the top in this order, which gives the original's
 // spill slots (i, dx, scale, mosaic, then the dy << 16 temp). The original compares the type
-// twice (`type == 3 ... type == 3`); cse deletes the second test for any C form that yields the
-// same value, so `type` is a hard-register variable (FAKEMATCH): cse records no equivalences
-// for non-fixed hard registers. It is copied from `t` after the continue checks so that
-// local-alloc ties the 0x3F constant to `t` (`movs r2, #0x3f; ands r2, r0`). The icon at the end
+// with 3 twice in a row: the cursor test is `!(type == 3 && holdState != 0) && marker->type == 3`,
+// whose `type != 3` exit jumps to the second test. cse stops at that label, and thread_jumps
+// only redirects the exit past it after cse2, when both tests use the same register; before
+// cse1 it doesn't, because one side is the user variable `type` and the other a bitfield temp
+// (spelling both the same way lets the pre-cse1 threading run and cse1 then folds the second
+// test). `type` is the masked byte (`0x3F & byte`), the form the bitfield compares take; a
+// plain `marker->type` read extracts with shifts instead. The icon at the end
 // reuses dx/dy, which settles the global-alloc ties (JP: dy before the highlight call's zero
 // constant, so dy gets r2 and dx's copy r6; US: mosaic, not dx, gets sl). US passes 12 for type
 // 1's param == 3 sprite and frame 0 for the icon; its pal is set but never gets a register.
@@ -391,14 +394,12 @@ void DrawMapMarkers(void)
     gGameState.enemyHighlighted = 0;
     for (i = 0; i < gGameState.markerCount; marker++, i++)
     {
-        register u32 type asm("r2");  // FAKEMATCH
-        u32 t = 0x3F & ((u8 *)marker)[5];
+        u32 type = 0x3F & ((u8 *)marker)[5];
 
-        if (t == 0 || marker->type > 21)
+        if (type == 0 || marker->type > 21)
             continue;
-        type = t;
         scale = 0;
-        if (!gGameState.itemsEnabled && type == 3 && gGameState.holdState == 0 && type == 3)
+        if (!gGameState.itemsEnabled && !(type == 3 && gGameState.holdState != 0) && marker->type == 3)
         {
             if (!gGameState.effectActive)
                 continue;
@@ -1098,6 +1099,15 @@ u32 MarkerDistance(u8 arg)
 // global-alloc must rank level (14 refs) above that zero (15 refs) so level takes r4, the
 // zero r5 and gGameState r6, which needs the zero's live length >= 15/14 of level's. The
 // separate timer decrement/increment statements shorten level's range.
+// What's left artificial: one `x = (s16)x >> 3` per coordinate is enough to keep the
+// extensions (then only the level/zero tie differs: zero live 122, needs 128); the two extra
+// `x = (s16)x;` lines are padding for that tie. Tried without success: plain `>> 3` in one or
+// two statements (s32/s16/u16/int), `x += 0xB8` statements, s16 or u16 position temps, a
+// pointer into gSinTable, reusing dx/dy for x/y (keeps the extensions, but they go to
+// global-alloc and the loads become ldrh + lsl/asr), s16 dx/dy, (s16) or plain ArcTan2 args.
+// Closest natural form: `s16 x, y; x = gSinTable[angle] >> 3; x += 0xB8;` (fixes the tie, but
+// combine turns the s16 narrowing into ldrh + lsl #16/asr #19 and drops the extensions; 28
+// lines).
 void UpdateTargetCompass(void)
 {
     u8 angle;
@@ -1739,22 +1749,30 @@ none:
 // the Private Oasis, has 0x13E once Link has the Cabana Deed), a friend's (gFriendMsgIds), or
 // the marker's by its gbaName.
 // The ids are computed in the shifted domain, ((v << 16) + (c << 16)) >> 16, which agbcc only
-// emits for an explicit shift pair (ID below).
+// emits for an explicit shift pair (ID below). The square is tested with a switch: its index
+// is a separate int load of selectedSquare (an `if (== 0x21)` is narrowed and cse shares the
+// `!= 0` test's load), and that address register living into the switch gives idx r2.
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
 void ShowSelectionMsg(void)
 {
     u8 idx = gGameState.selectedMarker;
-    // FAKEMATCH: 0x21 in a variable (found with decomp-permuter) moves the selectedSquare value
-    // from r1 to r0 and idx to r2, as in the original; a literal gives idx the r0 preference.
-    s32 c = 0x21;
 
     if (gGameState.selectedSquare != 0)
     {
-        if (gGameState.selectedSquare == c && gGameState.flags.hasCabanaDeed)
-            ShowMessage(0x13E, 1);
-        else
+        switch (gGameState.selectedSquare)
+        {
+        case 0x21:
+            if (gGameState.flags.hasCabanaDeed)
+            {
+                ShowMessage(0x13E, 1);
+                break;
+            }
+            // fall through
+        default:
             ShowMessage(gGameState.selectedSquare + 0x14D, 1);
+            break;
+        }
     }
     else if (gGameState.markers[idx].type == 0x13)
         ShowMessage(gFriendMsgIds[gGameState.markers[idx].param - 1], 1);
