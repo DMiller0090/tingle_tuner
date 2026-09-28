@@ -202,6 +202,7 @@ void Mode1State0(void)
     gGameState.hudChartLabel = 0;
     gGameState.msgLoopSound = 0xFFFF;
     gGameState.nextMsg = -1;
+#ifndef VERSION_GZLJ01_demo
     gGameState.holdState = 0;
     gGameState.selectedType = 0;
     gGameState.selection = 0;
@@ -219,6 +220,7 @@ void Mode1State0(void)
     gGameState.chestState = 0;
     for (i = 0; i < 16; i++)
         gObjs[i].active = 0;
+#endif
     gGameState.type9Timer = gSpriteTable[9][4];
     gGameState.type9Frame = 0;
     gGameState.type13Timer = gSpriteTable[13][4];
@@ -258,7 +260,9 @@ void Mode1State0(void)
     gGameState.tingleScale = 0x300;
     ItemMenuInit();
     gGameState.itemsEnabled = 1;
+#ifndef VERSION_GZLJ01_demo
     gGameState.effectStep = 0;
+#endif
     gGameState.inMessage = 0;
     gGameState.selectWinOpen = 0;
     gGameState.chartOpen = 0;
@@ -510,10 +514,12 @@ void Mode1State2(void)
                         }
                     }
                 }
+#ifndef VERSION_GZLJ01_demo
                 else if (gGameState.mapLoaded)
                 {
                     UpdateMap();
                 }
+#endif
             }
             else if (gGameState.menuOpen == 0)
             {
@@ -567,7 +573,9 @@ void Mode1State2(void)
             else
             {
                 ItemMenuUpdate();
+#ifndef VERSION_GZLJ01_demo
                 UpdateMapView();
+#endif
             }
         }
         else
@@ -670,6 +678,23 @@ void Mode1RecvMarkers(void)
                 m += 8;
             } while (1);
             i = 0;
+#ifdef VERSION_GZLJ01_demo
+            do
+            {
+                if (gGameState.markers[i].type == 1 || i >= gGameState.markerCount)
+                    break;
+                i++;
+            } while (1);
+            // The demo only names the square and resets revealedType16.
+            if (gGameState.markers[i].x <= 0x6FF && gGameState.markers[i].y <= 0x6FF
+             && ((gGameState.markers[i].x >> 8) != (*(s16 *)m >> 8)
+                 || (gGameState.markers[i].y >> 8) != (*(s16 *)(m + 2) >> 8)))
+            {
+                gGameState.squareMsgTimer = (gMain.random % 6 + 3) * 60;
+                gGameState.squareMsgPending = 1;
+                gGameState.revealedType16 = 0;
+            }
+#else
             x = *(s16 *)m;
             do
             {
@@ -703,6 +728,7 @@ void Mode1RecvMarkers(void)
                 gGameState.switchMsg = 0xFFFF;
                 gGameState.switchType = 0;
             }
+#endif
         }
     }
     gGameState.markerCount = GBACOM_BUF_MARKERS[0];
@@ -760,7 +786,9 @@ void ResetMapState(void)
     gGameState.nextMsg = -1;
     gGameState.hudChartLabel = 0;
     gGameState.awayFromType20 = 0;
+#ifndef VERSION_GZLJ01_demo
     gGameState.chestState = 0;
+#endif
     for (i = 0; i < 16; i++)
         gObjs[i].active = 0;
     if (!gGameState.itemsEnabled)
@@ -853,6 +881,14 @@ void Mode1State4(void)
                     gMain.modeState = 5;
                 }
             }
+#ifdef VERSION_GZLJ01_demo
+            // Dead: noMap was tested above (only the flags byte is reloaded after SoundPlay).
+            else if (gMain.unk404 == 0 && gGameState.flags.noMap)
+            {
+                gMain.soundDmaStop = 1;
+                gMain.unk404 = 1;
+            }
+#endif
         }
     }
     DrawSprite(gWaitSprite, 0, 120, 80, 0, 0, 0, 0, 0, 0, 0);
@@ -1065,12 +1101,20 @@ void MainMode1(void)
 
     if (GbaComRecvStatusCheck(GBACOM_SLOT_MAIL))
     {
+#ifdef VERSION_GZLJ01_demo
+        if (gGameState.menuOpen == 0 && gGameState.chartOpen == 0 && gMain.modeState == 2)
+#else
         if (gMain.modeState == 2)
+#endif
         {
             if (GBACOM_BUF_MAIL[7])
                 PlayMsgSound(GBACOM_BUF_MAIL[7] - 1);
+#ifdef VERSION_GZLJ01_demo
+            if (gGameState.inMessage == 0)
+#else
             if (gGameState.inMessage == 0 && gGameState.menuOpen == 0 && gGameState.chartOpen == 0
              && gGameState.selectWinOpen == 0)
+#endif
             {
                 GbaComRecvDataGet(&gGameState.switchMsg, GBACOM_SLOT_MAIL, 8);
                 if (gGameState.switchType == 5 || gGameState.switchType == 6
@@ -1083,8 +1127,10 @@ void MainMode1(void)
                     {
                         if (gGameState.holdState == 0)
                         {
+#ifndef VERSION_GZLJ01_demo
                             if (!gGameState.flags.cursorHeld)
                                 gGameState.flags.cursorHeld = 1;
+#endif
                             gGameState.holdState = 1;
                             gGameState.holdMsgIndex = 0;
                             gGameState.holdFrame = 0;
@@ -1153,7 +1199,9 @@ void MainMode1(void)
         else
         {
             GbaComRecvDataGet(gGameState.effect, GBACOM_SLOT_EFFECT, 4);
-            gGameState.itemsEnabled = 0;
+#ifndef VERSION_GZLJ01_demo
+            gGameState.itemsEnabled = 0;  // the demo's UseItem already cleared it
+#endif
             gGameState.effectActive = 1;
             if (gGameState.effect[0] == 2 || gGameState.effect[0] == 15 || gGameState.effect[0] == 21)
             {
@@ -1198,12 +1246,14 @@ void MainMode1(void)
             }
             else if (gGameState.effect[0] == 20)
                 gGameState.effect[0] = gGameState.savedEffect;
+#ifndef VERSION_GZLJ01_demo
             else if (gGameState.effect[0] == 19)
             {
                 ShowMessage(0x2D, 1);
                 gGameState.effect[0] = 5;
                 gGameState.effectStep = 6;
             }
+#endif
             else
                 gGameState.effectTimer = 0;
         }

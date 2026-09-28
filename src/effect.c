@@ -370,7 +370,10 @@ void StartRandomEffect(void)
 // Item effect 5.
 void Effect5(void)
 {
-    DrawEffectIntro();
+#ifdef VERSION_GZLJ01_demo
+    if (gGameState.effectStep != 6)
+#endif
+        DrawEffectIntro();
     if (gGameState.effectStep == 2)
     {
         if (gGameState.inMessage == 0)
@@ -387,7 +390,11 @@ void Effect5(void)
                 }
                 else if (gGameState.effect[1] == 0x13)
                 {
+#ifdef VERSION_GZLJ01_demo
+                    ShowMessage(0x2D, 1);
+#else
                     SendItemUse(0x13, gGameState.items[5].price);
+#endif
                     gGameState.effectStep = 5;
                 }
                 else
@@ -403,6 +410,17 @@ void Effect5(void)
             }
         }
     }
+#ifdef VERSION_GZLJ01_demo
+    else if (gGameState.effectStep == 5)
+    {
+        if (gGameState.msgStatus == 3)
+        {
+            gGameState.viewLocked = 0;
+            ShowMessage(0x30, 1);
+            EndItemEffect();
+        }
+    }
+#else
     else if (gGameState.effectStep == 5)
     {
     }
@@ -416,6 +434,7 @@ void Effect5(void)
             EndItemEffect();
         }
     }
+#endif
 }
 
 // Effect 7 (item 7, the shop): a random greeting.
@@ -445,12 +464,15 @@ void Effect7(void)
         if ((gGameState.msgStatus == 3 && (gMain.newKeys & 0x30F)) || gGameState.msgWaitTimer > 0x12A)
         {
             gGameState.msgOpen = 0;
+#ifndef VERSION_GZLJ01_demo
             if ((*(u32 *)gGameState.effect & 0xFFFFFF00) == 0)
             {
                 ShowMessage(0x3C, 14);
                 gGameState.dialogStep = 4;
             }
-            else if (gGameState.effect[1])
+            else
+#endif
+            if (gGameState.effect[1])
             {
                 ShowMessage(0x40, 14);
                 gGameState.dialogStep = 1;

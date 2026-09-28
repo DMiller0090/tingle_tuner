@@ -89,8 +89,10 @@ void JoyComIntr(void)
         REG_JOYSTAT &= ~JOYSTAT_GP_FLAG0;
         REG_JOYSTAT |= JOYSTAT_GP_FLAG1;
         REG_JOY_TRANS = gJoyCom.gameCode;
+#ifndef VERSION_GZLJ01_demo
         gJoyCom.recvState = JOYCOM_WORD_START;
         gJoyCom.sendState = JOYCOM_WORD_START;
+#endif
         return;
     }
 
@@ -153,11 +155,13 @@ void JoyComIntr(void)
             REG_JOY_TRANS = *(u32 *)&gJoyCom.context;
             gJoyCom.hasContext = TRUE;
             gJoyCom.state = JOYCOM_STATE_LINKED;
+#ifndef VERSION_GZLJ01_demo
             for (i = 0; i < gJoyCom.numSlots; i++)
                 gJoyCom.status[i] = GBACOM_STATUS_IDLE;
             gJoyCom.queueCount = 0;
             gJoyCom.queueWrite = 0;
             gJoyCom.queueRead = 0;
+#endif
         }
         break;
     case JOYCOM_STATE_LINKED:

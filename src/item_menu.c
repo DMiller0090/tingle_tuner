@@ -195,9 +195,12 @@ void ChestCounterMain(void)
 
 // Item menu: move the cursor over the 5 x 3 slots with the d-pad (with key repeat); B picks
 // the item under it, and the cursor sprite slides there.
-// GZLE01_ud adds a message test: L toggles it, then Up/Down step the message ID by 1,
+// GZLE01_ud and the demo add a message test: L toggles it, then Up/Down step the message ID by 1,
 // Left/Right by 10 and R by 100 (wrapping in 0-0x437), shown as four digits at the rupee
 // counter (see docs/layout.md).
+#if defined(VERSION_GZLE01_ud) || defined(VERSION_GZLJ01_demo)
+#define MSG_TEST
+#endif
 void ItemMenuUpdate(void)
 {
     s32 col = (u8)(gGameState.menuCursor % 5);
@@ -205,7 +208,7 @@ void ItemMenuUpdate(void)
     u16 keys = gMain.heldKeys;
     u8 item;
     struct ItemSlot *entry;
-#ifdef VERSION_GZLE01_ud
+#ifdef MSG_TEST
     u16 *map;
     s16 id;
     s32 n;
@@ -221,7 +224,7 @@ void ItemMenuUpdate(void)
         ChestCounterMain();
         return;
     }
-#ifdef VERSION_GZLE01_ud
+#ifdef MSG_TEST
     map = (u16 *)0x06006464;
     if (gMain.newKeys & 0x200)
     {
@@ -393,15 +396,25 @@ bool32 ItemMenuInit(void)
     CpuSet(gShopItemsInit, gGameState.items, 0x30);
     if (gGameState.balloonDiscount)
     {
+#ifdef VERSION_GZLJ01_demo
+        gGameState.items[3].price = 20;
+        gGameState.items[4].price = 20;
+        gGameState.items[5].price = 40;
+#else
         gGameState.items[3].price = 20;
         gGameState.items[4].price = 30;
         gGameState.items[5].price = 30;
+#endif
     }
     if (gGameState.tingDiscount)
     {
         gGameState.items[8].price = 10;
         gGameState.items[9].price = 20;
+#ifdef VERSION_GZLJ01_demo
+        gGameState.items[10].price = 50;
+#else
         gGameState.items[10].price = 40;
+#endif
     }
     if (gGameState.flags.dungeonNo == 0)
     {
@@ -551,7 +564,13 @@ bool32 UseItem(u8 item)
     {
         if (gGameState.rupees - gGameState.rupeeDelta < entry->price)
             goto no_money;
+#ifdef VERSION_GZLJ01_demo
+        if (!SendItemUse(item == 3 ? 0x11 : 0x12, 0))
+            return FALSE;
+        gGameState.itemsEnabled = 0;
+#else
         SendItemUse(item == 3 ? 0x11 : 0x12, 0);
+#endif
     }
     else if (item >= 8 && item <= 10)
     {
@@ -579,16 +598,25 @@ bool32 UseItem(u8 item)
             price = 0;
         else
             price = entry->price;
+#ifdef VERSION_GZLJ01_demo
+        if (!SendItemUse(item, price))
+            return FALSE;
+        gGameState.itemsEnabled = 0;
+#else
         SendItemUse(item, price);
+#endif
     }
     return TRUE;
 }
 
 
-// Redraw the right HUD panel (the item on B, or the chart label) when it is fully shown.
+// Redraw the right HUD panel (the item on B, or the chart label) when it is fully shown (the
+// demo redraws it whatever its slide state).
 void RedrawHudItem(void)
 {
+#ifndef VERSION_GZLJ01_demo
     if (gGameState.hudRightSlide == 0)
+#endif
     {
         if (gGameState.hudChartLabel == 0)
         {
@@ -621,6 +649,14 @@ void RedrawHudItem(void)
 // Slide the two HUD panels at the top of the screen in and out (hudLeftHidden/hudLeftSlide:
 // the left one, the A button's label; hudRightHidden/hudRightSlide: the right one with the
 // item on B and its price) depending on the game's state, and draw them.
+// The chart label's first tile while the right panel slides in (the demo draws it with
+// palette 14 until RedrawHudItem redraws it with 11).
+#ifdef VERSION_GZLJ01_demo
+#define CHART_LABEL_TILE_SLIDE 0xE080
+#else
+#define CHART_LABEL_TILE_SLIDE 0xB080
+#endif
+
 void UpdateHudPanels(void)
 {
     u16 *map;
@@ -647,7 +683,10 @@ void UpdateHudPanels(void)
     {
         if (((gGameState.flags.dungeonNo != 0 || gGameState.chartOpen == 0) && gGameState.flags.busy == 0
              && gGameState.active != 0)
-         || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen != 0))
+#ifndef VERSION_GZLJ01_demo
+         || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen != 0)
+#endif
+        )
             gGameState.hudLeftHidden = 0;
     }
 
@@ -665,12 +704,17 @@ void UpdateHudPanels(void)
     }
     else if (gGameState.itemsEnabled && gMain.modeState == 2)
     {
+#ifdef VERSION_GZLJ01_demo
+        if ((gGameState.flags.dungeonNo != 0 || gGameState.chartOpen == 0) && gGameState.flags.busy == 0
+         && gGameState.active != 0 && gGameState.holdState == 0)
+#else
         if ((gGameState.flags.dungeonNo != 0 && gGameState.flags.busy == 0 && gGameState.active != 0
              && gGameState.holdState == 0)
          || ((gGameState.flags.dungeonNo == 0 && gGameState.chartOpen == 0 && gGameState.flags.busy == 0
               && gGameState.active != 0 && gGameState.holdState == 0)
              || (gGameState.flags.dungeonNo == 0 && gGameState.chartOpen != 0)
              || gGameState.menuOpen != 0))
+#endif
             gGameState.hudRightHidden = 0;
     }
 
@@ -802,7 +846,7 @@ void UpdateHudPanels(void)
         else
         {
             map = (u16 *)0x06006464;
-            tile = 0xB080;
+            tile = CHART_LABEL_TILE_SLIDE;
             for (i = 4; i != gGameState.hudRightSlide; i--)
             {
                 map[0] = tile;

@@ -400,6 +400,39 @@ pointers through `__attribute__((packed))` copies of the structs, hence the byte
   and passed to `MsgStartSilent`, which shows it. "ud" is plausibly "USA debug". The game only
   loads `client_u.bin`.
 
+### Demo (GZLJ01_demo)
+
+The client from the Japanese store demo disc (`zz_zelda.tgc` on D44J01, Dec 2002) is an
+earlier build of the JP client: same modules, program `0x94` bytes shorter. It builds from the
+JP C with `VERSION_GZLJ01_demo` marking what it lacks or does differently (19 functions):
+
+- **Message test** (`ItemMenuUpdate`): the same L/Up/Down/Left/Right/R message browser as
+  `GZLE01_ud`, so it was a development feature later stripped from the JP retail client.
+- **Items**: `UseItem` clears `itemsEnabled` itself when the send succeeds (retail does it on
+  the GC's answer in `MainMode1`). Item 5's "nothing" result (0x13) shows message `2D` locally
+  and waits (`Effect5` step 5); retail sends it back to the GC (item 0x13 with the price) and
+  gets effect 19. Discount prices differ: balloon/shield/random 20/20/40 (retail 20/30/30),
+  the third Ting 50 (retail 40).
+- **Chart and selection**: L/B toggle the sea chart even while `itemsEnabled` is clear
+  (`UpdateChartOverlay`); no Cabana Deed name for the Private Oasis square
+  (`ShowSelectionMsg`, `MapIconCursor`); type-12 markers are always selectable, with no
+  "examined" check (`UpdateSelection`); the target icon is drawn over a wider area (0x180
+  instead of 0x100 around the screen, `DrawMapMarkers`); the cursor's hold animation runs
+  whether or not the GC reports it held.
+- **Moving to another square** (`Mode1RecvMarkers`) only schedules the square's name; retail
+  also clears the revealed/selection state and a pending switch record.
+- **HUD**: the panels' show conditions lack the chart-open and menu clauses
+  (`UpdateHudPanels`), the chart label slides in with palette 14 (`0xE080`), and
+  `RedrawHudItem` redraws whatever the slide state. The hour is drawn with a leading zero
+  (`DrawHour`, like the US builds).
+- **Link/state resets**: `JoyComIntr` doesn't reset the word states on a JOY reset or clear the
+  slot statuses and send queue when the link comes up; `Mode1State0`/`ResetMapState` don't
+  reset the hold/chest state and objects; a map change in a dungeon has a dead branch setting
+  `soundDmaStop`/`unk404` (`Mode1State4`). The mail slot is dropped while the menu or chart is
+  open (`MainMode1`).
+- **Data**: one message-font glyph (`gMode1BgTiles` tile `0x13E`) differs by a pixel, and 26
+  tiles of `gSeaAnimTiles` differ; the rest of `.rodata` is the same apart from pointers.
+
 ## Answers to earlier open questions
 
 - **Raw tail block**: it's the sound bank. `gSoundBankHeader` (`.rodata`, GZLJ01

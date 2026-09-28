@@ -978,8 +978,8 @@ void DrawWeekday(void)
 
 void DrawHour(void)
 {
-#ifdef VERSION_GZLJ01
-    // A leading zero is left blank.
+#if defined(VERSION_GZLJ01) && !defined(VERSION_GZLJ01_demo)
+    // A leading zero is left blank (the demo and US builds draw it).
     u8 ch = gGameState.flags.hour / 10 + GLYPH_DIGIT_0;
 
     if (ch != GLYPH_DIGIT_0)
