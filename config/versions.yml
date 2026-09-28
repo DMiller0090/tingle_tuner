@@ -27,3 +27,14 @@ GZLE01_ud:
   sha1: be851f25bad0dbc559ab3b8c1b7bc1512b4a25b7
   prog_base: 0x0201B000
   tail_dest: 0x02034E00
+
+# Prerelease Japanese demo (the D44J01 store-kiosk disc's zz_zelda.tgc, whose game ID is also
+# GZLJ01), shown from 2002-12-01. An earlier build of the JP client: same layout and sound
+# tail, program 0x94 bytes shorter. `base` versions' macros are defined too, so the C shares
+# the JP code and marks the demo's differences with VERSION_GZLJ01_demo.
+GZLJ01_demo:
+  disc_path: /res/Gba/client.bin
+  sha1: 27fe8312fae1d02860d009840dbc98cda368b1e1
+  prog_base: 0x02014800
+  tail_dest: 0x0202F000
+  base: GZLJ01

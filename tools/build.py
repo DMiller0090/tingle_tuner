@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 import lz77
-from common import BUILD, ROOT, orig_path, sha1, versions
+from common import BUILD, ROOT, orig_path, sha1, version_defines, versions
 
 
 def _find_devkitarm():
@@ -66,7 +66,7 @@ def compile_c(ver, src):
     s_file = BUILD / ver / rel.with_suffix('.s')
     o_file = BUILD / ver / rel.with_suffix('.o')
     s_file.parent.mkdir(parents=True, exist_ok=True)
-    defs = f'-DVERSION_{ver}'
+    defs = version_defines(ver)
     script = (f'set -eo pipefail; cd {unix_path(ROOT)}; '
               f'cpp -nostdinc -undef -P -I include -I src {defs} {unix_path(src)} '
               f'| {AGBCC_DIR}/agbcc {CFLAGS} -o {unix_path(s_file)}')

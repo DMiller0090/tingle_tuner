@@ -2,6 +2,7 @@
 
     python tools/extract.py GZLJ01 path/to/TWW-JP.iso
     python tools/extract.py GZLE01 path/to/TWW-USA.iso     # also extracts GZLE01_ud
+    python tools/extract.py GZLJ01_demo path/to/zz_zelda.gcm   # the JP store demo
     python tools/extract.py GZLJ01 --file path/to/client.bin
 
 Writes orig/<ver>/<client>.bin (gitignored) after checking its SHA-1, then unpacks it
@@ -95,9 +96,17 @@ def main():
     region = args.version.split('_')[0]
     if game_id != region:
         sys.exit(f'disc is {game_id}, expected {region}')
+    # Several versions share a game ID (the JP retail disc and the JP demo): install the ones
+    # whose file is on this disc with the right SHA-1.
+    found = False
     for ver, cfg in versions().items():
         if ver.split('_')[0] == region and cfg['disc_path'] in entries:
-            install(ver, read(cfg['disc_path']))
+            data = read(cfg['disc_path'])
+            if sha1(data) == cfg['sha1']:
+                install(ver, data)
+                found = True
+    if not found:
+        sys.exit(f'no known client on this {game_id} disc -- use an unmodified disc')
 
 
 if __name__ == '__main__':

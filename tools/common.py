@@ -26,6 +26,15 @@ def versions():
         return yaml.safe_load(f)
 
 
+def version_defines(ver):
+    """cpp flags for a version: VERSION_<ver>, plus VERSION_<base> for each `base` it builds on."""
+    defs = []
+    while ver:
+        defs.append(f'-DVERSION_{ver}')
+        ver = versions()[ver].get('base')
+    return ' '.join(defs)
+
+
 def orig_path(ver):
     cfg = versions()[ver]
     return ORIG / ver / Path(cfg['disc_path']).name
