@@ -711,41 +711,42 @@ u16 SoundVolumeFromY(struct SoundParams *params)
 
 #define SOUND_PRIORITY(entry) ((entry) & SOUND_HIGH_PRIORITY ? 2 : !((entry) & SOUND_LOW_PRIORITY))
 
-// Near-miss: identical but for one register copy in the volume product (`volume * y >> 7`
-// shifts a copy instead of the product's register) and so 4 bytes longer.
-//     void SoundPlay_(u16 id, struct SoundParams *params) asm("SoundPlay");
-//     void SoundPlay_(u16 id, struct SoundParams *params)
-//     {
-//         u8 player = (gSoundTable[id] & 0xFF0000) >> 16;
-//         u32 entry = gSoundTable[id];
-//         u32 volume = 0x80;
-//         u16 index;
-//         u32 cur;
-//
-//         if (gSoundPlayerSoundId[player] != -1)
-//         {
-//             if ((entry & SOUND_NO_RESTART) && id == gSoundPlayerSoundId[player])
-//                 return;
-//             cur = gSoundTable[gSoundPlayerSoundId[player]];
-//             if (SOUND_PRIORITY(entry) < SOUND_PRIORITY(cur))
-//                 return;
-//         }
-//         index = entry;
-//         if (entry & SOUND_ADD_ARG)
-//             index += params->arg;
-//         SoundCmdStartSe(player, 0, index);
-//         gSoundPlayerSoundId[player] = id;
-//         gSoundStarted[player] = TRUE;
-//         if (entry & SOUND_PAN_X)
-//         {
-//             SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
-//             volume = SoundVolumeFromX(params);
-//         }
-//         if (entry & SOUND_VOLUME_Y)
-//             volume = volume * SoundVolumeFromY(params) >> 7;
-//         SoundCmdSetTrackVolume(player, 1, volume);
-//     }
-INCLUDE_ASM(SoundPlay);
+// The volume product and its shift are separate statements (one expression shifts a copy).
+void SoundPlay_(u16 id, struct SoundParams *params) asm("SoundPlay");
+void SoundPlay_(u16 id, struct SoundParams *params)
+{
+    u8 player = (gSoundTable[id] & 0xFF0000) >> 16;
+    u32 entry = gSoundTable[id];
+    u32 volume = 0x80;
+    u16 index;
+    u32 cur;
+
+    if (gSoundPlayerSoundId[player] != -1)
+    {
+        if ((entry & SOUND_NO_RESTART) && id == gSoundPlayerSoundId[player])
+            return;
+        cur = gSoundTable[gSoundPlayerSoundId[player]];
+        if (SOUND_PRIORITY(entry) < SOUND_PRIORITY(cur))
+            return;
+    }
+    index = entry;
+    if (entry & SOUND_ADD_ARG)
+        index += params->arg;
+    SoundCmdStartSe(player, 0, index);
+    gSoundPlayerSoundId[player] = id;
+    gSoundStarted[player] = TRUE;
+    if (entry & SOUND_PAN_X)
+    {
+        SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
+        volume = SoundVolumeFromX(params);
+    }
+    if (entry & SOUND_VOLUME_Y)
+    {
+        volume = volume * SoundVolumeFromY(params);
+        volume >>= 7;
+    }
+    SoundCmdSetTrackVolume(player, 1, volume);
+}
 
 bool32 SoundIsPlaying(u16 id)
 {
@@ -789,50 +790,54 @@ s16 SoundLoop9Tempo(struct SoundParams *params)
         return -30 * params->arg;
 }
 
-// Near-miss: the volume and the slot index (spilled) swap stack slots, and the volume
-// product multiplies into the other register.
-//     void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params) asm("SoundPlayLoop");
-//     void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params)
-//     {
-//         u32 volume = 0x80;
-//         u32 entry = gSoundLoopTable[id];
-//         u16 index = *(u16 *)&gSoundLoopTable[id];
-//         s8 i = SoundFindLoopSlot(owner);
-//
-//         if (i >= 0)
-//         {
-//             u32 player = i + 16;
-//
-//             if (owner != gSoundLoopSlots[i].owner)
-//             {
-//                 if (id == 9)
-//                 {
-//                     gSoundLoop9Player = player;
-//                     gSoundLoop9Active = TRUE;
-//                     index += SoundLoop9Recent();
-//                 }
-//                 SoundCmdStartSe(player, 0, index);
-//                 gSoundLoopSlots[i].owner = owner;
-//             }
-//             if (id == 9)
-//             {
-//                 if (params->arg != gSoundLoop9Param)
-//                     gSoundLoop9TempoOfs = SoundLoop9Tempo(params);
-//                 SoundCmdSetTempo(player, gSoundLoop9TempoOfs);
-//             }
-//             gSoundPlayerSoundId[player] = id;
-//             if (entry & SOUND_PAN_X)
-//             {
-//                 SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
-//                 volume = SoundVolumeFromX(params);
-//             }
-//             if (entry & SOUND_VOLUME_Y)
-//                 volume = volume * SoundVolumeFromY(params) >> 7;
-//             SoundCmdSetTrackVolume(player, 1, volume);
-//             gSoundLoopSlots[i].refreshed = TRUE;
-//         }
-//     }
-INCLUDE_ASM(SoundPlayLoop);
+// i is declared first so it gets the first stack slot; the volume product and its shift are
+// separate statements (one expression shifts a copy).
+void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params) asm("SoundPlayLoop");
+void SoundPlayLoop_(u32 owner, u16 id, struct SoundParams *params)
+{
+    s8 i;
+    u32 volume = 0x80;
+    u32 entry = gSoundLoopTable[id];
+    u16 index = *(u16 *)&gSoundLoopTable[id];
+
+    i = SoundFindLoopSlot(owner);
+
+    if (i >= 0)
+    {
+        u32 player = i + 16;
+
+        if (owner != gSoundLoopSlots[i].owner)
+        {
+            if (id == 9)
+            {
+                gSoundLoop9Player = player;
+                gSoundLoop9Active = TRUE;
+                index += SoundLoop9Recent();
+            }
+            SoundCmdStartSe(player, 0, index);
+            gSoundLoopSlots[i].owner = owner;
+        }
+        if (id == 9)
+        {
+            if (params->arg != gSoundLoop9Param)
+                gSoundLoop9TempoOfs = SoundLoop9Tempo(params);
+            SoundCmdSetTempo(player, gSoundLoop9TempoOfs);
+        }
+        gSoundPlayerSoundId[player] = id;
+        if (entry & SOUND_PAN_X)
+        {
+            SoundCmdSetTrackPan(player, 1, SoundPanFromX(params));
+            volume = SoundVolumeFromX(params);
+        }
+        if (entry & SOUND_VOLUME_Y)
+        {
+            volume = volume * SoundVolumeFromY(params);
+            volume >>= 7;
+        }
+        SoundCmdSetTrackVolume(player, 1, volume);
+        gSoundLoopSlots[i].refreshed = TRUE;
+    }
+}
 
 void SoundDriverInit(const struct SoundBankHeader *header)
 {
@@ -1283,85 +1288,87 @@ u32 PcmVoiceVolume(struct SoundVoice *voice)
 // The NRx2 envelope byte for a GB voice at the start of each envelope step (8 = no change
 // otherwise): the start volume and a hardware step toward the step's target. For the wave
 // channel, the output level (0-4).
-// Near-miss: the original clears newStep before loading the velocity, and keeps the result
-// in r6 (newStep's register) where this uses r1.
-//     u8 CgbVoiceVolume(struct SoundVoice *voice, u8 loud)
-//     {
-//         u8 newStep;
-//
-//         u32 volume = voice->velocity;
-//         u32 end;
-//         u16 frames;
-//         u8 nr2;
-//
-//         newStep = FALSE;
-//         if (voice->env.frames == 0)
-//             newStep = TRUE;
-//         EnvelopeStep(voice);
-//         if (!newStep)
-//             return 8;
-//         if (loud)
-//             volume <<= 1;
-//         volume <<= 15;
-//         volume *= voice->track->volume;
-//         volume >>= 14;
-//         volume *= voice->track->cmdVolume;
-//         volume >>= 7;
-//         volume *= voice->track->player->unk40;
-//         volume >>= 7;
-//         volume *= voice->track->player->volume;
-//         volume >>= 8;
-//         volume *= voice->track->player->fadeVolume;
-//         if (voice->type == 3)
-//         {
-//             volume >>= 22;
-//             voice->volume = volume;
-//             volume *= 5;
-//             volume >>= 7;
-//             if (volume > 4)
-//                 volume = 4;
-//             return volume;
-//         }
-//         volume >>= 15;
-//         voice->volume = volume;
-//         volume *= voice->env.level;
-//         volume >>= 25;
-//         if (volume & ~0xF)
-//             volume = 15;
-//         voice->volume = voice->volume * voice->env.target >> 25;
-//         if (voice->volume & ~0xF)
-//             voice->volume = 15;
-//         end = voice->volume;
-//         if (end != volume)
-//         {
-//             s32 diff;
-//
-//             frames = voice->env.frames;
-//             frames += 15;
-//             diff = end - volume;
-//             if (diff < 0)
-//                 diff = -diff;
-//             frames = frames / diff;
-//             if (frames != 0)
-//                 goto step;
-//         }
-//         nr2 = (volume << 4) | 8;
-//         return nr2;
-//     step:
-//         if (frames & 0xFFF8)
-//             frames = 7;
-//         nr2 = (volume << 4) | frames;
-//         if (volume < end)
-//             nr2 |= 8;
-//         return nr2;
-//     }
-INCLUDE_ASM(CgbVoiceVolume);
+// newStep doubles as the result (the original keeps both in one register), and both results
+// leave through one return.
+u8 CgbVoiceVolume(struct SoundVoice *voice, u8 loud)
+{
+    u8 newStep;
+    u32 volume;
+    u32 end;
+    u16 frames;
+
+    newStep = FALSE;
+    volume = voice->velocity;
+    if (voice->env.frames == 0)
+        newStep = TRUE;
+    EnvelopeStep(voice);
+    if (!newStep)
+        return 8;
+    if (loud)
+        volume <<= 1;
+    volume <<= 15;
+    volume *= voice->track->volume;
+    volume >>= 14;
+    volume *= voice->track->cmdVolume;
+    volume >>= 7;
+    volume *= voice->track->player->unk40;
+    volume >>= 7;
+    volume *= voice->track->player->volume;
+    volume >>= 8;
+    volume *= voice->track->player->fadeVolume;
+    if (voice->type == 3)
+    {
+        volume >>= 22;
+        voice->volume = volume;
+        volume *= 5;
+        volume >>= 7;
+        if (volume > 4)
+            volume = 4;
+        return volume;
+    }
+    volume >>= 15;
+    voice->volume = volume;
+    volume *= voice->env.level;
+    volume >>= 25;
+    if (volume & ~0xF)
+        volume = 15;
+    voice->volume = voice->volume * voice->env.target >> 25;
+    if (voice->volume & ~0xF)
+        voice->volume = 15;
+    end = voice->volume;
+    if (end != volume)
+    {
+        s32 diff;
+
+        frames = voice->env.frames;
+        frames += 15;
+        diff = end - volume;
+        if (diff < 0)
+            diff = -diff;
+        frames = frames / diff;
+        if (frames != 0)
+            goto step;
+    }
+    newStep = (volume << 4) | 8;
+    goto done;
+step:
+    if (frames & 0xFFF8)
+        frames = 7;
+    newStep = (volume << 4) | frames;
+    if (volume < end)
+        newStep |= 8;
+done:
+    return newStep;
+}
 
 
 // This frame's frequency value: the base plus the pitch sweep, the track's bend (a PCM step
 // scales; a GB channel's register value counts down from 0x800), and vibrato.
-// Near-miss: same code shape; freq and the sweep pointer swap r2/r3, and the vibrato pointer
-// and depth take r7/r6 (one more saved register) where the original has r4/r3.
+// Near-miss (86 masked diff lines): the GB vibrato result shares one `0x800 - t` tail, which
+// fixed the freq/sweep swap and the extra saved register. Left: in the GB negative-vibrato arm
+// the original loads 0x800, negates v in place, then subtracts ((0x800 - freq) * (-v * depth
+// + 0x80000)); every operand order / `v = -v` / temp form tried computes 0x800 - freq first
+// (or flips the freq/sweep r2/r3 priority tie), so v, depth and t get r3/r4/r1, not r1/r3/r0.
 //     u32 VoiceUpdatePitch(struct SoundVoice *voice)
 //     {
 //         u32 freq = voice->baseFreq;
@@ -1449,10 +1456,12 @@ INCLUDE_ASM(CgbVoiceVolume);
 //                 }
 //                 else
 //                 {
+//                     u32 t;
 //                     if (v >= 0)
-//                         freq = 0x800 - ((0x800 - freq) << 19) / (v * depth + 0x80000);
+//                         t = ((0x800 - freq) << 19) / (v * depth + 0x80000);
 //                     else
-//                         freq = 0x800 - ((0x800 - freq) * (-v * depth + 0x80000) >> 19);
+//                         t = (0x800 - freq) * (0x80000 - v * depth) >> 19;
+//                     freq = 0x800 - t;
 //                 }
 //                 vib->phase += vib->params->speed;
 //                 if ((vib->phase >> 1) > 0xFF)
@@ -1783,65 +1792,62 @@ void TrackNoteOn(struct SoundTrack *track, u8 key, u8 velocity, u32 length)
 
 // Release a note: a PCM voice (and the wave channel) decays in software, the other GB
 // channels get their hardware envelope (release / 32 as the step, or off).
-// Near-miss: with the type local, only the switch differs: the original reads voice->type again.
-// Without it (and the switch reading it anyway) type and freq swap r2/r3.
-//     void VoiceNoteOff(struct SoundVoice *voice)
-//     {
-//         if (voice->state == 1 && !voice->track->tie)
-//         {
-//                     u8 type = voice->type;
-//
-//             if (type == 0)
-//
-//             {
-//                 VoiceListRemove(voice, &gPcmActiveVoices);
-//                 voice->state = 2;
-//                 VoiceListInsert(voice);
-//             }
-//             else
-//             {
-//                             u16 freq = voice->freq.cgb;
-//                 u8 step = voice->release;
-//
-//                             if (type == 3)
-//                 {
-//                     voice->state = 2;
-//                 }
-//                 else
-//                 {
-//                     u8 env;
-//
-//                     step >>= 5;
-//                     if (step == 0)
-//      env = 0;
-//      else
-//      env = step | (voice->volume << 4);
-//                     switch (voice->type)
-//                     {
-//                     case 1:
-//                         REG_NR12 = env;
-//                         REG_SOUND1CNT_X = freq | 0x8000;
-//                         REG_NR11 &= 0xC0;
-//                         break;
-//                     case 2:
-//                         REG_NR22 = env;
-//                         REG_SOUND2CNT_H = freq | 0x8000;
-//                         REG_NR21 &= 0xC0;
-//                         break;
-//                     case 4:
-//                         REG_NR42 = env;
-//                         REG_NR44 = 0x80;
-//                         break;
-//                     }
-//                     voice->state = 0;
-//                 }
-//             }
-//             if (voice->fixedPan == 0)
-//                 voice->pan = voice->track->pan;
-//             TrackRemoveVoice(voice->track, voice);
-//         }
-//     }
-INCLUDE_ASM(VoiceNoteOff);
+// The switch re-reads voice->type (the volatile read keeps cse from reusing `type`).
+void VoiceNoteOff(struct SoundVoice *voice)
+{
+    if (voice->state == 1 && !voice->track->tie)
+    {
+        u8 type = voice->type;
+
+        if (voice->type == 0)
+        {
+            VoiceListRemove(voice, &gPcmActiveVoices);
+            voice->state = 2;
+            VoiceListInsert(voice);
+        }
+        else
+        {
+            u16 freq = voice->freq.cgb;
+            u8 step = voice->release;
+
+            if (type == 3)
+            {
+                voice->state = 2;
+            }
+            else
+            {
+                u8 env;
+
+                step >>= 5;
+                if (step == 0)
+                    env = 0;
+                else
+                    env = step | (voice->volume << 4);
+                switch (*(volatile u8 *)&voice->type)
+                {
+                case 1:
+                    REG_NR12 = env;
+                    REG_SOUND1CNT_X = freq | 0x8000;
+                    REG_NR11 &= 0xC0;
+                    break;
+                case 2:
+                    REG_NR22 = env;
+                    REG_SOUND2CNT_H = freq | 0x8000;
+                    REG_NR21 &= 0xC0;
+                    break;
+                case 4:
+                    REG_NR42 = env;
+                    REG_NR44 = 0x80;
+                    break;
+                }
+                voice->state = 0;
+            }
+        }
+        if (voice->fixedPan == 0)
+            voice->pan = voice->track->pan;
+        TrackRemoveVoice(voice->track, voice);
+    }
+}
 
 void VoiceStop(struct SoundVoice *voice)
 {
@@ -2495,12 +2501,16 @@ void PlayerSetPause(u32 index, u8 on)
     gSoundPlayers[index].paused = on;
 }
 
-// Near-miss: the original adds 0x42 to the table address before the index.
-//     u32 PlayerGetState(u32 index)
-//     {
-//         return gSoundPlayers[index].state;
-//     }
-INCLUDE_ASM(PlayerGetState);
+// FAKEMATCH: the original adds the state offset to the table address after scaling the index
+// and before adding it; `gSoundPlayers[index].state` adds it last.
+u32 PlayerGetState(u32 index)
+{
+    u8 *p = (u8 *)gSoundPlayers;
+
+    index *= sizeof(struct SoundPlayer);
+    p += 0x42;  // state
+    return p[index];
+}
 
 
 // The command queue: the API writes commands at gSoundCmdWrite, SoundCmdFlush (from
@@ -2647,18 +2657,20 @@ void SoundCmdSetTrackVolume(u16 player, u32 mask, u8 volume)
     SoundCmdPush();
 }
 
-// Near-miss: the original shifts player first (`lsls r0, r0, #0x10` before range's
-// `lsls r2, r2, #0x18`); every parameter type and operand order tried leaves that one swap.
-//     void SoundCmdSetTrackBend(u16 player, u32 mask, u8 range, s8 bend)
-//     {
-//         struct SoundCmd *cmd = gSoundCmdWrite;
-//
-//         cmd->cmd = SOUND_CMD_SET_TRACK_BEND;
-//         cmd->a = (range << 8) | (player << 16) | (u8)bend;
-//         cmd->b = mask;
-//         SoundCmdPush();
-//     }
-INCLUDE_ASM(SoundCmdSetTrackBend);
+// player and range are narrowed in place: the original shifts player before range's lsls
+// (u16/u8 parameters leave player's shift at its use).
+void SoundCmdSetTrackBend(u32 player, u32 mask, u32 range, s8 bend)
+{
+    struct SoundCmd *cmd;
+
+    player <<= 16;
+    range = (u8)range;
+    cmd = gSoundCmdWrite;
+    cmd->cmd = SOUND_CMD_SET_TRACK_BEND;
+    cmd->a = (range << 8) | player | (u8)bend;
+    cmd->b = mask;
+    SoundCmdPush();
+}
 
 void SoundCmdSetTrackPan(u16 player, u32 mask, u8 pan)
 {
@@ -2748,67 +2760,65 @@ void SoundCmdPlayer(struct SoundCmd *cmd)
 }
 
 // Commands 100-103: a = player << 16 | value, b = mask of the player's tracks (shifted out).
-// Near-miss: in the bend case the range, bend and the constant 1 get other registers
-// (r2/r4/r6 in the original); the types and a shared value variable change nothing.
-//     void SoundCmdTracks(struct SoundCmd *cmd)
-//     {
-//         u32 a = cmd->a;
-//         struct SoundPlayer *player = &gSoundPlayers[a >> 16];
-//         s32 i = 0;
-//
-//         switch (cmd->cmd)
-//         {
-//         case SOUND_CMD_MUTE_TRACKS:
-//         {
-//             u8 mute = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                     player->tracks[i]->mute = mute;
-//             }
-//             break;
-//         }
-//         case SOUND_CMD_SET_TRACK_VOLUME:
-//         {
-//             u8 volume = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                     player->tracks[i]->cmdVolume = volume;
-//             }
-//             break;
-//         }
-//         case SOUND_CMD_SET_TRACK_BEND:
-//         {
-//             u8 range = (a & 0xFF00) >> 8;
-//             u8 bend = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                 {
-//                     player->tracks[i]->bendRange = range;
-//                     player->tracks[i]->bend = bend;
-//                 }
-//             }
-//             break;
-//         }
-//         case SOUND_CMD_SET_TRACK_PAN:
-//         {
-//             u8 pan = a;
-//
-//             for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
-//             {
-//                 if ((cmd->b & 1) && player->tracks[i] != NULL)
-//                     player->tracks[i]->pan = pan;
-//             }
-//             break;
-//         }
-//         }
-//     }
-INCLUDE_ASM(SoundCmdTracks);
+// In the bend case the bend narrows a in place (a u8 local gets another register).
+void SoundCmdTracks(struct SoundCmd *cmd)
+{
+    u32 a = cmd->a;
+    struct SoundPlayer *player = &gSoundPlayers[a >> 16];
+    s32 i = 0;
+
+    switch (cmd->cmd)
+    {
+    case SOUND_CMD_MUTE_TRACKS:
+    {
+        u8 mute = a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+                player->tracks[i]->mute = mute;
+        }
+        break;
+    }
+    case SOUND_CMD_SET_TRACK_VOLUME:
+    {
+        u8 volume = a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+                player->tracks[i]->cmdVolume = volume;
+        }
+        break;
+    }
+    case SOUND_CMD_SET_TRACK_BEND:
+    {
+        u8 range = (a & 0xFF00) >> 8;
+        a = (u8)a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+            {
+                player->tracks[i]->bendRange = range;
+                player->tracks[i]->bend = a;
+            }
+        }
+        break;
+    }
+    case SOUND_CMD_SET_TRACK_PAN:
+    {
+        u8 pan = a;
+
+        for (; cmd->b != 0 && i < 10; i++, cmd->b >>= 1)
+        {
+            if ((cmd->b & 1) && player->tracks[i] != NULL)
+                player->tracks[i]->pan = pan;
+        }
+        break;
+    }
+    }
+}
 
 // Commands 200-201: a = the argument, b = mask of players (shifted out).
 void SoundCmdPlayers(struct SoundCmd *cmd)
