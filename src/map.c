@@ -227,6 +227,8 @@ end:
 // constant 0 or, as below, keeps it as an int (with a u8 conversion). Also the second
 // `marker->type == 3` test is kept in the original but dropped here. The US builds differ:
 // no pal variable (0 inline, 12 for type 1's unk6 == 3 sprite) and frame 0 for the last sprite.
+// Also: the original's frame is 0x30 (five spill slots at sp+0x1c..0x2c, mosaic at 0x28);
+// this C gets 0x2c (four, mosaic at 0x1c), so the spilled locals differ too (not tried further).
 /*
 #define SPRITE_FRAMES(p) ((const struct SpriteFrame *)(p))
 
@@ -575,6 +577,11 @@ INCLUDE_ASM(DrawMapMarkers);
 // entries only show once flags.unkA_4 is set.
 // Near-miss: the original keeps (y >> 8) * 7 narrowed to u16 before adding it to room, and
 // allocates registers differently from there on (the unrolled loop's 0x1FFF lands in r2, not r4).
+// The u16 row temp b below gives the narrowing, so the entry block matches (430 diff lines,
+// was 432). What remains starts at the first loop: the original keeps i in r1, the hoisted
+// constant 1 in r2 and gGameState in r4; here 1 is a HImode pseudo (the & 1 on s16 >> 8 is
+// shortened) with low priority, so it lands in r4 and gGameState gets copied to r1. Casting
+// the shifts to s32/u32, 1u and s32 temps for x >> 8 / y >> 8 did not change it.
 /*
 #define CLEAR_PAL(p) (*(p) &= 0x1FFF, (p)++)
 #define CLEAR_PAL_4(p) CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p); CLEAR_PAL(p)
@@ -584,12 +591,13 @@ INCLUDE_ASM(DrawMapMarkers);
 void HighlightMapRooms(void)
 {
     u8 m = FindMarker(1);
-    u16 room;
+    u16 room, b;
     s32 i, j, k;
     u16 *map;
 
     room = gGameState.markers[m].x >> 8;
-    room += (u16)((gGameState.markers[m].y >> 8) * 7);
+    b = (gGameState.markers[m].y >> 8) * 7;
+    room += b;
     for (i = 0; i <= 3; i++)
     {
         if (gGameState.seaSquare[i] == room)
@@ -771,125 +779,125 @@ void FollowMarkerStreamedMap(void)
 // Per-frame map update. Sea chart mode (gMain.unk457 == 0): find the four sea chart squares
 // around the view, step their tile animations and draw the chart. Map mode: while L is held,
 // scroll the map image with the D-pad and draw the scroll cursor.
-// Nearly matches: all but one instruction's placement. The original computes j * 2 (for
-// seaAnimTimer[j]) in the loop body's first block, next to the row read; this computes it
-// in the else. Writing `t = j * 2;` after the row and `seaAnimTimer[t / 2]++` gets it within
-// one scheduling slot. The locals dx and dy double as the loop's column and row.
-//     void UpdateMap(void)
-//     {
-//         u16 maxX = gGameState.mapImage->width - 120;
-//         u16 maxY = gGameState.mapImage->height - 120;
-//         s16 dx = 0;
-//         s16 dy = 0;
-//         u8 i = FindMarker(3);
-//
-//         if (i == 0xFF)
-//             FindMarker(1);
-//         gGameState.unk018 = 0;
-//         if (gMain.unk457 == 0)
-//         {
-//             s32 j;
-//
-//             Func_0201B2C0();
-//             FollowMarkerFixedMap();
-//             for (j = 0; j < 4; j++)
-//             {
-//                 s32 k;
-//
-//                 dx = (((s16)gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
-//                 if (dx > 6)
-//                     dx = 7;
-//                 dy = (((s16)gMain.bgOfs[2][1] + 8) >> 8) + gSeaQuadrantOffsets[j][1];
-//                 if (dy > 6)
-//                     dy = 7;
-//                 k = (dy & 1) * 2 + (dx & 1);
-//                 gGameState.seaSquare[k] = dx + dy * 7;
-//                 gGameState.seaTileSet[k] = gSeaSquareTileSets[dy * 7 + dx];
-//                 if (gGameState.seaAnimTimer[k] >= gSeaAnimPeriods[gGameState.seaTileSet[k]])
-//                 {
-//                     if (++gGameState.seaAnimFrame[k] > 4)
-//                         gGameState.seaAnimFrame[k] = 0;
-//                     gGameState.seaAnimTimer[k] = 0;
-//                 }
-//                 else
-//                 {
-//                     gGameState.seaAnimTimer[j]++;  // [j], not [k]
-//                 }
-//             }
-//             CpuCopy16(gSeaAnimTiles, (void *)0x0600C000, 0x2000);
-//             HighlightMapRooms();
-//         }
-//         else
-//         {
-//             if (!(gMain.heldKeys & 0x200))
-//             {
-//                 if (gGameState.mapScrolling == 1)
-//                 {
-//                     SoundPlay(7 - SOUND_ID_SHIFT, 0);
-//                     gGameState.mapScrolling = 0;
-//                 }
-//                 if (gGameState.unk120 == 0)
-//                     FollowMarkerStreamedMap();
-//             }
-//             else if (gGameState.unk1E5_1)
-//             {
-//                 u8 mosaic;
-//                 const u8 *sprite;
-//                 u8 frame;
-//                 bool32 clamped;
-//
-//                 if (gMain.newKeys & 0x200)
-//                 {
-//                     SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
-//                     gGameState.mapScrolling = 1;
-//                 }
-//                 if (gMain.heldKeys & 0x40)
-//                     dy = -4;
-//                 else if (gMain.heldKeys & 0x80)
-//                     dy = 4;
-//                 if (gMain.heldKeys & 0x20)
-//                     dx = -4;
-//                 else if (gMain.heldKeys & 0x10)
-//                     dx = 4;
-//                 mosaic = gMain.mosaic != 0;
-//                 sprite = gSprite_0202BDC8;
-//                 frame = 0;
-//                 if (!(gMain.frameCount & 0xC))
-//                     frame = 1;
-//                 DrawSprite(sprite, frame, 0x44, 0x44, 0, mosaic, 0, 0, 0, 0, 0);
-//                 clamped = FALSE;
-//                 gGameState.mapX += dx;
-//                 if (gGameState.mapX < 0)
-//                 {
-//                     gGameState.mapX = 0;
-//                     clamped = TRUE;
-//                 }
-//                 if (gGameState.mapX > (s16)maxX)
-//                 {
-//                     gGameState.mapX = maxX;
-//                     clamped = TRUE;
-//                 }
-//                 gGameState.mapY += dy;
-//                 if (gGameState.mapY < 0)
-//                 {
-//                     gGameState.mapY = 0;
-//                     clamped = TRUE;
-//                 }
-//                 if (gGameState.mapY > (s16)maxY)
-//                 {
-//                     gGameState.mapY = maxY;
-//                     clamped = TRUE;
-//                 }
-//                 if (!clamped && (gMain.heldKeys & 0xF0))
-//                     SoundPlayLoop(8, 8, NULL);
-//             }
-//             ScrollMap(&gGameState);
-//         }
-//         if (gGameState.unk224 == 0)
-//             // DrawMapMarkers takes no parameters, but this passes two.
-//             ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
-//     }
-INCLUDE_ASM(UpdateMap);
+// The locals dx and dy double as the loop's column and row.
+void UpdateMap(void)
+{
+    u16 maxX = gGameState.mapImage->width - 120;
+    u16 maxY = gGameState.mapImage->height - 120;
+    s16 dx = 0;
+    s16 dy = 0;
+    u8 i = FindMarker(3);
+
+    if (i == 0xFF)
+        FindMarker(1);
+    gGameState.unk018 = 0;
+    if (gMain.unk457 == 0)
+    {
+        s32 j;
+
+        Func_0201B2C0();
+        FollowMarkerFixedMap();
+        for (j = 0; j < 4; j++)
+        {
+            s32 k;
+            s32 t;
+            s32 row;
+
+            dx = (((s16)gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
+            if (dx > 6)
+                dx = 7;
+            row = ((s16)gMain.bgOfs[2][1] + 8) >> 8;
+            t = j * 2;  // for seaAnimTimer[j] below, computed here as in the original
+            dy = row + gSeaQuadrantOffsets[j][1];
+            if (dy > 6)
+                dy = 7;
+            k = (dy & 1) * 2 + (dx & 1);
+            gGameState.seaSquare[k] = dx + dy * 7;
+            gGameState.seaTileSet[k] = gSeaSquareTileSets[dy * 7 + dx];
+            if (gGameState.seaAnimTimer[k] >= gSeaAnimPeriods[gGameState.seaTileSet[k]])
+            {
+                if (++gGameState.seaAnimFrame[k] > 4)
+                    gGameState.seaAnimFrame[k] = 0;
+                gGameState.seaAnimTimer[k] = 0;
+            }
+            else
+            {
+                gGameState.seaAnimTimer[t / 2]++;  // [j], not [k]
+            }
+        }
+        CpuCopy16(gSeaAnimTiles, (void *)0x0600C000, 0x2000);
+        HighlightMapRooms();
+    }
+    else
+    {
+        if (!(gMain.heldKeys & 0x200))
+        {
+            if (gGameState.mapScrolling == 1)
+            {
+                SoundPlay(7 - SOUND_ID_SHIFT, 0);
+                gGameState.mapScrolling = 0;
+            }
+            if (gGameState.unk120 == 0)
+                FollowMarkerStreamedMap();
+        }
+        else if (gGameState.unk1E5_1)
+        {
+            u8 mosaic;
+            const u8 *sprite;
+            u8 frame;
+            bool32 clamped;
+
+            if (gMain.newKeys & 0x200)
+            {
+                SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
+                gGameState.mapScrolling = 1;
+            }
+            if (gMain.heldKeys & 0x40)
+                dy = -4;
+            else if (gMain.heldKeys & 0x80)
+                dy = 4;
+            if (gMain.heldKeys & 0x20)
+                dx = -4;
+            else if (gMain.heldKeys & 0x10)
+                dx = 4;
+            mosaic = gMain.mosaic != 0;
+            sprite = gSprite_0202BDC8;
+            frame = 0;
+            if (!(gMain.frameCount & 0xC))
+                frame = 1;
+            DrawSprite(sprite, frame, 0x44, 0x44, 0, mosaic, 0, 0, 0, 0, 0);
+            clamped = FALSE;
+            gGameState.mapX += dx;
+            if (gGameState.mapX < 0)
+            {
+                gGameState.mapX = 0;
+                clamped = TRUE;
+            }
+            if (gGameState.mapX > (s16)maxX)
+            {
+                gGameState.mapX = maxX;
+                clamped = TRUE;
+            }
+            gGameState.mapY += dy;
+            if (gGameState.mapY < 0)
+            {
+                gGameState.mapY = 0;
+                clamped = TRUE;
+            }
+            if (gGameState.mapY > (s16)maxY)
+            {
+                gGameState.mapY = maxY;
+                clamped = TRUE;
+            }
+            if (!clamped && (gMain.heldKeys & 0xF0))
+                SoundPlayLoop(8, 8, NULL);
+        }
+        ScrollMap(&gGameState);
+    }
+    if (gGameState.unk224 == 0)
+        // DrawMapMarkers takes no parameters, but this passes two.
+        ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
+}
 
 void Func_0201A540(void)
 {
@@ -1072,102 +1080,106 @@ u32 MarkerDistance(u8 arg)
 // Nearly matches: the logic and instruction selection are right, but registers differ from
 // the start (the ArcTan2 operands land in r4 instead of r2, so the address temporaries shift
 // and the targetNear stores of levels 2 and 4 are not cross-jumped):
-// void UpdateTargetCompass(void)
-// {
-//     u8 angle;
-//     s32 x, y;
-//     s32 level;
+// Tried: block-local s32 dx/dy for the ArcTan2 operands (fixes that block, but the sin
+// part's x/y then lose their s16 narrowing and the diff grows to 180 lines; sharing x/y is
+// what keeps it), s16/u16 x and y, one-expression sin loads, u32 level and a separate u32
+// distance. Priorities in the original: level > the unk224 zero > gGameState (r4, r5, r6).
+//     void UpdateTargetCompass(void)
+//     {
+//         u8 angle;
+//         s32 x, y;
+//         s32 level;
 //
-//     if (gGameState.unk1FA != 0)
-//         return;
-//     if (gGameState.unk224 != 0)
-//         return;
-//     if (gGameState.icons[2].type != 3)
-//         return;
-//     {
-//         u8 i = FindMarker(1);
+//         if (gGameState.unk1FA != 0)
+//             return;
+//         if (gGameState.unk224 != 0)
+//             return;
+//         if (gGameState.icons[2].type != 3)
+//             return;
+//         {
+//             u8 i = FindMarker(1);
 //
-//         x = gGameState.icons[2].x - gGameState.markers[i].x;
-//         y = gGameState.icons[2].y - gGameState.markers[i].y;
-//         angle = ((u16)~ArcTan2(x >> 4, y >> 4) + 0x4001) >> 8;
-//     }
-//     x = gSinTable[angle];
-//     x >>= 3;
-//     y = (gSinTable + 64)[angle];
-//     y >>= 3;
-//     DrawSprite(gMapIconSprites[gGameState.icons[2].type], 0, (u16)(x + 0xB8), (u16)(y + 0x58), 0, 0, 0, 0, 0, 0, 0);
-//     level = MarkerDistance(0);
-//     if ((u32)level <= 0x18)
-//     {
-//         if (gGameState.unk224 == 0)
-//         {
-//             ShowMessage(0x1A5, 1);
-//             gGameState.icons[2].type = 0;
-//             gGameState.icons[1].type = 0;
-//             gGameState.unk105 = 0;
+//             x = gGameState.icons[2].x - gGameState.markers[i].x;
+//             y = gGameState.icons[2].y - gGameState.markers[i].y;
+//             angle = ((u16)~ArcTan2(x >> 4, y >> 4) + 0x4001) >> 8;
 //         }
-//         level = 0;
-//         gGameState.targetNear = 0;
-//     }
-//     else if ((u32)level <= 0x7F)
-//     {
-//         if (gGameState.unk224 == 0 && gGameState.targetNear == 0)
+//         x = gSinTable[angle];
+//         x >>= 3;
+//         y = (gSinTable + 64)[angle];
+//         y >>= 3;
+//         DrawSprite(gMapIconSprites[gGameState.icons[2].type], 0, (u16)(x + 0xB8), (u16)(y + 0x58), 0, 0, 0, 0, 0, 0, 0);
+//         level = MarkerDistance(0);
+//         if ((u32)level <= 0x18)
 //         {
-//             ShowMessage(0x1A4, 1);
-//             gGameState.targetNear = 1;
-//         }
-//         level = 1;
-//     }
-//     else if ((u32)level <= 0x1FF)
-//     {
-//         level = 2;
-//         gGameState.targetNear = 0;
-//     }
-//     else if ((u32)level <= 0x3FF)
-//     {
-//         level = 3;
-//         gGameState.targetNear = 0;
-//     }
-//     else
-//     {
-//         level = 4;
-//         gGameState.targetNear = 0;
-//     }
-//     if (gGameState.targetBlinkOn != 0)
-//     {
-//         if (--gGameState.targetBlinkTimer == 0)
-//             gGameState.targetBlinkOn = 0;
-//     }
-//     else
-//     {
-//         if (++gGameState.targetBlinkTimer >= gTargetBlinkPeriods[level])
-//         {
-//             gGameState.targetBlinkTimer = gTargetBlinkPeriods[level];
-//             gGameState.targetBlinkOn = 1;
-//         }
-//     }
-//     gGameState.targetScale = (gGameState.targetBlinkTimer << 7) / gTargetBlinkPeriods[level] + 0x100;
-//     DrawSprite(gSprite_0202C3F8, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
-//     if (gGameState.unk224 == 0 && gGameState.flags.hasTact && level > 1
-//      && (u8)(gGameState.flags.unk2 - angle + 9) > 18)
-//     {
-//         angle = ~angle + 1;
-//         if (((angle + 8) & 0x1F) <= 0x10)
-//         {
-//             u8 dir = (u8)(angle + 0x88) >> 5;
-//
-//             if (gGameState.targetDir != dir && gGameState.unk1FA == 0)
+//             if (gGameState.unk224 == 0)
 //             {
-//                 ShowMessage(0x19C + dir, 1);
-//                 gGameState.targetDir = dir;
+//                 ShowMessage(0x1A5, 1);
+//                 gGameState.icons[2].type = 0;
+//                 gGameState.icons[1].type = 0;
+//                 gGameState.unk105 = 0;
 //             }
+//             level = 0;
+//             gGameState.targetNear = 0;
+//         }
+//         else if ((u32)level <= 0x7F)
+//         {
+//             if (gGameState.unk224 == 0 && gGameState.targetNear == 0)
+//             {
+//                 ShowMessage(0x1A4, 1);
+//                 gGameState.targetNear = 1;
+//             }
+//             level = 1;
+//         }
+//         else if ((u32)level <= 0x1FF)
+//         {
+//             level = 2;
+//             gGameState.targetNear = 0;
+//         }
+//         else if ((u32)level <= 0x3FF)
+//         {
+//             level = 3;
+//             gGameState.targetNear = 0;
 //         }
 //         else
 //         {
-//             gGameState.targetDir = 0xFF;
+//             level = 4;
+//             gGameState.targetNear = 0;
+//         }
+//         if (gGameState.targetBlinkOn != 0)
+//         {
+//             if (--gGameState.targetBlinkTimer == 0)
+//                 gGameState.targetBlinkOn = 0;
+//         }
+//         else
+//         {
+//             if (++gGameState.targetBlinkTimer >= gTargetBlinkPeriods[level])
+//             {
+//                 gGameState.targetBlinkTimer = gTargetBlinkPeriods[level];
+//                 gGameState.targetBlinkOn = 1;
+//             }
+//         }
+//         gGameState.targetScale = (gGameState.targetBlinkTimer << 7) / gTargetBlinkPeriods[level] + 0x100;
+//         DrawSprite(gSprite_0202C3F8, 0, 200, 72, angle + 0x80, 0, gGameState.targetScale, 0, 16, 0, 0);
+//         if (gGameState.unk224 == 0 && gGameState.flags.hasTact && level > 1
+//          && (u8)(gGameState.flags.unk2 - angle + 9) > 18)
+//         {
+//             angle = ~angle + 1;
+//             if (((angle + 8) & 0x1F) <= 0x10)
+//             {
+//                 u8 dir = (u8)(angle + 0x88) >> 5;
+//
+//                 if (gGameState.targetDir != dir && gGameState.unk1FA == 0)
+//                 {
+//                     ShowMessage(0x19C + dir, 1);
+//                     gGameState.targetDir = dir;
+//                 }
+//             }
+//             else
+//             {
+//                 gGameState.targetDir = 0xFF;
+//             }
 //         }
 //     }
-// }
 INCLUDE_ASM(UpdateTargetCompass);
 
 // Copy each view quadrant's current sea animation frame into the BG tiles, then the map image
@@ -1175,6 +1187,10 @@ INCLUDE_ASM(UpdateTargetCompass);
 // Nearly matches: only the last two instructions of each tile address differ (the original
 // adds the VRAM base into a new register, `mov r2, sl; adds r0, r1, r2`, where this adds it in
 // place). The separate a and t are needed to keep 0x300 from being folded into the base.
+// Why: local-alloc only ties the sum to a's register when the sum's pseudo dies once, but a
+// user var set in both halves dies twice; sums into a new temp or per-half variables instead
+// let agbcc allocate a to r0 (42-60 diff lines). Also tried a *= 32, pointer/array forms of
+// the source address, u32/u16 types and statement orders.
 //     void Mode1VBlank(void)
 //     {
 //         u8 *dest = (u8 *)0x0600EC00;
@@ -1520,6 +1536,8 @@ void Func_0201B2C0(void)
 // chart squares (setting unk135 to the square's id + 1). unk11A: something is selected.
 // Near-miss, written with gSlot14Data as struct SeaChartEntry[49]: same code shape, but
 // the registers differ throughout (the original keeps gGameState in r3 inside the marker loop).
+// Also: the original spills to [sp, #4] where this uses [sp] (one more stack slot), and it
+// tests the type from r6 with a copy to r0 after the first compare (not tried further).
 /*
 s32 Func_0201B3A4(void)
 {
@@ -1703,12 +1721,18 @@ INCLUDE_ASM(Func_0201B3A4);
 // (c << 16)) >> 16, which agbcc only emits for an explicit shift pair (the ID macro below);
 // written that way the code shape matches but the registers of the entry block differ
 // (the original keeps gGameState in r4 and loads it first).
+// Best so far (30 diff lines, was 62 with `u8 idx = gGameState.unk119;` at the top): idx
+// assigned in the first marker test. What remains is the entry block: the original loads
+// unk119 into r2 before the unk135 test and copies gGameState to r4. With idx loaded first,
+// global-alloc puts idx in r0 and the unk135 value in r1 (someone prefers r0); idx types,
+// a `sel` local, a GameState pointer and nested/early-return forms of the unk135 case
+// didn't change that.
 /*
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
 void Func_0201B7D4(void)
 {
-    u8 idx = gGameState.unk119;
+    u8 idx;
 
     if (gGameState.unk135 != 0)
     {
@@ -1717,7 +1741,7 @@ void Func_0201B7D4(void)
         else
             ShowMessage(gGameState.unk135 + 0x14D, 1);
     }
-    else if (gGameState.markers[idx].type == 0x13)
+    else if (idx = gGameState.unk119, gGameState.markers[idx].type == 0x13)
         ShowMessage(gMsgIds_02024278[gGameState.markers[idx].unk6 - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
         ShowMessage(0x5D, 1);
@@ -1739,10 +1763,6 @@ INCLUDE_ASM(Func_0201B7D4);
 
 // Act on the current selection (unk119: a marker, or unk135): 0: send the switch record,
 // 1: a random reaction sound, 2: play the selection's sound via Func_0201B7D4.
-// Near-miss: same code shape, but the original keeps result in r1 (reusing its 1 as the
-// mask in the type 16 test) where agbcc puts it in r4, and orders the dispatch compares
-// as == 2, == 0.
-/*
 void Func_0201B8C8(void)
 {
     u8 result = 0;
@@ -1751,15 +1771,17 @@ void Func_0201B8C8(void)
     {
         if (gGameState.markers[gGameState.unk119].type == 12)
         {
-            result = 1;
             if (gGameState.unk11C)
                 result = 2;
+            else
+                result = 1;
         }
         else if (gGameState.markers[gGameState.unk119].type == 13)
         {
-            result = 1;
             if (gGameState.unk11D)
                 result = 2;
+            else
+                result = 1;
         }
         else if (gGameState.markers[gGameState.unk119].type == 5)
         {
@@ -1769,51 +1791,57 @@ void Func_0201B8C8(void)
         }
         else if (gGameState.markers[gGameState.unk119].type == 16)
         {
-            result = 1;
             if ((gGameState.unk026 >> gGameState.markers[gGameState.unk119].unk6) & 1)
                 result = 2;
+            else
+                result = 1;
         }
         else
         {
-            result = 2;
             if (gGameState.markers[gGameState.unk119].type == 7)
                 result = 1;
+            else
+                result = 2;
         }
     }
     else if (gGameState.unk135)
     {
         result = 2;
     }
-    switch (result)
+    if (result != 2)
     {
-    case 2:
+        if (result == 0)
+        {
+            if (gGameState.switchType == 15)
+            {
+                gGameState.unk1F8 = gGameState.switchMsg;
+                gGameState.switchMsg = 0x302;
+            }
+            if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
+            {
+                Mode1SendSwitch(3);
+                SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
+            }
+        }
+        else
+        {
+            if ((gMain.random & 0xFF) > 0xCB)
+                ShowMessage(0x17, 1);
+            else if ((gMain.random & 0xFF) > 0x65)
+                ShowMessage(0x16, 1);
+            else
+                ShowMessage(0x15, 1);
+            gGameState.unk156 = gMain.random % 60 + 30;
+            if (gGameState.markers[gGameState.unk119].type != 7)
+                gGameState.unk11A = 2;
+        }
+    }
+    else
+    {
         Func_0201B7D4();
         SoundPlay(2, 0);
-        break;
-    case 0:
-        if (gGameState.switchType == 15)
-        {
-            gGameState.unk1F8 = gGameState.switchMsg;
-            gGameState.switchMsg = 0x302;
-        }
-        if (gGameState.switchType != 0 && gGameState.switchType != 0xFF)
-        {
-            Mode1SendSwitch(3);
-            SoundPlay(0x21 - SOUND_ID_SHIFT, 0);
-        }
-        break;
-    default:
-        if ((gMain.random & 0xFF) > 0xCB)
-            ShowMessage(0x17, 1);
-        else if ((gMain.random & 0xFF) > 0x65)
-            ShowMessage(0x16, 1);
-        else
-            ShowMessage(0x15, 1);
-        gGameState.unk156 = gMain.random % 60 + 30;
-        if (gGameState.markers[gGameState.unk119].type != 7)
-            gGameState.unk11A = 2;
-        break;
     }
 }
-*/
-INCLUDE_ASM(Func_0201B8C8);
+
+// The original pads the end of this object with zeros (agbcc would pad with nops).
+asm(".align 2, 0");
