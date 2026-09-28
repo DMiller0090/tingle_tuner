@@ -621,21 +621,21 @@ void Mode1State3(void)
 }
 // Slot 3: the map markers. Byte 0 is the count, byte 1 goes to gcActive and active, then
 // 8-byte markers (struct MapMarker, unaligned here so read as bytes).
-// The US builds check the new marker position instead of the old one.
+// The US builds check the new marker position instead of the old one. (The gcActive flag's
+// setcc insns, gone after combine, still lengthen gGameState's live range: without it the
+// US build gives m and gGameState each other's registers.)
 void Mode1RecvMarkers(void)
 {
     u8 count = GBACOM_BUF_MARKERS[0];
     u8 *m;
     s32 i;
     s32 j;
-#ifndef VERSION_GZLJ01
-    s16 time;
-    u16 time2;
-#endif
+    bool32 gcActive;
 
     if (gMain.mode == 1)
     {
-        if (GBACOM_BUF_MARKERS[1] != 0)
+        gcActive = GBACOM_BUF_MARKERS[1] != 0;
+        if (gcActive)
         {
             // Both searches' results are unused. (do/while (1): a for or while loop
             // gets its exit test copied to the bottom, the original's doesn't.)
@@ -690,11 +690,7 @@ void Mode1RecvMarkers(void)
                 if ((u16)x <= 0x6FF && *(u16 *)(m + 2) <= 0x6FF)
                 {
                     gGameState.squareMsgPending = 1;
-                    // FAKEMATCH: the two temporaries lengthen gGameState's live range just
-                    // enough that m gets r5 and gGameState r6 (a tie in allocation priority).
-                    time = (gMain.random % 6 + 3) * 60;
-                    time2 = time;
-                    gGameState.squareMsgTimer = time2;
+                    gGameState.squareMsgTimer = (gMain.random % 6 + 3) * 60;
                 }
 #endif
                 gGameState.revealedType16 = 0;
