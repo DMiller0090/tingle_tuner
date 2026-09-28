@@ -136,6 +136,9 @@ void UpdateRupeeCounter(void)
         map[0x20] = 0xB000;
     }
 }
+
+// Set up the map BGs: on the sea the sea chart (BG2, gMode1SeaMap) and the floor number box,
+// in a dungeon BG3 for the map image.
 void InitMapBgs(void)
 {
     if (gGameState.flags.dungeonNo == 0)
@@ -152,6 +155,7 @@ void InitMapBgs(void)
     }
 }
 
+// Load mode 1's OBJ and BG tiles, palettes and BG map, then the map BGs.
 void LoadMode1Graphics(void)
 {
     LZ77UnCompVram(gMode1ObjTiles, (void *)0x06010000);

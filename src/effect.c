@@ -77,6 +77,7 @@ void (*const gObjBurstStateFuncs[2])(struct Obj *obj) =
     ObjBurstFly
 };
 
+// Back to no item effect: items usable again, UpdateItemEffect idle, the view follows.
 void EndItemEffect(void)
 {
     gGameState.itemsEnabled = 1;
@@ -84,6 +85,8 @@ void EndItemEffect(void)
     gGameState.viewLocked = 0;
 }
 
+// Item effects 2, 15 and 21 (a Tingle Bomb went off): 180 frames of shaking, the burst pieces
+// and Tingle's animation 5.
 void StartBombBlast(void)
 {
     gGameState.effectTimer = 180;
@@ -93,6 +96,8 @@ void StartBombBlast(void)
     ObjSpawn(0);
 }
 
+// Item effects 2, 15 and 17: shake the screen while effectTimer runs (held while the GC's
+// menu is open) and draw the blast at the cursor.
 void EffectBombBlast(void)
 {
     u8 mosaic = gMain.mosaic != 0;
@@ -114,6 +119,7 @@ void EffectBombBlast(void)
                       gGameState.markers[i].y - gMain.bgOfs[3][1], mosaic, unk);
 }
 
+// Start the animation that opens items 3-5 and 8-10 (gEffectIntroSprite, mid-map).
 void StartEffectIntro(void)
 {
     gGameState.introFrame = 0;
@@ -123,6 +129,7 @@ void StartEffectIntro(void)
     gGameState.effectStep = 1;
 }
 
+// Step and draw it; after its last frame go to effectStep 2 and turn the message page.
 void DrawEffectIntro(void)
 {
     u32 mosaic = gMain.mosaic != 0;
@@ -151,6 +158,7 @@ void DrawEffectIntro(void)
     DrawSpriteAt(anim, gGameState.introFrame, gGameState.spriteX, gGameState.spriteY, mosaic, 0, 1);
 }
 
+// GC answer 17 to item 3's request 0x11: effect 3, the balloon.
 void StartBalloonEffect(void)
 {
     StartEffectIntro();
@@ -229,6 +237,8 @@ void DrawTimerCount(s16 x, s16 y)
     DrawSprite(gSpriteTable[10], 0, x + 8, y, 0, mosaic, 0, 0, 0, digit + 1, 0);
 }
 
+// Item effects 3, 4 and 13: after the intro send the item use, then show flags.timer (the
+// GC's remaining time) over the player until it runs out.
 void EffectBalloonShield(void)
 {
     struct Main *main = &gMain;
@@ -311,6 +321,7 @@ void EffectBalloonShield(void)
     }
 }
 
+// GC answer 18 to item 4's request 0x12: effect 4, the shield.
 void StartShieldEffect(void)
 {
     StartEffectIntro();
@@ -319,6 +330,8 @@ void StartShieldEffect(void)
     ShowMessage(0x25, 1);
 }
 
+// GC answer 16 to item 16 (A with nothing selected; GC MODE_LOOK_ATTENTION): Tingle's
+// animation 5 for 120 frames.
 void StartLookEffect(void)
 {
     gGameState.effectTimer = 120;
@@ -327,12 +340,15 @@ void StartLookEffect(void)
     gGameState.tingleAnimPart = 0;
 }
 
+// Item effects 0, 1, 6 and 16: end when effectTimer runs out.
 void EffectWaitTimer(void)
 {
     if (gGameState.effectTimer == 0)
         EndItemEffect();
 }
 
+// Effect 5 (item 5): the GC picked a result (effect[1]); a message per result, and 13
+// (the long shield) takes over at once.
 void StartRandomEffect(void)
 {
     StartEffectIntro();
@@ -402,6 +418,7 @@ void Effect5(void)
     }
 }
 
+// Effect 7 (item 7, the shop): a random greeting.
 void StartShopEffect(void)
 {
     if (gMain.random & 1)
@@ -575,6 +592,7 @@ void Effect7(void)
     }
 }
 
+// Items 8-10 (the Tings): the effect intro, then Effect8.
 void StartTingEffect(void)
 {
     StartEffectIntro();
@@ -723,6 +741,8 @@ void Effect8(void)
     }
 }
 
+// Item 11 (the slot 6 item until the shop is unlocked): a choice dialogue, one for the sea
+// and one for dungeons (Effect11).
 void StartEffect11(void)
 {
     if (!gGameState.onSea)
@@ -794,6 +814,7 @@ void Effect11(void)
     }
 }
 
+// Effect5 with a result for Effect12: go straight to its drop.
 void StartEffectDrop(void)
 {
     gGameState.effectDelay = 8;
@@ -894,6 +915,8 @@ void Effect12(void)
     }
 }
 
+// GC answer 14 to item 2 (the cursor sat on Link: the GC frees it and drops the bomb
+// later): a 300-frame countdown (Effect14).
 void StartBombCountdown(void)
 {
     ShowMessage(0x50, 1);

@@ -909,6 +909,8 @@ void UpdateMap(void)
         ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
 }
 
+// Follow the player's marker without redrawing the map (the fixed sea view or the streamed
+// map image).
 void UpdateMapView(void)
 {
     if (gMain.mapImageMode == 0)
@@ -1559,7 +1561,7 @@ void DarkenUnvisitedSquares(void)
 // comparisons then use a widened copy of it.
 s32 UpdateSelection(void)
 {
-    u8 player;
+    u8 cursor;
     s32 i;
     u8 type;
     u8 square;
@@ -1574,11 +1576,11 @@ s32 UpdateSelection(void)
         return 0;
     }
     gGameState.selectedSquare = 0;
-    player = FindMarker(3);
+    cursor = FindMarker(3);
     i = FindMarker(0x14);
     if (i != 0xFF && gGameState.awayFromType20 == 0)
     {
-        if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16 || (u16)(gGameState.markers[i].y - gGameState.markers[player].y + 8) > 16)
+        if ((u16)(gGameState.markers[i].x - gGameState.markers[cursor].x + 8) > 16 || (u16)(gGameState.markers[i].y - gGameState.markers[cursor].y + 8) > 16)
             gGameState.awayFromType20 = 1;
     }
     if ((u8)(gGameState.switchType - 1) <= 1 || gGameState.switchType == 4
@@ -1596,7 +1598,7 @@ s32 UpdateSelection(void)
         gGameState.selection = 1;
         return 0;
     }
-    if (player == 0xFF)
+    if (cursor == 0xFF)
         goto none;
     for (i = 0; i < gGameState.markerCount; i++)
     {
@@ -1604,9 +1606,9 @@ s32 UpdateSelection(void)
         if (type == 1 || gGameState.markers[i].type == 3 || gGameState.markers[i].type == 4
          || gGameState.markers[i].type == 0x11 || gGameState.markers[i].type == 0x12)
             continue;
-        if ((u16)(gGameState.markers[i].x - gGameState.markers[player].x + 8) > 16)
+        if ((u16)(gGameState.markers[i].x - gGameState.markers[cursor].x + 8) > 16)
             continue;
-        if ((u16)(gGameState.markers[i].y - gGameState.markers[player].y + 8) > 16)
+        if ((u16)(gGameState.markers[i].y - gGameState.markers[cursor].y + 8) > 16)
             continue;
         gGameState.selectedType = type;
         if (gGameState.markers[i].gbaName != 0)
@@ -1699,7 +1701,7 @@ s32 UpdateSelection(void)
     }
     if (gMain.mapImageMode == 0)
     {
-        square = (gGameState.markers[player].x >> 8) + (gGameState.markers[player].y >> 8) * 7;
+        square = (gGameState.markers[cursor].x >> 8) + (gGameState.markers[cursor].y >> 8) * 7;
         for (i = 0; i < 49; i++)
         {
             if (gChartPoints[i].square != square)
@@ -1718,9 +1720,9 @@ s32 UpdateSelection(void)
                 ey = gChartPoints[i].y - 8;
                 r = 8;
             }
-            if ((u8)(gGameState.markers[player].x - ex) > r)
+            if ((u8)(gGameState.markers[cursor].x - ex) > r)
                 continue;
-            if ((u8)(gGameState.markers[player].y - ey) > r)
+            if ((u8)(gGameState.markers[cursor].y - ey) > r)
                 continue;
             gGameState.selectedSquare = gChartPoints[i].square + 1;
             gGameState.selection = 1;

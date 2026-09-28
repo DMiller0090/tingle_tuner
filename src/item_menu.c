@@ -585,6 +585,7 @@ bool32 UseItem(u8 item)
 }
 
 
+// Redraw the right HUD panel (the item on B, or the chart label) when it is fully shown.
 void RedrawHudItem(void)
 {
     if (gGameState.hudRightSlide == 0)

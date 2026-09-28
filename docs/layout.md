@@ -137,6 +137,44 @@ What the range does, in address order (names in symbols.txt):
   slots 12/13), the object system (`gObjs`, `ObjSpawn`, `ObjBurst`), `MainMode2` (the link-lost
   screen: two states), the per-line wave scroll, the select-button window wipe and the status icon.
 
+### Markers, selection and items
+
+The map shows the markers of slot 3 (`struct MapMarker`, built by the GC's `dMap_c`, see
+[protocol.md](protocol.md)): marker 0 is Link (type 1), marker 1 the Tingle Tuner cursor
+(type 3), then enemies (2), the ship (4), doors (17), friends (19) and others. A player or
+friend marker's `param` is the character (0: Link; `gCharIcon0-4`, also the status icon), and
+`UseItem` refuses items 3-5, 8-10 and 16 while Link's is not 0. `UpdateSelection` (every
+frame in state 2) looks for a marker within 8 px of the cursor, or on the sea for the spot of
+the cursor's square (slot 14); A (`ExamineSelection`) sends a pending switch record, or has
+Tingle think (messages `15`-`17`, `reactionTimer`) before `ShowSelectionMsg` shows the
+marker's message (`gbaName`) or the square's name; markers of types 5, 12, 13 and 16 are
+drawn hidden (`gSpriteTable[7]`) until examined (`revealedType*`). When Link's marker enters
+another sea chart square, the square is named 3-8 s later (`squareMsgPending`).
+
+Items (`gGameState.items`, from `gShopItemsInit`; B uses `selectedItem`, A with nothing
+selected uses 16). Most go to the GC in slot 6 and the answer in slot 7 (`effect[0]`) starts an
+item effect (`gItemEffectFuncs`); the GC side is `daAgb_c::GbaItemUse`. The in-game names are
+presumably the Tingle Tuner shop's:
+
+| item | price (discount) | GBA -> GC | effect |
+|------|------------------|-----------|--------|
+| 1 | 0 | - | puts the target (`icons[2]`) on the cursor; sea only |
+| 2 | 10 | 2 | bomb: GC answer 2 (15 with a rupee drop when following a target) blasts at the cursor (`EffectBombBlast`); answer 14 when the cursor sits on Link starts a countdown (`Effect14`) |
+| 3 | 30 (20) | 0x11, then 3 | balloon: GC hover boots for 150 frames (`StartBalloonEffect`, effect 3) |
+| 4 | 40 (30) | 0x12, then 4 | shield: GC Tingle shield for 300 frames (`StartShieldEffect`, effect 4) |
+| 5 | 40 (30) | 5 | random: the GC picks 10 (full heal), 12 (balloon and shield), 13 (long shield) or 0x13 (nothing) (`Effect5`) |
+| 6 | 0 | - | message `0D` only |
+| 7 | 0 | 7, then slots 12/13 | the shop (`Effect7`): arrows, bombs or bait for rupees |
+| 8-10 | 20/40/80 (10/20/40) | 0x14, then 8-10 | Tings: 3 hearts, magic, both full (`Effect8`: the title sprite brings the Ting down to Link) |
+| 11 | 0 | - | in slot 6 until the shop is unlocked (message code `F3 05`): a choice dialogue (`Effect11`) |
+| 16 | - | 16 | the GC's `MODE_LOOK_ATTENTION` (Link looks at the cursor) |
+| 0x15 | - | 0x15 | message code `F3 12`: a bomb on Link (answer 21) |
+
+The discounts come from the GC event flags `UNLOCK_TINGLE_BALLOON_DISCOUNT` (3-5) and
+`UNLOCK_TING_DISCOUNT` (8-10), which the GBA sets itself through `GbaFlg.bits` when message
+code `F3 00`/`F3 01` runs (`MsgCmd00`/`01`); the shop is event `0x1708`, set the same way by
+`F3 05`.
+
 `DrawSprite` (`02018AB8`) is the first function in the range that uses `.rodata` (it reads
 `gSinTable + 0x80`, the cosine), so `gSinTable` is either its object's or a data object of
 its own. `gSpriteTable` (`0202417C`, `struct SpriteFrame` lists) comes next. Mode 2's states
@@ -181,7 +219,7 @@ the choice tables, `switchMsg`) hold message numbers, not sound IDs.
 | JP | US | SE | pl. | what plays it |
 |----|----|----|-----|---------------|
 | `00` | `00` | 2 | 4 | voice: the map screen comes in (`Mode1State1`, with the dungeon's message); msg `0A`, `0B` (entry 0) |
-| `01` | `01` | 3 | 4 | voice: Link's marker reaches something selectable (`UpdateSelection`); msg `17` |
+| `01` | `01` | 3 | 4 | voice: the cursor's marker reaches something selectable (`UpdateSelection`); msg `17` |
 | `02` | `02` | 4 | 4 | voice: A on a selection shows its message (`ExamineSelection` result 2) |
 | `03`-`05` | same | 5, 8, 6 | 4 | voice: messages only (msg `15`, `18`, `1A`; `16` is skipped) |
 | `06` | - | 7 | 4 | voice, JP only: msg `1B` |
@@ -189,7 +227,7 @@ the choice tables, `switchMsg`) hold message numbers, not sound IDs.
 | `08` | `07` | 23 | 0 | msg `13` |
 | `09` | `08` | 24 | 0 | rupee counter reaches the count (`SE_RUPEE_COUNT_END`); msg `14` |
 | `0A` | `09` | 26 | 0 | A on the map's target cursor places the target (`MapIconCursor`) |
-| `0B` | `0A` | 25 | 0 | the target icon is put on Link's marker (`Mode1State2` after choice message `1A7`, `UseItem`) |
+| `0B` | `0A` | 25 | 0 | the target icon is put on the cursor's marker (`Mode1State2` after choice message `1A7`, `UseItem`) |
 | `0C` | `0B` | 27 | 0 | tick: `flags.timer` changes (`DrawTimerCount`), effect 14's countdown |
 | `0D`-`0F` | `0C`-`0E` | 28-30 | 0 | unused |
 | `10` | `0F` | 31 | 0 | msg `12` |
@@ -224,7 +262,7 @@ Loop IDs (`SoundPlayLoop`, same in all builds; SE index US = JP - 1):
 | ID | SE | what keeps it playing |
 |----|----|-----------------------|
 | 0 | 12 | `MsgStep` while `charLoopSound` is set and no message loop runs |
-| 1 | 15 | item effects 8-10 while the title sprite waits over the marker; msg `21` |
+| 1 | 15 | item effects 8-10 while the title sprite waits over Link's marker; msg `21` |
 | 2 | 16 | the link-lost screen (`Mode2State1`); msg `20` |
 | 3 | 18 | status icon 2 (`DrawStatusIcon`, `enemyHighlighted`) |
 | 4 | 19 | status icon while `flags.followTarget` |

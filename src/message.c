@@ -237,6 +237,7 @@ const u8 *const *const gTingleAnims[15] =
     gTingleAnim0
 };
 
+// Draw BG map row `row` of the message box: its border tiles and 12 text canvas tiles.
 void DrawMsgBoxRow(s8 row)
 {
     u16 *map = (u16 *)0x06006120 + row * 32;
@@ -254,6 +255,7 @@ void DrawMsgBoxRow(s8 row)
     map[0] = map[0x20] = 0xD024;
 }
 
+// Put back the two BG map rows under the message box row (from the copy at 0x06007800).
 void RestoreMsgBoxRow(s8 row)
 {
     u16 *src = (u16 *)0x06007800;
@@ -551,6 +553,7 @@ void DrawMsgBoxFrame(s8 row)
     }
 }
 
+// Clear the text canvas and home the text cursor; with playSound, a random voice blip.
 void MsgNewPage(u8 playSound)
 {
     u32 params[2];
@@ -676,6 +679,9 @@ u8 ChoiceMenuUpdate_(void)
     return 1;
 }
 
+// Message code F6 (and the sound byte of slots 5 and 15): play gMsgSoundIds[id]. 0x0C-0x0F
+// are a random one of three voice blips, 0x20-0x22 a loop sound (msgLoopSound; a following
+// F9 sets the delay), 0x16 nothing.
 void PlayMsgSound(u8 id)
 {
     u32 params[2];
@@ -710,6 +716,7 @@ void PlayMsgSound(u8 id)
     }
 }
 
+// Start Tingle's animation gGameState.tingleAnim from its first frame (with its scale).
 void StartTingleAnim(void)
 {
     u8 i;
@@ -741,6 +748,7 @@ void StartTingleAnim(void)
     gGameState.tingleTimer = (**entry)[4];
 }
 
+// Wrap the text cursor to the next line at the right edge; FALSE when the box is full.
 bool32 TextWrapLine(void)
 {
     u8 step;
