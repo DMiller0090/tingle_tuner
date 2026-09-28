@@ -48,9 +48,9 @@ Override locations with `AGBCC` (dir containing `agbcc`), `WSL_DISTRO`, `DEVKITA
 Extract the clients from **unmodified** retail discs (SHA-1 checked against `config/versions.yml`):
 
 ```sh
-python tools/extract.py GZLJ01 path/to/TWW-JP.iso
-python tools/extract.py GZLE01 path/to/TWW-USA.iso     # extracts GZLE01 and GZLE01_ud
-python tools/extract.py GZLP01_0 path/to/TWW-EUR.iso   # extracts all ten PAL clients
+python tools/extract.py GZLJ01 path/to/jp-disc.iso
+python tools/extract.py GZLE01 path/to/us-disc.iso     # extracts GZLE01 and GZLE01_ud
+python tools/extract.py GZLP01_0 path/to/eu-disc.iso   # extracts all ten PAL clients
 ```
 
 ## Build
