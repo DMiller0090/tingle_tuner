@@ -309,3 +309,55 @@ No reachable message runs `F3 05` or `F3 01`, so only the balloon discount can b
 arrived as the cursor reached the switch, A started the message, 1.7 s later the report byte
 went to 0x10 (balloon discount) and 44 ms after that the GC's `mFlags` byte 7 showed
 `UNLOCK_TINGLE_BALLOON_DISCOUNT` set. It is kept once the game is saved.
+
+### What the garbled text can run
+
+The discount unlocks above are a special case of a wider question: with `0x02000000` holding the
+raw boot image, `MsgStep` (`message.c`) executes every control byte `0xF2`-`0xFF` it walks over
+before drawing, and the only one that transfers control is `F3 xx`, an *unchecked* table jump:
+
+```c
+else if (ch == 0xF3)   // call a handler
+    gMsgCmdFuncs[*++gGameState.msgPtr]();
+```
+
+`gMsgCmdFuncs` (`0x020243A4`) has 19 real entries (`00`-`12`). Any `xx >= 0x13` reads a word past
+the table and calls it. Because the jump target is fixed image data, this is never arbitrary code
+injection: an index only ever reaches one of a fixed set of addresses, and the reachable set is
+bounded by which `F3 xx` bytes actually appear in the boot image at each message's offset. Reading
+the table words past index 0x12:
+
+- `0x13`-`0x2E` land in the sprite/animation tables that follow `gMsgCmdFuncs` (`gTingleAnims`,
+  `gTingleAnim*`, `gTingleSprite`) — data words, not code, so calling them hangs. This is most of
+  the 240/1080 IDs that freeze.
+- `0x2F`-`0x4F` are small values or IO-range junk — hang.
+- `0x50`-`0x70` land on **real Thumb functions**, because the next image tables (`gItemEffectFuncs`,
+  `gMode2StateFuncs`, `gObjFuncs`, `gObjBurstStateFuncs`) are themselves arrays of valid pointers.
+  This is the only band that does something other than freeze.
+
+Scanning all 0x438 message offsets in the boot image for the first out-of-range `F3 xx` each one
+reaches (a message stops mattering after that call diverts control), only four such calls are ever
+reached from real message data:
+
+| Runs (`F3 xx`) | Handler | Message IDs (garbled state) |
+|---|---|---|
+| `F3 56`, `F3 60` | `EffectWaitTimer` (`effect.c`) | 0xD0, 0x158, 0x163, 0x1B8, 0x1DF, 0x32F, … (21) |
+| `F3 58` | `Effect8` (`effect.c`) | 0x81, 0x8F, 0x99, 0xA1, 0x18F, 0x23D, 0x3A0, 0x3BC |
+| `F3 5F` | `EffectBombBlast` (`effect.c`) | 0x47, 0x124, 0x1FC |
+
+So the realistic outcome space of a garbled textbox is **freeze (most IDs), unlock the balloon
+discount (0x263 etc., via the in-range `F3 00`), or enter one of `EffectWaitTimer` /
+`EffectBombBlast` / `Effect8` out of sequence** with whatever `effect[]`, `effectStep`,
+`effectDelay` and marker state happened to be live:
+
+- `Effect8` is the one worth testing. Normally it is the items-8-10 (Tings) drop-in that issues
+  `SendItemUse(0x14, …)` and `SendItemUse(idx + 8, price)`; entered cold, the branch it takes and
+  the item index/price it sends depend on `effect[0]`/`effectStep`, a possible path to an
+  item-use the menu never authorised. Candidate test: JP, reach the garbled state, trigger message
+  0x81 with slot-7/marker state set, and watch the GC's `SendItemUse` args and
+  `gGameState.itemsEnabled`.
+- `EffectWaitTimer` and `EffectBombBlast` can call `EndItemEffect` (`itemsEnabled = 1`) — another
+  route to clearing the bomb lockout independent of the GC's slot-7 reply.
+
+No garbled message reaches `Effect5/7/11/12/14`, the `Mode2State*` or `ObjBurst*` entries, or the
+free-bomb `MsgCmd12` (`F3 12` is in range and needs the real, not garbled, text).
