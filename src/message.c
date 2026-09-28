@@ -278,11 +278,9 @@ void TextClearCanvas(void)
 // Blit a glyph's 4bpp rows (src, one word per 8-pixel row) into the text canvas at dst,
 // x pixels into the tile: n rows into this tile row, the rest (rows - n) into the next one
 // (0x180 bytes on, 12 tiles per row). Pixels that spill past the tile go to the next tile.
-// Near-miss: same code shape, but the original keeps src in its stack slot and mask2 in r9
-// (and dst's incremented copy in r0 across the inner loop); agbcc gives src a register here.
-/*
-void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst) asm("TextBlitGlyph");
-void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
+// The u8 x and y (the header's types) matter: their zero-extensions, folded into `& 7` by
+// combine, still count in src's live length, which leaves src in its stack slot.
+void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
 {
     s32 shift, n, m, i;
     u32 mask, mask2, w, *prev;
@@ -298,42 +296,55 @@ void TextBlitGlyph_(u32 x, u32 y, u8 color, u8 rows, const u32 *src, u32 *dst)
         mask2 = -1;
     else
         mask2 = 0x11FFFFFF;
-    for (; n > 0; n--)
+#ifdef VERSION_GZLJ01
+    for (; n > 0; dst++, n--)
+#else
+    // The US stops after `rows` rows (the JP only uses it for m).
+    for (; n > 0 && rows != 0; dst++, n--, rows--)
+#endif
     {
         prev = dst;
         w = *src++ & mask & mask2;
         if (shift)
         {
-            *dst++ |= w << ((8 - shift) * 4);
+            *dst |= w << ((8 - shift) * 4);
             for (i = shift; i > 0; i--)
                 w = (w >> 4) | 0x10000000;
-            prev[8] = w;
+#ifndef VERSION_GZLJ01
+            if (w != 0x11111111)  // skip an all-background word
+#endif
+                prev[8] = w;
         }
         else
         {
-            *dst++ = w;
+            *dst = w;
         }
     }
     dst += 0x58;
-    for (; m > 0; m--)
+#ifdef VERSION_GZLJ01
+    for (; m > 0; dst++, m--)
+#else
+    for (; m > 0 && rows != 0; dst++, m--, rows--)
+#endif
     {
         prev = dst;
         w = *src++ & mask;
         if (shift)
         {
-            *dst++ |= w << ((8 - shift) * 4);
+            *dst |= w << ((8 - shift) * 4);
             for (i = shift; i > 0; i--)
                 w = (w >> 4) | 0x10000000;
-            prev[8] = w;
+#ifndef VERSION_GZLJ01
+            if (w != 0x11111111)  // skip an all-background word
+#endif
+                prev[8] = w;
         }
         else
         {
-            *dst++ = w;
+            *dst = w;
         }
     }
 }
-*/
-INCLUDE_ASM(TextBlitGlyph);
 
 // Scale a glyph (4 bytes = 8 pixels a row, count bytes) up 2x into TEXT_GLYPH_BUF: the left
 // half of each row goes to the first 8x8 4bpp tile, the right half to the second. The US
@@ -413,9 +424,13 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     }
 }
 #else
-// US near-miss: the right halves go where x + unk157 falls (as in TextDrawSmallGlyph), and the
-// link-lost screen (mode 2) has a 30-tile-wide canvas. Same code shape, but the original
-// spills gGameState's address to the stack and allocates the other registers differently.
+// US near-miss (102 masked diff lines): the right halves go where x + unk157 falls (as in
+// TextDrawSmallGlyph), and the link-lost screen (mode 2) has a 30-tile-wide canvas. Same code
+// shape, but the original spills gGameState's address to the stack and allocates the other
+// registers differently. Writing row/col in both mode arms gives the original's duplicated
+// arms. A separate dst2 for the right halves gets the high registers right (x r9, color r10,
+// &unk157 r8, gGameState spilled to sp+8) but not the low ones (original: row r4, x << 24 r5,
+// y r6, dst r7).
 /*
 void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
 {
@@ -446,10 +461,15 @@ void TextDrawGlyph(u8 x, u8 y, u8 color, u16 ch)
     else
     {
         if (gMain.mode != 2)
+        {
             row = (y >> 3) * 0x180 + (y & 7) * 4;
+            col = (x >> 3) * 32 + 0x0600F100;
+        }
         else
+        {
             row = (y >> 3) * 0x3C0 + (y & 7) * 4;
-        col = (x >> 3) * 32 + 0x0600F100;
+            col = (x >> 3) * 32 + 0x0600F100;
+        }
         dst = (u32 *)(row + col);
         TextBlitGlyph(x, y, color, 8, glyph, dst);
     }
@@ -497,7 +517,11 @@ void TextDrawSmallGlyph(u8 x, u8 y, u8 color, u16 ch)
 // edge pieces (0x25), each once at y = row * 8 + 48 (a line higher while the screen shakes)
 // and once flipped at y = 40, all in palette 8.
 // Near-miss: identical but for one instruction, the edge loop's x (0x88) is set up after the
-// hoisted constants 0x25 and ~0xC instead of before them.
+// hoisted constants 0x25 and ~0xC instead of before them. The x giv's init goes in front of the
+// loop after loop pass 1's moved invariants, so the original moved 0x25 and ~0xC only in pass 2:
+// move_movables' test (threshold * savings * lifetime >= insn_count, threshold dropping by 3 per
+// move) says two to four more pass-1 moves before the size field's 0x3F would do it. Tried: x
+// as its own biv, loop forms and directions, types of i/x, a tile variable, a y - shake temp.
 /*
 #define TEXT_BOX_PIECE(p, Y, X, TILE, VFLIP)     p->y = Y;                                    p->mosaic = 0;                               p->x = X;                                    VFLIP                                        p->size = 0;                                 p->tileNum = TILE;                           p->priority = 0;                             p->paletteNum = 8;                           p++;                                         gMain.unk450++;
 
@@ -813,15 +837,15 @@ bool32 DrawChar(u8 ch)
 #else
 // The US font has accented letters: the base glyph, then a small accent glyph over it (the
 // accent only outside the link-lost screen; 0x9E/0x9F draw the small glyph first).
-// Near-miss: identical but for the accent's table address in the 7 accent branches, which the
-// original forms as (index * 2 + 1) + table and this as index * 2 + (table + 1).
-/*
+// The accent offset is read as table[0][index * 2 + 1]: with table[index][1], agbcc folds the
+// + 1 into the table address instead of the index.
 #define DRAW_ACCENTED(table, first, accent)                                                   \
     {                                                                                         \
         TextDrawGlyph(gGameState.textX, gGameState.textY, gGameState.unk14A,                  \
                       table[ch - first][0]);                                                  \
         if (gMain.mode != 2)                                                                  \
-            TextDrawSmallGlyph(gGameState.textX, gGameState.textY + table[ch - first][1],     \
+            TextDrawSmallGlyph(gGameState.textX,                                              \
+                               gGameState.textY + table[0][(ch - first) * 2 + 1],             \
                                gGameState.unk14A, accent);                                    \
     }
 
@@ -864,8 +888,6 @@ bool32 DrawChar(u8 ch)
     return TRUE;
 }
 #undef DRAW_ACCENTED
-*/
-INCLUDE_ASM(DrawChar);
 #endif
 
 #ifndef VERSION_GZLJ01
@@ -1239,11 +1261,15 @@ end:
 // while A is held), then run Tingle's animation (switch on gGameState.unk226; unk227 picks the
 // sprite list, unk228 the frame, unk202 counts the frame's duration, unk206 the scale) and
 // draw him, and the sprite at (0xC8, 0x58) while flags.unkB_1 is set.
-// Not matched yet. The draft below has the right structure and case order (the jump table
-// order is 14,1,2,3+6,4,5,7,8,9,10,11,12,13,16,18+17,20+19,0; 15 returns); what's left is
-// register allocation (base r6 / frame r7 / gMain r8) and the per-case frame = unk228 reads:
-// the original reloads gGameState from the pool for each of them (the volatile read is a hack
-// that gets close), so its tails don't cross-jump the way this draft's do.
+// Not matched yet (296 masked diff lines). The draft below has the right structure and case
+// order (the jump table order is 14,1,2,3+6,4,5,7,8,9,10,11,12,13,16,18+17,20+19,0; 15 returns).
+// What's left is mostly where gGameState's address comes from: the cases use one register for it
+// (a pseudo gcse makes: agbcc -O2 runs gcse, its loads are inserted with insn code -1), but the
+// original reloads it from the pool for each case's frame = unk228 read and in cases 9, 12 and 13,
+// so its per-case tails don't cross-jump the way this draft's do. The volatile read is a hack that
+// gets close; reading frame through a second extern at the same address (asm(".set")) gets 268
+// lines, so the original's gcse didn't reach those blocks. Also register allocation (base r6 /
+// frame r7 / gMain r8). Case 4 writes the unk202 store in both arms (cross-jumped in the original).
 /*
 void Func_0201CFE8(void)
 {
@@ -1313,7 +1339,7 @@ void Func_0201CFE8(void)
     {
         gGameState.unk22B = 1;
         anim = gGameState.unk226;
-        sprite = gTingleAnims[anim][gGameState.unk227];
+        sprite = (*(anim + gTingleAnims))[gGameState.unk227];
         x = 0xB8;
         switch (anim)
         {
@@ -1431,14 +1457,18 @@ void Func_0201CFE8(void)
                 {
                     if (gGameState.unk228 > 8)
                         gGameState.unk228 = 0;
+                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
                 }
-                else if (gGameState.unk228 > 0x1D)
+                else
                 {
-                    gGameState.unk228 = 0;
-                    gGameState.unk227++;
-                    sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                    if (gGameState.unk228 > 0x1D)
+                    {
+                        gGameState.unk228 = 0;
+                        gGameState.unk227++;
+                        sprite = gTingleAnims[gGameState.unk226][gGameState.unk227];
+                    }
+                    gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
                 }
-                gGameState.unk202 = sprite[gGameState.unk228 * 8 + 4];
             }
             else
             {
