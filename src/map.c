@@ -771,125 +771,125 @@ void FollowMarkerStreamedMap(void)
 // Per-frame map update. Sea chart mode (gMain.unk457 == 0): find the four sea chart squares
 // around the view, step their tile animations and draw the chart. Map mode: while L is held,
 // scroll the map image with the D-pad and draw the scroll cursor.
-// Nearly matches: all but one instruction's placement. The original computes j * 2 (for
-// seaAnimTimer[j]) in the loop body's first block, next to the row read; this computes it
-// in the else. Writing `t = j * 2;` after the row and `seaAnimTimer[t / 2]++` gets it within
-// one scheduling slot. The locals dx and dy double as the loop's column and row.
-//     void UpdateMap(void)
-//     {
-//         u16 maxX = gGameState.mapImage->width - 120;
-//         u16 maxY = gGameState.mapImage->height - 120;
-//         s16 dx = 0;
-//         s16 dy = 0;
-//         u8 i = FindMarker(3);
-//
-//         if (i == 0xFF)
-//             FindMarker(1);
-//         gGameState.unk018 = 0;
-//         if (gMain.unk457 == 0)
-//         {
-//             s32 j;
-//
-//             Func_0201B2C0();
-//             FollowMarkerFixedMap();
-//             for (j = 0; j < 4; j++)
-//             {
-//                 s32 k;
-//
-//                 dx = (((s16)gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
-//                 if (dx > 6)
-//                     dx = 7;
-//                 dy = (((s16)gMain.bgOfs[2][1] + 8) >> 8) + gSeaQuadrantOffsets[j][1];
-//                 if (dy > 6)
-//                     dy = 7;
-//                 k = (dy & 1) * 2 + (dx & 1);
-//                 gGameState.seaSquare[k] = dx + dy * 7;
-//                 gGameState.seaTileSet[k] = gSeaSquareTileSets[dy * 7 + dx];
-//                 if (gGameState.seaAnimTimer[k] >= gSeaAnimPeriods[gGameState.seaTileSet[k]])
-//                 {
-//                     if (++gGameState.seaAnimFrame[k] > 4)
-//                         gGameState.seaAnimFrame[k] = 0;
-//                     gGameState.seaAnimTimer[k] = 0;
-//                 }
-//                 else
-//                 {
-//                     gGameState.seaAnimTimer[j]++;  // [j], not [k]
-//                 }
-//             }
-//             CpuCopy16(gSeaAnimTiles, (void *)0x0600C000, 0x2000);
-//             HighlightMapRooms();
-//         }
-//         else
-//         {
-//             if (!(gMain.heldKeys & 0x200))
-//             {
-//                 if (gGameState.mapScrolling == 1)
-//                 {
-//                     SoundPlay(7 - SOUND_ID_SHIFT, 0);
-//                     gGameState.mapScrolling = 0;
-//                 }
-//                 if (gGameState.unk120 == 0)
-//                     FollowMarkerStreamedMap();
-//             }
-//             else if (gGameState.unk1E5_1)
-//             {
-//                 u8 mosaic;
-//                 const u8 *sprite;
-//                 u8 frame;
-//                 bool32 clamped;
-//
-//                 if (gMain.newKeys & 0x200)
-//                 {
-//                     SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
-//                     gGameState.mapScrolling = 1;
-//                 }
-//                 if (gMain.heldKeys & 0x40)
-//                     dy = -4;
-//                 else if (gMain.heldKeys & 0x80)
-//                     dy = 4;
-//                 if (gMain.heldKeys & 0x20)
-//                     dx = -4;
-//                 else if (gMain.heldKeys & 0x10)
-//                     dx = 4;
-//                 mosaic = gMain.mosaic != 0;
-//                 sprite = gSprite_0202BDC8;
-//                 frame = 0;
-//                 if (!(gMain.frameCount & 0xC))
-//                     frame = 1;
-//                 DrawSprite(sprite, frame, 0x44, 0x44, 0, mosaic, 0, 0, 0, 0, 0);
-//                 clamped = FALSE;
-//                 gGameState.mapX += dx;
-//                 if (gGameState.mapX < 0)
-//                 {
-//                     gGameState.mapX = 0;
-//                     clamped = TRUE;
-//                 }
-//                 if (gGameState.mapX > (s16)maxX)
-//                 {
-//                     gGameState.mapX = maxX;
-//                     clamped = TRUE;
-//                 }
-//                 gGameState.mapY += dy;
-//                 if (gGameState.mapY < 0)
-//                 {
-//                     gGameState.mapY = 0;
-//                     clamped = TRUE;
-//                 }
-//                 if (gGameState.mapY > (s16)maxY)
-//                 {
-//                     gGameState.mapY = maxY;
-//                     clamped = TRUE;
-//                 }
-//                 if (!clamped && (gMain.heldKeys & 0xF0))
-//                     SoundPlayLoop(8, 8, NULL);
-//             }
-//             ScrollMap(&gGameState);
-//         }
-//         if (gGameState.unk224 == 0)
-//             // DrawMapMarkers takes no parameters, but this passes two.
-//             ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
-//     }
-INCLUDE_ASM(UpdateMap);
+// The locals dx and dy double as the loop's column and row.
+void UpdateMap(void)
+{
+    u16 maxX = gGameState.mapImage->width - 120;
+    u16 maxY = gGameState.mapImage->height - 120;
+    s16 dx = 0;
+    s16 dy = 0;
+    u8 i = FindMarker(3);
+
+    if (i == 0xFF)
+        FindMarker(1);
+    gGameState.unk018 = 0;
+    if (gMain.unk457 == 0)
+    {
+        s32 j;
+
+        Func_0201B2C0();
+        FollowMarkerFixedMap();
+        for (j = 0; j < 4; j++)
+        {
+            s32 k;
+            s32 t;
+            s32 row;
+
+            dx = (((s16)gMain.bgOfs[2][0] + 8) >> 8) + gSeaQuadrantOffsets[j][0];
+            if (dx > 6)
+                dx = 7;
+            row = ((s16)gMain.bgOfs[2][1] + 8) >> 8;
+            t = j * 2;  // for seaAnimTimer[j] below, computed here as in the original
+            dy = row + gSeaQuadrantOffsets[j][1];
+            if (dy > 6)
+                dy = 7;
+            k = (dy & 1) * 2 + (dx & 1);
+            gGameState.seaSquare[k] = dx + dy * 7;
+            gGameState.seaTileSet[k] = gSeaSquareTileSets[dy * 7 + dx];
+            if (gGameState.seaAnimTimer[k] >= gSeaAnimPeriods[gGameState.seaTileSet[k]])
+            {
+                if (++gGameState.seaAnimFrame[k] > 4)
+                    gGameState.seaAnimFrame[k] = 0;
+                gGameState.seaAnimTimer[k] = 0;
+            }
+            else
+            {
+                gGameState.seaAnimTimer[t / 2]++;  // [j], not [k]
+            }
+        }
+        CpuCopy16(gSeaAnimTiles, (void *)0x0600C000, 0x2000);
+        HighlightMapRooms();
+    }
+    else
+    {
+        if (!(gMain.heldKeys & 0x200))
+        {
+            if (gGameState.mapScrolling == 1)
+            {
+                SoundPlay(7 - SOUND_ID_SHIFT, 0);
+                gGameState.mapScrolling = 0;
+            }
+            if (gGameState.unk120 == 0)
+                FollowMarkerStreamedMap();
+        }
+        else if (gGameState.unk1E5_1)
+        {
+            u8 mosaic;
+            const u8 *sprite;
+            u8 frame;
+            bool32 clamped;
+
+            if (gMain.newKeys & 0x200)
+            {
+                SoundPlay(0x16 - SOUND_ID_SHIFT, 0);
+                gGameState.mapScrolling = 1;
+            }
+            if (gMain.heldKeys & 0x40)
+                dy = -4;
+            else if (gMain.heldKeys & 0x80)
+                dy = 4;
+            if (gMain.heldKeys & 0x20)
+                dx = -4;
+            else if (gMain.heldKeys & 0x10)
+                dx = 4;
+            mosaic = gMain.mosaic != 0;
+            sprite = gSprite_0202BDC8;
+            frame = 0;
+            if (!(gMain.frameCount & 0xC))
+                frame = 1;
+            DrawSprite(sprite, frame, 0x44, 0x44, 0, mosaic, 0, 0, 0, 0, 0);
+            clamped = FALSE;
+            gGameState.mapX += dx;
+            if (gGameState.mapX < 0)
+            {
+                gGameState.mapX = 0;
+                clamped = TRUE;
+            }
+            if (gGameState.mapX > (s16)maxX)
+            {
+                gGameState.mapX = maxX;
+                clamped = TRUE;
+            }
+            gGameState.mapY += dy;
+            if (gGameState.mapY < 0)
+            {
+                gGameState.mapY = 0;
+                clamped = TRUE;
+            }
+            if (gGameState.mapY > (s16)maxY)
+            {
+                gGameState.mapY = maxY;
+                clamped = TRUE;
+            }
+            if (!clamped && (gMain.heldKeys & 0xF0))
+                SoundPlayLoop(8, 8, NULL);
+        }
+        ScrollMap(&gGameState);
+    }
+    if (gGameState.unk224 == 0)
+        // DrawMapMarkers takes no parameters, but this passes two.
+        ((void (*)())DrawMapMarkers)(&gGameState, gMain.frameCount);
+}
 
 void Func_0201A540(void)
 {
@@ -1703,12 +1703,18 @@ INCLUDE_ASM(Func_0201B3A4);
 // (c << 16)) >> 16, which agbcc only emits for an explicit shift pair (the ID macro below);
 // written that way the code shape matches but the registers of the entry block differ
 // (the original keeps gGameState in r4 and loads it first).
+// Best so far (30 diff lines, was 62 with `u8 idx = gGameState.unk119;` at the top): idx
+// assigned in the first marker test. What remains is the entry block: the original loads
+// unk119 into r2 before the unk135 test and copies gGameState to r4. With idx loaded first,
+// global-alloc puts idx in r0 and the unk135 value in r1 (someone prefers r0); idx types,
+// a `sel` local, a GameState pointer and nested/early-return forms of the unk135 case
+// didn't change that.
 /*
 #define ID(v, c) ((s32)(((v) << 16) + ((c) << 16)) >> 16)
 
 void Func_0201B7D4(void)
 {
-    u8 idx = gGameState.unk119;
+    u8 idx;
 
     if (gGameState.unk135 != 0)
     {
@@ -1717,7 +1723,7 @@ void Func_0201B7D4(void)
         else
             ShowMessage(gGameState.unk135 + 0x14D, 1);
     }
-    else if (gGameState.markers[idx].type == 0x13)
+    else if (idx = gGameState.unk119, gGameState.markers[idx].type == 0x13)
         ShowMessage(gMsgIds_02024278[gGameState.markers[idx].unk6 - 1], 1);
     else if (gGameState.markers[idx].type == 0x14)
         ShowMessage(0x5D, 1);
