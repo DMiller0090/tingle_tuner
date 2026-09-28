@@ -188,8 +188,7 @@ def put(path, text):
         f.write(text)
 
 
-def setup(ver, func, c_file):
-    d = BUILD / ver / 'permuter' / func
+def setup(ver, func, c_file, d):
     if d.exists():
         shutil.rmtree(d)
     d.mkdir(parents=True)
@@ -198,7 +197,8 @@ def setup(ver, func, c_file):
     base, renames, cfunc = convert(pre, func)
     put(d / 'base.c', base)
     put(d / 'renames.sed', ''.join(f's/\\b{c}\\b/{a}/g\n' for c, a in renames.items()))
-    shutil.copy(str(HERE / 'compile.sh'), str(d / 'compile.sh'))
+    # (Rewritten, not copied: a checkout with autocrlf gives it CRLFs, which bash rejects.)
+    put(d / 'compile.sh', (HERE / 'compile.sh').read_text(encoding='utf-8').replace('\r\n', '\n'))
     absolute = (BUILD / ver / 'asm' / 'absolute.s').read_text(encoding='utf-8')
     put(d / 'abs.s', ''.join(l.strip() + '\n' for l in absolute.splitlines()
                              if l.strip().startswith('.set ')))
@@ -224,13 +224,14 @@ def main():
     ap.add_argument('file', nargs='?')
     ap.add_argument('--comment', action='store_true',
                     help='use the near-miss comment above INCLUDE_ASM(function) in src/')
+    ap.add_argument('--tag', help='use build/<ver>/permuter/<function>-<tag> (another starting point)')
     ap.add_argument('--run', action='store_true', help='run the permuter afterwards')
     ap.add_argument('-j', type=int, default=4, help='permuter threads')
     argv = sys.argv[1:]
     rest = argv[argv.index('--') + 1:] if '--' in argv else []
     args = ap.parse_args(argv[:len(argv) - len(rest) - (1 if rest or '--' in argv else 0)])
     ver, func = args.version, args.function
-    d = BUILD / ver / 'permuter' / func
+    d = BUILD / ver / 'permuter' / (func + (f'-{args.tag}' if args.tag else ''))
     if args.comment:
         src = next(p for p in (ROOT / 'src').rglob('*.c')
                    if f'INCLUDE_ASM({func});' in p.read_text(encoding='utf-8'))
@@ -238,9 +239,9 @@ def main():
         out.mkdir(parents=True, exist_ok=True)
         c_file = out / f'{func}.c'
         c_file.write_text(uncomment(src.read_text(encoding='utf-8'), func), encoding='utf-8')
-        d = setup(ver, func, c_file)
+        setup(ver, func, c_file, d)
     elif args.file:
-        d = setup(ver, func, Path(args.file).resolve())
+        setup(ver, func, Path(args.file).resolve(), d)
     elif not (d / 'base.c').exists():
         sys.exit('no permuter dir yet: pass a file or --comment')
     if args.run:
