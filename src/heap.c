@@ -18,20 +18,113 @@ void HeapInit(struct Heap *heap, u32 size)
     heap->unk7 = 0;
 }
 
+// First fit, merging free neighbours on the way. A multiple-of-4 request gets a 4-aligned
+// payload: a block whose payload isn't aligned is split into an empty block and the rest.
+// Near-miss: same code shape, but block/total/avail get r4/r2/r3 where the original has
+// r5/r3/r4 (and the 0xFFFE constant is loaded later); declaration order and scopes don't move it.
+//     void *HeapAlloc(struct Heap *heap, u32 size)
+//     {
+//         bool32 align4 = FALSE;
+//         u32 need;
+//         u16 *block;
+//         u16 *firstFree;
+//         u32 header;
+//
+//         if ((size & 3) == 0)
+//             align4 = TRUE;
+//         size = (size + 1) & ~HEAP_BLOCK_USED;
+//         need = size + 2;
+//         if (need > heap->size)
+//             return NULL;
+//         block = heap->blocks;
+//         firstFree = heap->firstFree;
+//         if (firstFree != NULL)
+//             block = firstFree;
+//         if (*block == HEAP_END)
+//             return NULL;
+//         header = size | HEAP_BLOCK_USED;
+//         do
+//         {
+//             u32 len = *block & ~HEAP_BLOCK_USED;
+//             u32 total = len + 2;
+//             u32 avail;
+//             u16 *next;
+//
+//             if (align4)
+//             {
+//                 avail = total;
+//                 if (((u32)block & 3) == 0)
+//                     avail = len;
+//             }
+//             else
+//             {
+//                 avail = total;
+//             }
+//             next = (u16 *)((u8 *)block + total);
+//             if (!(*block & HEAP_BLOCK_USED))
+//             {
+//                 if (need > avail)
+//                 {
+//                     if (!(*next & HEAP_BLOCK_USED))
+//                     {
+//                         do
+//                         {
+//                             u32 n = (*next & ~HEAP_BLOCK_USED) + 2;
+//
+//                             total += n;
+//                             avail += n;
+//                             next = (u16 *)((u8 *)block + total);
+//                         } while (need > avail && !(*next & HEAP_BLOCK_USED));
+//                         *block = (total - 2) & ~HEAP_BLOCK_USED;
+//                     }
+//                     if (need > avail)
+//                         goto next;
+//                 }
+//                 if (align4 && ((u32)(block + 1) & 3) && need <= total - 2)
+//                 {
+//                     *block = 0;
+//                     block[1] = (total - 4) & ~HEAP_BLOCK_USED;
+//                     block++;
+//                     total -= 2;
+//                     avail = total;
+//                 }
+//                 if (need <= avail)
+//                 {
+//                     if (need < total)
+//                     {
+//                         u16 *rest = (u16 *)((u8 *)block + need);
+//
+//                         *rest = (total - need - 2) & ~HEAP_BLOCK_USED;
+//                         if (firstFree > rest)
+//                             heap->firstFree = rest;
+//                     }
+//                     *block = header;
+//                     return block + 1;
+//                 }
+//             }
+//         next:
+//             block = next;
+//         } while (*block != HEAP_END);
+//         return NULL;
+//     }
 INCLUDE_ASM(HeapAlloc);
 
 // Nearly matches (the re-read and the -2 mask come out right), but r0/r1 are swapped
-// around the AND in the `&=`; operand order, casts and 0xFFFE don't change it:
-//     volatile s16 *block;
-//
-//     if (ptr != NULL)
+// around the AND in the `&=`; operand order, casts, 0xFFFE and a u16 temporary don't
+// change it (an s16 temporary gets the registers right but adds a sign extension):
+//     void HeapFree(struct Heap *heap, void *ptr)
 //     {
-//         block = (volatile s16 *)ptr - 1;
-//         if (*block & HEAP_BLOCK_USED)
+//         volatile s16 *block;
+//
+//         if (ptr != NULL)
 //         {
-//             *block &= ~HEAP_BLOCK_USED;
-//             if (heap != NULL && (heap->firstFree > (u16 *)block || heap->firstFree == NULL))
-//                 heap->firstFree = (u16 *)block;
+//             block = (volatile s16 *)ptr - 1;
+//             if (*block & HEAP_BLOCK_USED)
+//             {
+//                 *block &= ~HEAP_BLOCK_USED;
+//                 if (heap != NULL && (heap->firstFree > (u16 *)block || heap->firstFree == NULL))
+//                     heap->firstFree = (u16 *)block;
+//             }
 //         }
 //     }
 INCLUDE_ASM(HeapFree);
