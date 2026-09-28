@@ -106,7 +106,11 @@ void VBlankIntr(void)
     SoundVSyncProc();
     REG_IF |= INTR_FLAG_VBLANK;
     // FAKEMATCH: this self-assignment (found with decomp-permuter) emits nothing, but it
-    // makes reload take r2, not r1, for the 0x414 offset below.
+    // makes reload take r2, not r1, for the 0x414 offset below. Its load and store survive
+    // until reload (the .greg shows an extra "Spilling reg 1" for them, before the 0x414
+    // reload's) and are dropped afterwards, so the original needs something else there that
+    // occupies r1 during reload and then vanishes. Priorities and hard-reg use counts don't
+    // explain it (r1 has more uses than r2 either way).
     gGameState.scrollTableNext = gGameState.scrollTableNext;
     gMain.intrCheck = INTR_FLAG_VBLANK;
 }
