@@ -21,7 +21,7 @@ import subprocess
 from pathlib import Path
 
 from build import AGBCC_DIR, CFLAGS, WSL_DISTRO, unix_path
-from common import BUILD, ROOT, versions
+from common import BUILD, ROOT, version_defines, versions
 from scratch import uncomment
 
 
@@ -64,7 +64,7 @@ def main():
 
     i_file = out / 'x.i'
     script = (f'set -eo pipefail; cd {unix_path(ROOT)}; '
-              f'cpp -nostdinc -undef -P -I include -I src -DVERSION_{ver} {unix_path(c_file)} '
+              f'cpp -nostdinc -undef -P -I include -I src {version_defines(ver)} {unix_path(c_file)} '
               f'> {unix_path(i_file)}; cd {unix_path(out)}; '
               f'{AGBCC_DIR}/agbcc {CFLAGS} -dg -dl x.i -o x.s')
     import os
