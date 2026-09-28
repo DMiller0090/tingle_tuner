@@ -280,7 +280,6 @@ void TextClearCanvas(void)
 // (0x180 bytes on, 12 tiles per row). Pixels that spill past the tile go to the next tile.
 // The u8 x and y (the header's types) matter: their zero-extensions, folded into `& 7` by
 // combine, still count in src's live length, which leaves src in its stack slot.
-#ifdef VERSION_GZLJ01
 void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
 {
     s32 shift, n, m, i;
@@ -297,7 +296,12 @@ void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
         mask2 = -1;
     else
         mask2 = 0x11FFFFFF;
+#ifdef VERSION_GZLJ01
     for (; n > 0; dst++, n--)
+#else
+    // The US stops after `rows` rows (the JP only uses it for m).
+    for (; n > 0 && rows != 0; dst++, n--, rows--)
+#endif
     {
         prev = dst;
         w = *src++ & mask & mask2;
@@ -306,7 +310,10 @@ void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
             *dst |= w << ((8 - shift) * 4);
             for (i = shift; i > 0; i--)
                 w = (w >> 4) | 0x10000000;
-            prev[8] = w;
+#ifndef VERSION_GZLJ01
+            if (w != 0x11111111)  // skip an all-background word
+#endif
+                prev[8] = w;
         }
         else
         {
@@ -314,7 +321,11 @@ void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
         }
     }
     dst += 0x58;
+#ifdef VERSION_GZLJ01
     for (; m > 0; dst++, m--)
+#else
+    for (; m > 0 && rows != 0; dst++, m--, rows--)
+#endif
     {
         prev = dst;
         w = *src++ & mask;
@@ -323,7 +334,10 @@ void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
             *dst |= w << ((8 - shift) * 4);
             for (i = shift; i > 0; i--)
                 w = (w >> 4) | 0x10000000;
-            prev[8] = w;
+#ifndef VERSION_GZLJ01
+            if (w != 0x11111111)  // skip an all-background word
+#endif
+                prev[8] = w;
         }
         else
         {
@@ -331,9 +345,6 @@ void TextBlitGlyph(u8 x, u8 y, u8 color, u8 rows, const u32 *src, u32 *dst)
         }
     }
 }
-#else
-INCLUDE_ASM(TextBlitGlyph);
-#endif
 
 // Scale a glyph (4 bytes = 8 pixels a row, count bytes) up 2x into TEXT_GLYPH_BUF: the left
 // half of each row goes to the first 8x8 4bpp tile, the right half to the second. The US
