@@ -105,7 +105,7 @@ In C so far (the rest of each file is `INCLUDE_ASM`): `src/main.c` (all but `VBl
 most of the game code from `02018884` to the sound driver (in GZLJ01, 130 of its 141 functions;
 the US `TextDrawGlyph` is still asm), in five objects: `src/sprite.c`, `src/map.c`,
 `src/message.c`, `src/item_menu.c` and `src/effect.c` (docs/layout.md says why they end where
-they do), and `src/sound.c` (all but `VoiceUpdatePitch`). These
+they do), and `src/sound.c`. These
 and main.c, mode0.c, mode1.c, gba_com.c, multi_sio.c and sound.c define their `.rodata` in C.
 The ARM mixer is hand-written assembly (layout.md, "Sound driver").
 Near-misses are kept as comments above their `INCLUDE_ASM`. Newlib's `bzero`
