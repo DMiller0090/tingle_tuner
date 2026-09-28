@@ -1099,6 +1099,15 @@ u32 MarkerDistance(u8 arg)
 // global-alloc must rank level (14 refs) above that zero (15 refs) so level takes r4, the
 // zero r5 and gGameState r6, which needs the zero's live length >= 15/14 of level's. The
 // separate timer decrement/increment statements shorten level's range.
+// What's left artificial: one `x = (s16)x >> 3` per coordinate is enough to keep the
+// extensions (then only the level/zero tie differs: zero live 122, needs 128); the two extra
+// `x = (s16)x;` lines are padding for that tie. Tried without success: plain `>> 3` in one or
+// two statements (s32/s16/u16/int), `x += 0xB8` statements, s16 or u16 position temps, a
+// pointer into gSinTable, reusing dx/dy for x/y (keeps the extensions, but they go to
+// global-alloc and the loads become ldrh + lsl/asr), s16 dx/dy, (s16) or plain ArcTan2 args.
+// Closest natural form: `s16 x, y; x = gSinTable[angle] >> 3; x += 0xB8;` (fixes the tie, but
+// combine turns the s16 narrowing into ldrh + lsl #16/asr #19 and drops the extensions; 28
+// lines).
 void UpdateTargetCompass(void)
 {
     u8 angle;
