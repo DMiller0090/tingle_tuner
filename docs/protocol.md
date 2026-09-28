@@ -277,3 +277,35 @@ longer than the GC's own lock:
 | Balloon / shield (0x11 / 0x12, then 3 / 4) | on the 0x11 / 0x12 reply | losing it cancels the item (0x11 / 0x12 do nothing on the GC); the effect then runs off the GC's `flags.timer`, so losing the 3 / 4 reply changes nothing |
 | Roulette (5) | on the reply | losing it cancels the roll (nothing charged yet); losing a later 0x13 reply leaves the GBA at `effectStep` 5 |
 | Shop (slot 12) | dialogue waits for slot 13 | lost reply leaves the dialogue stuck (keys masked) until a map change |
+
+## Unlocking discounts through a missing message download
+
+The Tuner's unlockables are the shop (slot 6, item 7 instead of 11), the balloon/shield/roulette
+discount and the Ting discount (roulette and the green and blue Tings only need `flags.hasMagic`).
+The GBA sets them with the message commands `F3 05`, `F3 00` and `F3 01`, which only the JP
+messages 0x3D2, 0x3B4 and 0x9E/0x3BC contain; these are mailed by `agbF` actors (sea room 44,
+Windfall, Forsaken Fortress 2/3 room 1). `MainLoop` reports the three bits in `GbaFlg` every
+frame, and `daAgb_c::FlagsRecv` turns a set bit into a permanent event flag. Nothing checks that
+the bit came from those messages.
+
+**Garbled text** (GZLJ01, watched live 2026-09-28). Disconnect during the connection phase after
+the JOY boot image has arrived but before the message data (slot 0): `Mode0State1` gives up after
+120 frames and goes to mode 2, and on the relink `Mode2State1` goes straight to mode 1. The
+message area at `0x02000000` still holds the boot image, which is `client.bin` except for the
+three header bytes the BIOS patches (0x00, 0xC4, 0xC5), so every message reads `client.bin` as
+text, the same way every time. The report byte stays 0 (`Mode0State3` never copied the GC's
+flags), which is harmless since the GC never clears them. In that state 240 of the 1080 message
+IDs freeze the Tuner (an `F3` handler index >= 0x13), and six run unlock commands:
+
+| Message | Runs | Normally shown by |
+|---|---|---|
+| 0x263 | `F3 00` | `agbA` in `Siren` (Tower of the Gods) room 8 at (-806, -295, -12934), cursor hit, gone once switch 0x0D is set |
+| 0x26A | `F3 00` | `agbF` in `Siren` room 10 (condition 0x42: in a room with a `daNpc_Os`) |
+| 0x11E | `F3 01` | `ShowSelectionMsg` for a map point with `gbaName` 0xAF |
+| 0x11F | `F3 00` | `ShowSelectionMsg` for a map point with `gbaName` 0xB0 |
+| 0x20E, 0x349 | `F3 00` | no source found |
+
+No message reaches `F3 05`, so the shop can't be unlocked this way. Measured with 0x263: the mail
+arrived as the cursor reached the switch, A started the message, 1.7 s later the report byte
+went to 0x10 (balloon discount) and 44 ms after that the GC's `mFlags` byte 7 showed
+`UNLOCK_TINGLE_BALLOON_DISCOUNT` set. It is kept once the game is saved.
