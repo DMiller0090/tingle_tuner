@@ -207,3 +207,157 @@ image the Tuner received (measured: Windfall's 392x472 map drawn in GT, view (25
 (324, 175), potion 3.07 s + 1.58 s, i.e. Windfall speed). With a real map the view is clamped at
 `mapY` >= 0, so a stale marker within 60 px of that map's top edge shortens the effect to
 `marker.y + 32` px: faster than normal.
+
+## Short link drops
+
+A drop of the link shorter than about 3 GC frames doesn't look like a disconnect to either side,
+but it does lose packets:
+
+- **GBA**: `JoyComMain` only restarts the link (and `GbaComMain` only enters mode 2, the
+  "link lost" screen) after 10 frames without a JOY interrupt (`idleFrames > 9`).
+- **GC**: a failed transfer sets `field_0x4`, `mDoGaC_Connect` calls `mDoGaC_ComClose` (every
+  slot to status 9) and probes again once per frame. `mDoGaC_GbaLink` stays 1 while the context
+  is known and fewer than 3 probes have run since the link was last up (`field_0x10e < 3`), so
+  `daAgb_c` carries on. The probe resets the GBA (`JOYCNT_RESET`); the GBA's `CODE_OK` step
+  sets all its slots idle and empties its send queue, and `mDoGaC_ComRestart` empties the GC's
+  (`field_0x9`/`0xa`). `mDoGaC_ContextCheck` sets `mReConnect`.
+
+Whatever either side had queued is gone, and neither side resends it. Only when 3 or more probes
+fail does `mDoGaC_GbaLink` return 0 for a frame; retail `daAgb_Execute` then clears the item
+timer `field_0x65c` and `field_0x66b`, cuts a running hover or shield to 10 frames, and resets the
+cursor.
+
+**Skipping the Tingle Bomb wait** (GZLJ01, watched live 2026-09-28). After a Tingle Bomb two
+timers block items: the GC's `field_0x65c` = 120 (4 s; `modeMove` calls `onActive` only at 0,
+and `GbaItemUse` refuses everything but 0x15 while inactive), and the GBA's 180-frame
+`EffectBombBlast` with `itemsEnabled` = 0, which START (the item menu) and B need. Retail
+`UseItem` doesn't clear `itemsEnabled` for a bomb; that happens when the GC's reply (slot 7,
+effect 2) arrives. Drop the link after the GC has read the request but before the reply reached
+the GBA, and the GC uses the bomb (bomb spawned, rupees charged, timer 120) while the GBA never
+locks. Measured: GC received the request at 12.312 s, transfer error at 12.329, `GbaItemUse` ran at
+12.333 (reply queued), `ComClose` at 12.339 wiped it; 2 probes, GBA `idleFrames` peaked at 5,
+linked again at 12.441. The green Ting was started at 12.912. The GC timer is untouched but
+doesn't matter: a Ting's `StartEffectIntro` animation is 333 GBA frames (plus the message) before
+it sends 0x14, which went out at 18.739, after the timer ran out (16.337), and was accepted. The window
+is from the GC reading the request to the reply landing, about one GC frame; earlier loses the
+request (no bomb), later lets the reply through.
+
+**Clearing the GC timer too** (watched live 2026-09-28). A drop long enough for the third probe
+to fail makes `mDoGaC_GbaLink` return 0 for one frame, and `field_0x65c` went 117 -> 0 with the
+bomb reply lost as well, while the GBA's `idleFrames` peaked at 7 (no link-lost screen). The
+window is narrow: the probes run at the GC's 30 fps, so the same hold length gives 2 or 3 failed
+probes depending on its phase, and one attempt reached 3 probes at `idleFrames` 8 but hit 10
+before the handshake finished (mode 2). It also costs a map reload: with `GbaLink` 0,
+`dMap_c::mapAGBSendMapMain` resets `mAGBMapSendStatus` (d_map.cpp ~1497), the GBA fades out
+(`Mode1State3`), waits for the map (`Mode1State4`) and fades back in: about 214 GBA frames
+(3.6 s), about as long as the 180-frame blast it replaces. So it doesn't speed up bomb chains.
+
+**Striped map after a disconnect at a stage transition** (GZLJ01, `M_Dra09` room 9, watched
+2026-09-28). The map screen showed identical columns of stray tiles. The GBA's map image had an
+all-zero header (width, height, `tilesSize`, `mapWidth` 0) with `tiles` and `map` both
+`0x0200A000`, and from offset 0x1BC on it matched the GC's image for the room byte for byte
+(0x5580 bytes, `mAGBMapSendStatus` 4). So the image was arriving when the GBA wiped the buffer:
+`InitMapView` clears all 0xA000 bytes when `mapImageMode` != 0 and `mapLoaded` == 0, which is what
+`Mode1State0` does on a relink while `noMap` is still 1. The JOY interrupt kept writing the rest in
+place, `LoadMapImage` then turned the zeroed header's offsets into the buffer's own address, and
+with `mapWidth` 0 every row of the view draws the same map entries from the header, over whatever
+tiles were already in VRAM. The GC resends the map after its link check fails, so the first
+words of the image can land before the GBA gets from mode 2 to `Mode1State0`. The next map change
+loads a proper image.
+
+**Other items.** The drop only removes a GBA wait that starts when the reply arrives and lasts
+longer than the GC's own lock:
+
+| Item (request) | GBA wait starts | Lost reply |
+|---|---|---|
+| Tingle Bomb (2) -> effect 2 / 15 | on the reply (180 frames) | skips it; GC timer 120 |
+| Tingle Bomb on Link (2) -> effect 14 | on the reply (300 + 180 frames) | skips it, but GC timer 270 (9 s) refuses a 0x14 sent within 9 s |
+| A, nothing selected (16) | on the reply (`StartLookEffect`, 120 frames) | skips it; no GC timer |
+| Ting 8-10 (0x14, then 8-10) | at `UseItem` (`StartTingEffect`) | nothing to skip; losing the 8-10 reply leaves the GBA at `effectStep` 5 until a map change |
+| Balloon / shield (0x11 / 0x12, then 3 / 4) | on the 0x11 / 0x12 reply | losing it cancels the item (0x11 / 0x12 do nothing on the GC); the effect then runs off the GC's `flags.timer`, so losing the 3 / 4 reply changes nothing |
+| Roulette (5) | on the reply | losing it cancels the roll (nothing charged yet); losing a later 0x13 reply leaves the GBA at `effectStep` 5 |
+| Shop (slot 12) | dialogue waits for slot 13 | lost reply leaves the dialogue stuck (keys masked) until a map change |
+
+## Unlocking discounts through a missing message download
+
+The Tuner's unlockables are the shop (slot 6, item 7 instead of 11), the balloon/shield/roulette
+discount and the Ting discount (roulette and the green and blue Tings only need `flags.hasMagic`).
+The GBA sets them with the message commands `F3 05`, `F3 00` and `F3 01`, which only the JP
+messages 0x3D2, 0x3B4 and 0x9E/0x3BC contain; these are mailed by `agbF` actors (sea room 44,
+Windfall, Forsaken Fortress 2/3 room 1). `MainLoop` reports the three bits in `GbaFlg` every
+frame, and `daAgb_c::FlagsRecv` turns a set bit into a permanent event flag. Nothing checks that
+the bit came from those messages.
+
+**Garbled text** (GZLJ01, watched live 2026-09-28). Disconnect during the connection phase after
+the JOY boot image has arrived but before the message data (slot 0): `Mode0State1` gives up after
+120 frames and goes to mode 2, and on the relink `Mode2State1` goes straight to mode 1. The
+message area at `0x02000000` still holds the boot image, which is `client.bin` except for the
+three header bytes the BIOS patches (0x00, 0xC4, 0xC5), so every message reads `client.bin` as
+text, the same way every time. The report byte stays 0 (`Mode0State3` never copied the GC's
+flags), which is harmless since the GC never clears them. In that state 240 of the 1080 message
+IDs freeze the Tuner (an `F3` handler index >= 0x13), and six run unlock commands:
+
+| Message | Runs | Normally shown by |
+|---|---|---|
+| 0x263 | `F3 00` | `agbA` in `Siren` (Tower of the Gods) room 8 at (-806, -295, -12934), cursor hit, gone once switch 0x0D is set |
+| 0x26A | `F3 00` | `agbF` in `Siren` room 10 (condition 0x42: in a room with a `daNpc_Os`) |
+| 0x11E | `F3 01` | `ShowSelectionMsg` for a map point with `gbaName` 0xAF, which nothing on the GC assigns (the object table tops out at 0x41) |
+| 0x11F | `F3 00` | `ShowSelectionMsg` for a map point with `gbaName` 0xB0, likewise unused |
+| 0x20E, 0x349 | `F3 00` | no source found |
+
+No reachable message runs `F3 05` or `F3 01`, so only the balloon discount can be unlocked this way. A later disconnect in the same phase gives the same state: the message data is unpacked in one BIOS call, so the area holds either the boot image or the real text. Measured with 0x263: the mail
+arrived as the cursor reached the switch, A started the message, 1.7 s later the report byte
+went to 0x10 (balloon discount) and 44 ms after that the GC's `mFlags` byte 7 showed
+`UNLOCK_TINGLE_BALLOON_DISCOUNT` set. It is kept once the game is saved.
+
+### What the garbled text can run
+
+The discount unlocks above are a special case of a wider question: with `0x02000000` holding the
+raw boot image, `MsgStep` (`message.c`) executes every control byte `0xF2`-`0xFF` it walks over
+before drawing, and the only one that transfers control is `F3 xx`, an *unchecked* table jump:
+
+```c
+else if (ch == 0xF3)   // call a handler
+    gMsgCmdFuncs[*++gGameState.msgPtr]();
+```
+
+`gMsgCmdFuncs` (`0x020243A4`) has 19 real entries (`00`-`12`). Any `xx >= 0x13` reads a word past
+the table and calls it. Because the jump target is fixed image data, this is never arbitrary code
+injection: an index only ever reaches one of a fixed set of addresses, and the reachable set is
+bounded by which `F3 xx` bytes actually appear in the boot image at each message's offset. Reading
+the table words past index 0x12:
+
+- `0x13`-`0x2E` land in the sprite/animation tables that follow `gMsgCmdFuncs` (`gTingleAnims`,
+  `gTingleAnim*`, `gTingleSprite`) — data words, not code, so calling them hangs. This is most of
+  the 240/1080 IDs that freeze.
+- `0x2F`-`0x4F` are small values or IO-range junk — hang.
+- `0x50`-`0x70` land on **real Thumb functions**, because the next image tables (`gItemEffectFuncs`,
+  `gMode2StateFuncs`, `gObjFuncs`, `gObjBurstStateFuncs`) are themselves arrays of valid pointers.
+  This is the only band that does something other than freeze.
+
+Scanning all 0x438 message offsets in the boot image for the first out-of-range `F3 xx` each one
+reaches (a message stops mattering after that call diverts control), only four such calls are ever
+reached from real message data:
+
+| Runs (`F3 xx`) | Handler | Message IDs (garbled state) |
+|---|---|---|
+| `F3 56`, `F3 60` | `EffectWaitTimer` (`effect.c`) | 0xD0, 0x158, 0x163, 0x1B8, 0x1DF, 0x32F, … (21) |
+| `F3 58` | `Effect8` (`effect.c`) | 0x81, 0x8F, 0x99, 0xA1, 0x18F, 0x23D, 0x3A0, 0x3BC |
+| `F3 5F` | `EffectBombBlast` (`effect.c`) | 0x47, 0x124, 0x1FC |
+
+So the realistic outcome space of a garbled textbox is **freeze (most IDs), unlock the balloon
+discount (0x263 etc., via the in-range `F3 00`), or enter one of `EffectWaitTimer` /
+`EffectBombBlast` / `Effect8` out of sequence** with whatever `effect[]`, `effectStep`,
+`effectDelay` and marker state happened to be live:
+
+- `Effect8` is the one worth testing. Normally it is the items-8-10 (Tings) drop-in that issues
+  `SendItemUse(0x14, …)` and `SendItemUse(idx + 8, price)`; entered cold, the branch it takes and
+  the item index/price it sends depend on `effect[0]`/`effectStep`, a possible path to an
+  item-use the menu never authorised. Candidate test: JP, reach the garbled state, trigger message
+  0x81 with slot-7/marker state set, and watch the GC's `SendItemUse` args and
+  `gGameState.itemsEnabled`.
+- `EffectWaitTimer` and `EffectBombBlast` can call `EndItemEffect` (`itemsEnabled = 1`) — another
+  route to clearing the bomb lockout independent of the GC's slot-7 reply.
+
+No garbled message reaches `Effect5/7/11/12/14`, the `Mode2State*` or `ObjBurst*` entries, or the
+free-bomb `MsgCmd12` (`F3 12` is in range and needs the real, not garbled, text).
